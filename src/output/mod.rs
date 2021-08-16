@@ -4,8 +4,12 @@
 //! - Add the relevant implementation of `Screen`, in a new submodule
 //! - Modify `Screen::get` to properly detect and handle the new screen type, with `cfg!` or runtime checks
 
+mod test;
+mod ansi_cli;
+
 use std::{fmt, ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div, DivAssign}};
 
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub struct XY(usize, usize);
 
 impl XY {
@@ -55,6 +59,12 @@ impl fmt::Display for XY {
     }
 }
 
+impl fmt::Debug for XY {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "XY({}, {})", self.0, self.1)
+    }
+}
+
 /// The color of a piece of formatted text. Meant to be used through `Text` / `text!`. The numeric values are the ANSI
 /// color codes for each color; that's also where the actual colors are from.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -97,6 +107,33 @@ macro_rules! setters {
     };
 }
 
+macro_rules! abbrev_debug {
+    (
+        $class:ident $( < $( $lt:lifetime ),* > )?;
+        $( write $always:ident, )*
+        $( ignore $ignore:ident, )*
+        $( if $sometimes:ident != $default:expr, )*
+    ) => {
+        impl $( < $( $lt ),* > )?  fmt::Debug for $class $( < $( $lt ),* > )? {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, concat!(stringify!($class), " {{ "))?;
+                $(
+                    write!(f, concat!(stringify!($always), ": {:?}, "), self.$always)?;
+                )*
+                $(
+                    write!(f, concat!(stringify!($ignore), ": ..., "))?;
+                )*
+                $(
+                    if self.$sometimes != $default {
+                        write!(f, concat!(stringify!($sometimes), ": {:?}, "), self.$sometimes)?;
+                    }
+                )*
+                write!(f, ".. }}")
+            }
+        }
+    }
+}
+
 impl Text {
     pub fn of(s: String) -> Text {
         Text {
@@ -128,56 +165,22 @@ impl Text {
     }
 
     fn with_text(&self, new_text: String) -> Text {
-        let mut new = self.clone();
-        new.text = new_text;
-        new
+        let mut res = self.clone();
+        res.text = new_text.into();
+        res
     }
 }
 
-impl fmt::Debug for Text {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Text {{ {:?}, ", self.text)?;
-        if self.fg != Color::Default {
-            write!(f, "fg: {:?}, ", self.fg)?;
-        }
-        if self.bg != Color::Default {
-            write!(f, "bg: {:?}, ", self.bg)?;
-        }
-        if self.bright { write!(f, "bright: true, ")?; }
-        if self.bold { write!(f, "bold: true, ")?; }
-        if self.underline { write!(f, "underline: true, ")?; }
-        if self.italic { write!(f, "italic: true, ")?; }
-        if self.invert { write!(f, "invert: true, ")?; }
-        write!(f, ".. }}")
-    }
-}
-
-fn is_breakable(c: char) -> bool {
-    c.is_whitespace() || c.is_control() || (c.is_ascii_punctuation() && c != '-' && c != '_')
-}
-
-fn wrap(chunks: Vec<Text>, width: usize, scroll: usize, indent: usize, first_indent: usize) -> Vec<Text> {
-    let mut res = Vec::with_capacity(chunks.len());
-    let mut line_num = 0;
-    let mut col = first_indent;
-    for item in chunks {
-        for line in item.text.lines() {
-            let mut rest = line;
-            while rest.len() > width - col {
-                let line = if let Some(break_pos) = rest[..width - col].find(is_breakable) {
-                    &rest[..break_pos].trim_end()
-                } else {
-                    &rest[..width - col - 1]
-                };
-
-            }
-        }
-        if item.text.ends_with('\n') {
-            line_num += 1;
-            col = indent;
-        }
-    }
-    res
+abbrev_debug! {
+    Text;
+    write text,
+    if fg != Color::Default,
+    if bg != Color::Default,
+    if bright != false,
+    if bold != false,
+    if underline != false,
+    if italic != false,
+    if invert != false,
 }
 
 macro_rules! text1 {
@@ -207,15 +210,46 @@ macro_rules! text {
     };
 }
 
-#[allow(unused)]
-fn ensure_text_macro_compiles() {
-    let name = "bloop";
-    let _ = text!(
-        red "hello",
-        " there ",
-        bold green on_blue "Liege {}!"(name),
-        " You're a very {}"(name),
-    );
+pub fn wrap_line(
+    width: usize,
+    mut line: &str,
+    col: &mut usize, line_num: &mut usize,
+    /*
+    This parameter is basically just a dirty hack. If it's true, *col is effectively first_indent, so we should
+    hyphenate words that are too long. If it's false, *col marks the end of the last bit of text, so we should
+    wrap, even if it leaves a blank line.
+    */
+    mut starts_fresh: bool
+) -> Vec<String> {
+    assert!(*col < width);
+
+    let mut lines = Vec::new();
+    while line.len() > width - *col {
+        let first_n = &line[..width - *col + 1];
+        let (len, chunk) = if let Some(end_pos) = first_n.rfind(char::is_whitespace) {
+            let len = match first_n[..end_pos].rfind(|c: char| !c.is_whitespace()) {
+                Some(n) => n + 1, // rfind returns the address of the one, we want the one after
+                None => first_n.len(), // not sure if this could happen but just in case
+            };
+            (len, first_n[..len].into())
+        } else if starts_fresh {
+            starts_fresh = false;
+            (0, String::new())
+        } else {
+            (first_n.len()-2, format!("{}-", &first_n[..first_n.len()-2]))
+        };
+        lines.push(chunk);
+        line = line[len..].trim_start();
+        *col = 0;
+        *line_num += 1;
+    }
+    *col = line.len();
+    lines.push(line.into());
+    lines
+}
+
+fn find_break(from: &str) -> Option<usize> {
+    from.rfind(char::is_whitespace)
 }
 
 /// A box of text which can be written to a `Screen`. Note these are meant to be generated on the fly, every frame,
@@ -241,9 +275,94 @@ impl<'a> Textbox<'a> {
     }
 }
 
+abbrev_debug! {
+    Textbox<'a>;
+    ignore chunks,
+    if pos != XY(0, 0),
+    if size != XY(0, 0),
+    if scroll != 0,
+    if indent != 0,
+    if first_indent != None,
+}
+
 impl<'a> Drop for Textbox<'a> {
     fn drop(&mut self) {
-        // TODO: Actually do the writing
+        let first_indent = self.first_indent.unwrap_or(self.indent);
+        let XY(width, height) = self.size;
+        let XY(x, y) = self.pos;
+
+        let mut col = first_indent;
+        let mut line_num = 0;
+        let mut line_start = true;
+
+        macro_rules! next_line {
+            ($new_para:expr) => {
+                line_num += 1;
+                line_start = true;
+                col = if $new_para { first_indent } else { self.indent };
+            }
+        }
+
+        macro_rules! write_raw {
+            ($text:expr) => {
+                if line_num >= self.scroll && line_num - self.scroll < height {
+                    self.screen.write_raw(
+                        $text,
+                        XY(x + col, y + line_num - self.scroll)
+                    );
+                }
+            }
+        }
+
+        macro_rules! do_wrap {
+            ($chunk:ident, $line:ident) => {
+                while $line.len() > width - col {
+                    if let Some(break_pos) = find_break(&$line[..width - col]) {
+                        let (subline, rest_of_line) = $line.split_at(break_pos);
+                        $line = rest_of_line.trim_start();
+
+                        write_raw!(vec![$chunk.with_text(subline.into())]);
+                    } else if line_start {
+                        // if we're already at the start of the line, can't exactly push stuff to the next line;
+                        // that'd loop forever
+                        let (subline, rest_of_line) = $line.split_at(width - col - 1);
+                        $line = rest_of_line.trim_start();
+
+                        write_raw!(vec![$chunk.with_text(subline.to_string() + "-")]);
+                    } else {
+                        // if we've just finished another chunk, so it's *not* the beginning of a line, then just go
+                        // to the next line for anything that's too long
+                        // (that means we don't do anything here; this branch is just for documentation)
+                    }
+                    next_line!(false);
+                }
+                if $line.len() > 0 {
+                    write_raw!(vec![$chunk.with_text($line.into())]);
+                    #[allow(unused_assignments)] {
+                        col += $line.len();
+                        line_start = false;
+                    }
+                }
+            }
+        }
+
+        for chunk in &self.chunks {
+            let mut rest = &chunk.text[..];
+            while let Some(nl_pos) = rest.find('\n') {
+                let (mut line, new_rest) = rest.split_at(nl_pos);
+                rest = &new_rest[1..];
+
+                do_wrap!(chunk, line);
+                next_line!(true);
+            }
+            if !rest.is_empty() {
+                do_wrap!(chunk, rest);
+            } else {
+                // ended with a newline, don't bother trying to format the zero remainin characters, that'll just
+                // cause problems
+                // (so just pass on to the next line)
+            }
+        }
     }
 }
 
@@ -305,10 +424,7 @@ impl<'a> Drop for Header<'a> {
 ///
 /// Note that nothing is written until `flush` is called; all of the other methods just edit the internal state. This
 /// prevents any potential issues with flickering, partial updates being visible, etc.
-///
-/// Drop is required because *most* output will require some cleanup, e.g. resetting terminal state, and it's worth
-/// forcing it to be explicitly ignored for the few cases where it matters so I don't forget when it does.
-pub trait Screen: Drop {
+pub trait Screen {
     /// Get the size of the screen, as of this frame.
     /// (Don't worry too much about this changing midframe; hopefully resize detection will catch that)
     fn size(&self) -> XY;
@@ -323,14 +439,12 @@ pub trait Screen: Drop {
     fn flush(&mut self);
 }
 
-
-
 impl dyn Screen {
     /// Get the default screen for the current configuration. May be compiled in, may be determined at runtime.
     /// Note this is meant to be run once, at startup; it also initializes the screen which may have one-time effects
     /// (e.g. setting standard input and output to raw mode).
     pub fn get() -> Box<dyn Screen> {
-        Box::new(test::TestScreen)
+        Box::new(test::TestScreen::get())
     }
 
     /// Write a header to the screen. (Note this must be rewritten every frame!)
@@ -358,5 +472,3 @@ impl dyn Screen {
         }
     }
 }
-
-mod test;

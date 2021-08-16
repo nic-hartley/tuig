@@ -5,3 +5,4 @@ edition = "2018"
 
 [dependencies]
 paste = "1.0.5"
+rand = { version = "0.8.4", features = [ "small_rng" ] }

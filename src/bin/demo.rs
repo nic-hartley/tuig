@@ -10,6 +10,6 @@ fn main() {
         bold "textbox",
         "! Do you ",
         yellow "like {}?"("it")
-    )).pos(1, 2).first_indent(2);
+    )).pos(1, 2).first_indent(2).size(10, 1000);
     screen.flush();
 }
