@@ -13,6 +13,10 @@ use std::{fmt, ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div, DivAss
 pub struct XY(usize, usize);
 
 impl XY {
+    pub const fn tuple(&self) -> (usize, usize) {
+        (self.0, self.1)
+    }
+
     pub const fn x(&self) -> usize {
         self.0
     }
@@ -34,9 +38,22 @@ macro_rules! xy_op {
                 }
             }
 
+            impl $trait<(usize, usize)> for XY {
+                type Output = XY;
+                fn $fn(self, rhs: (usize, usize)) -> XY {
+                    XY(self.0 $op rhs.0, self.1 $op rhs.1)
+                }
+            }
+
             paste::paste! {
                 impl [< $trait Assign >] for XY {
                     fn [< $fn _assign >] (&mut self, rhs: XY) {
+                        self.0 $assn_op rhs.0;
+                        self.1 $assn_op rhs.1;
+                    }
+                }
+                impl [< $trait Assign >] <(usize, usize)> for XY {
+                    fn [< $fn _assign >] (&mut self, rhs: (usize, usize)) {
                         self.0 $assn_op rhs.0;
                         self.1 $assn_op rhs.1;
                     }
@@ -126,7 +143,7 @@ macro_rules! abbrev_debug {
                     write!(f, concat!(stringify!($always), ": {:?}, "), self.$always)?;
                 )*
                 $(
-                    write!(f, concat!(stringify!($ignore), ": ..., "))?;
+                    write!(f, concat!(stringify!($ignore), ": .., "))?;
                 )*
                 $(
                     if self.$sometimes != $default {
@@ -285,8 +302,11 @@ abbrev_debug! {
 impl<'a> Drop for Textbox<'a> {
     fn drop(&mut self) {
         let first_indent = self.first_indent.unwrap_or(self.indent);
-        let XY(width, height) = self.size;
-        let XY(x, y) = self.pos;
+        let (width, height) = self.size.tuple();
+        let (x, y) = self.pos.tuple();
+
+        assert!(width > self.indent);
+        assert!(width > first_indent);
 
         let mut col = first_indent;
         let mut line_num = 0;
@@ -439,7 +459,7 @@ pub trait Screen {
     fn do_clear(&mut self);
 }
 
-impl dyn Screen {
+impl dyn Screen + '_ {
     /// Get the default screen for the current configuration. May be compiled in, may be determined at runtime.
     /// Note this is meant to be run once, at startup; it also initializes the screen which may have one-time effects
     /// (e.g. setting standard input and output to raw mode).

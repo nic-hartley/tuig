@@ -1,6 +1,6 @@
 use std::{io::{Write, stdout}, mem};
 
-use crossterm::{execute, terminal::{self, DisableLineWrap, EnableLineWrap, EnterAlternateScreen, LeaveAlternateScreen}};
+use crossterm::{cursor::{Hide, MoveTo, Show}, execute, terminal::{self, DisableLineWrap, EnableLineWrap, EnterAlternateScreen, LeaveAlternateScreen}};
 
 use super::*;
 
@@ -15,14 +15,14 @@ pub struct AnsiScreen {
 impl AnsiScreen {
     pub fn get() -> crossterm::Result<Self> {
         terminal::enable_raw_mode()?;
-        execute!(stdout(), EnterAlternateScreen, DisableLineWrap)?;
+        execute!(stdout(), EnterAlternateScreen, DisableLineWrap, Hide)?;
         Ok(Self { texts: vec![] })
     }
 }
 
 impl Drop for AnsiScreen {
     fn drop(&mut self) {
-        execute!(stdout(), EnableLineWrap, LeaveAlternateScreen).unwrap();
+        execute!(stdout(), Show, EnableLineWrap, LeaveAlternateScreen).unwrap();
         terminal::disable_raw_mode().unwrap();
     }
 }
@@ -34,13 +34,11 @@ impl Screen for AnsiScreen {
     }
 
     fn write_raw(&mut self, text: Vec<Text>, pos: XY) {
-        let XY(width, height) = self.size();
+        let (width, height) = self.size().tuple();
         if pos.y() > height || pos.x() > width {
-            println!("entirely oob");
             return;
         }
         if self.texts.len() != height {
-            println!("had to resize terminal");
             self.texts.resize_with(height, || vec![]);
         }
 
