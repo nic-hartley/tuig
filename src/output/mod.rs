@@ -13,11 +13,11 @@ use std::{fmt, ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div, DivAss
 pub struct XY(usize, usize);
 
 impl XY {
-    pub fn x(&self) -> usize {
+    pub const fn x(&self) -> usize {
         self.0
     }
 
-    pub fn y(&self) -> usize {
+    pub const fn y(&self) -> usize {
         self.1
     }
 }
@@ -78,6 +78,14 @@ pub enum Color {
     Cyan = 6,
     White = 7,
     Default = 9,
+    BrightBlack = 60,
+    BrightRed = 61,
+    BrightGreen = 62,
+    BrightYellow = 63,
+    BrightBlue = 64,
+    BrightMagenta = 65,
+    BrightCyan = 66,
+    BrightWhite = 67,
 }
 
 /// A single bit of formatted text. Note this isn't really meant to be used on its own, though it can be; the API is
@@ -87,11 +95,8 @@ pub struct Text {
     pub text: String,
     pub fg: Color,
     pub bg: Color,
-    pub bright: bool,
     pub bold: bool,
     pub underline: bool,
-    pub italic: bool,
-    pub invert: bool,
 }
 
 macro_rules! setters {
@@ -140,11 +145,8 @@ impl Text {
             text: s,
             fg: Color::Default,
             bg: Color::Default,
-            bright: false,
             bold: false,
             underline: false,
-            italic: false,
-            invert: false,
         }
     }
 
@@ -159,9 +161,7 @@ impl Text {
         cyan => fg = Color::Cyan,       on_cyan => bg = Color::Cyan,
         white => fg = Color::White,     on_white => bg = Color::White,
         default => fg = Color::Default, on_default => bg = Color::Default,
-        bright => bright = true,        bold => bold = true,
-        underline => underline = true,  italic => italic = true,
-        invert => invert = true,
+        underline => underline = true,  bold => bold = true,
     }
 
     fn with_text(&self, new_text: String) -> Text {
@@ -176,11 +176,8 @@ abbrev_debug! {
     write text,
     if fg != Color::Default,
     if bg != Color::Default,
-    if bright != false,
     if bold != false,
     if underline != false,
-    if italic != false,
-    if invert != false,
 }
 
 macro_rules! text1 {
@@ -372,7 +369,6 @@ pub struct Header<'a> {
     selected: Option<usize>,
     profile: String,
     time: String,
-    lag: bool,
 }
 
 impl<'a> Header<'a> {
@@ -385,36 +381,35 @@ impl<'a> Header<'a> {
         profile(name: &str) => profile = name.into(),
         time(now: &str) => time = now.into(),
         selected(tab: usize) => selected = Some(tab),
-        lag(is: bool) => lag = is,
     }
 }
 
 impl<'a> Drop for Header<'a> {
     fn drop(&mut self) {
-        let mut text = Vec::with_capacity(self.tabs.len() * 3 + 2);
+        let mut text = Vec::with_capacity(self.tabs.len() * 3 + 1);
         let mut width = 0;
         for (i, (name, notifs)) in self.tabs.iter().enumerate() {
             match self.selected {
-                Some(n) if n == i => text.push(text1!(bold "{}"(name))),
-                _ => text.push(text1!("{}"(name))),
+                Some(n) if n == i => text.push(Text::of(name.into()).underline()),
+                _ => text.push(Text::of(name.into())),
             }
             if *notifs == 0 {
-                text.push(text1!("   |"));
+                text.push(text1!("   | "));
             } else if *notifs <= 9 {
-                text.extend(text!(red " {} "(notifs), "|"));
+                text.extend(text!(red " {} "(notifs), "| "));
             } else {
-                text.extend(text!(red " + ", "|"));
+                text.extend(text!(red " + ", "| "));
             }
-            width += name.len() + 5; // 5 for 3 spaces, one pipe, notifs char
+            width += name.len() + 5; // 5 for " n | "
         }
-        text.push(text1!(" you are {}"(self.profile)));
-        width += 9 + self.profile.len();
+
+        text.push(text1!("you are {}"(self.profile)));
+        width += 8 + self.profile.len();
+
+        // this weird construction ensures that, if we manually highlight the header, the whole line gets highlighted
+        // and doesn't have any weird gaps.
         let space_left = self.screen.size().x() - width;
-        if self.lag {
-            text.push(text1!(italic "{:>1$}"(self.time, space_left)));
-        } else {
-            text.push(text1!("{:>1$}"(self.time, space_left)));
-        }
+        text.push(text1!("{:>1$}"(self.time, space_left)));
         self.screen.write_raw(text, XY(0, 0));
     }
 }
@@ -424,19 +419,24 @@ impl<'a> Drop for Header<'a> {
 ///
 /// Note that nothing is written until `flush` is called; all of the other methods just edit the internal state. This
 /// prevents any potential issues with flickering, partial updates being visible, etc.
+///
+/// `flush` is called once every frame, *after* everything has rendered. It 
 pub trait Screen {
     /// Get the size of the screen, as of this frame.
-    /// (Don't worry too much about this changing midframe; hopefully resize detection will catch that)
+    /// (Don't worry too much about this changing midframe; hopefully resize detection will catch that and hide issues)
     fn size(&self) -> XY;
 
-    /// Blank out the entire screen -- no text visible, no formatting left over, etc.
-    fn clear(&mut self);
     /// Directly write some text to the screen at the position. Does the bare minimum formatting, etc. May mishandle
     /// newlines, e.g. by directly writing them to the screen. It's expected that the higher-level methods will handle
     /// that appropriately.
     fn write_raw(&mut self, text: Vec<Text>, pos: XY);
-    /// Actually display the changes.
+    /// Clear the screen and draw the next frame's worth of stuff.
     fn flush(&mut self);
+    /// Just clear the (cached write_raw) screen; used to keep the screen relatively smooth even when it's resized.
+    /// Note this **should not** actually send the clear command to the screen.
+    fn clear(&mut self);
+    /// Actually clear the screen. Used, e.g., when resizing is detected, to prevent weird shearing issues.
+    fn do_clear(&mut self);
 }
 
 impl dyn Screen {
@@ -444,6 +444,16 @@ impl dyn Screen {
     /// Note this is meant to be run once, at startup; it also initializes the screen which may have one-time effects
     /// (e.g. setting standard input and output to raw mode).
     pub fn get() -> Box<dyn Screen> {
+        if cfg!(feature = "force_out_test") {
+            return Box::new(test::TestScreen::get());
+        }
+        if cfg!(feature = "force_ansi_test") {
+            return Box::new(ansi_cli::AnsiScreen::get().expect("Failed to initialize forced ANSI CLI output."));
+        }
+
+        if let Ok(s) = ansi_cli::AnsiScreen::get() {
+            return Box::new(s);
+        }
         Box::new(test::TestScreen::get())
     }
 
@@ -456,9 +466,9 @@ impl dyn Screen {
             profile: "".into(),
             // TODO: Use an actual time type
             time: "".into(),
-            lag: false,
         }
     }
+
     /// Write a text-box to the screen.
     pub fn textbox<'a>(&'a mut self, text: Vec<Text>) -> Textbox<'a> {
         Textbox {

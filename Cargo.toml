@@ -3,6 +3,11 @@ name = "redshell"
 version = "0.0.1"
 edition = "2018"
 
+[features]
+force_out_test = []
+force_out_ansi = []
+
 [dependencies]
 paste = "1.0.5"
 rand = { version = "0.8.4", features = [ "small_rng" ] }
+crossterm = "0.20.0"
