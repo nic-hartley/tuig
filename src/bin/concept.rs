@@ -5,10 +5,46 @@ use redshell::{output::{Screen, Text, XY}, text};
 fn intro(s: &mut dyn Screen) {
     let (width, height) = s.size().tuple();
     s.textbox(text!(
-        "Hey.\nYou ever used Redshell before?\n",
-        green underline "no", "  ", red "yes",
-    )).size(width, height);
+        "??????????: Hey.\n",
+        "??????????: You ever used Redshell before?\n",
+        "> ", green underline "no", "  ", red "yes",
+    )).size(width, height).indent(12).first_indent(0);
     s.flush();
+    sleep(Duration::from_millis(1000));
+
+    s.textbox(text!(
+        "??????????: Hey.\n",
+        "??????????: You ever used Redshell before?\n",
+        "> ", green "no", "  ", red underline "yes",
+    )).size(width, height).indent(12).first_indent(0);
+    s.flush();
+    sleep(Duration::from_millis(500));
+
+    s.textbox(text!(
+        "??????????: Hey.\n",
+        "??????????: You ever used Redshell before?\n",
+        "> ", green underline "no", "  ", red "yes",
+    )).size(width, height).indent(12).first_indent(0);
+    s.flush();
+    sleep(Duration::from_millis(250));
+
+    s.textbox(text!(
+        "??????????: Hey.\n",
+        "??????????: You ever used Redshell before?\n",
+        "       you: ", green "no", "\n",
+    )).size(width, height).indent(12).first_indent(0);
+    s.flush();
+    sleep(Duration::from_millis(500));
+
+    s.textbox(text!(
+        "??????????: Hey.\n",
+        "??????????: You ever used Redshell before?\n",
+        "       you: no\n",
+        "??????????: Cool. Let me explain how it works, then. You familiar with a command line?\n",
+        "> ", green "not at all", "  ", yellow underline "a little", "  ", red "intimately"
+    )).size(width, height).indent(12).first_indent(0);
+    s.flush();
+    sleep(Duration::from_millis(500));
 }
 
 fn tabswitch(s: &mut dyn Screen) {
