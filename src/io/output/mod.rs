@@ -7,80 +7,9 @@
 mod test;
 mod ansi_cli;
 
-use std::{fmt, ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div, DivAssign}};
+use std::fmt;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
-pub struct XY(usize, usize);
-
-impl XY {
-    pub const fn tuple(&self) -> (usize, usize) {
-        (self.0, self.1)
-    }
-
-    pub const fn x(&self) -> usize {
-        self.0
-    }
-
-    pub const fn y(&self) -> usize {
-        self.1
-    }
-}
-
-macro_rules! xy_op {
-    ( $(
-        $trait:ident($fn:ident) => $op:tt $assn_op:tt
-    ),* $(,)? ) => {
-        $(
-            impl $trait for XY {
-                type Output = XY;
-                fn $fn(self, rhs: XY) -> XY {
-                    XY(self.0 $op rhs.0, self.1 $op rhs.1)
-                }
-            }
-
-            impl $trait<(usize, usize)> for XY {
-                type Output = XY;
-                fn $fn(self, rhs: (usize, usize)) -> XY {
-                    XY(self.0 $op rhs.0, self.1 $op rhs.1)
-                }
-            }
-
-            paste::paste! {
-                impl [< $trait Assign >] for XY {
-                    fn [< $fn _assign >] (&mut self, rhs: XY) {
-                        self.0 $assn_op rhs.0;
-                        self.1 $assn_op rhs.1;
-                    }
-                }
-                impl [< $trait Assign >] <(usize, usize)> for XY {
-                    fn [< $fn _assign >] (&mut self, rhs: (usize, usize)) {
-                        self.0 $assn_op rhs.0;
-                        self.1 $assn_op rhs.1;
-                    }
-                }
-            }
-        )*
-    };
-}
-
-xy_op! {
-    Add(add) => + +=,
-    Sub(sub) => - -=,
-    Mul(mul) => * *=,
-    Div(div) => / /=,
-}
-
-impl fmt::Display for XY {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({}, {})", self.0, self.1)
-    }
-}
-
-impl fmt::Debug for XY {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "XY({}, {})", self.0, self.1)
-    }
-}
+use crate::io::XY;
 
 /// The color of a piece of formatted text. Meant to be used through `Text` / `text!`. The numeric values are the ANSI
 /// color codes for each color; that's also where the actual colors are from.
@@ -116,46 +45,6 @@ pub struct Text {
     pub underline: bool,
 }
 
-macro_rules! setters {
-    ( $(
-        $name:ident $( ( $($pname:ident: $ptype:ty),* $(,)? ) )?  => $field:ident = $value:expr
-    ),* $(,)? ) => {
-        $(
-            pub fn $name(mut self $( , $( $pname: $ptype ),* )?) -> Self {
-                self.$field = $value;
-                self
-            }
-        )*
-    };
-}
-
-macro_rules! abbrev_debug {
-    (
-        $class:ident $( < $( $lt:lifetime ),* > )?;
-        $( write $always:ident, )*
-        $( ignore $ignore:ident, )*
-        $( if $sometimes:ident != $default:expr, )*
-    ) => {
-        impl $( < $( $lt ),* > )?  fmt::Debug for $class $( < $( $lt ),* > )? {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(f, concat!(stringify!($class), " {{ "))?;
-                $(
-                    write!(f, concat!(stringify!($always), ": {:?}, "), self.$always)?;
-                )*
-                $(
-                    write!(f, concat!(stringify!($ignore), ": .., "))?;
-                )*
-                $(
-                    if self.$sometimes != $default {
-                        write!(f, concat!(stringify!($sometimes), ": {:?}, "), self.$sometimes)?;
-                    }
-                )*
-                write!(f, ".. }}")
-            }
-        }
-    }
-}
-
 impl Text {
     pub fn of(s: String) -> Text {
         Text {
@@ -167,7 +56,7 @@ impl Text {
         }
     }
 
-    setters! {
+    crate::util::setters! {
         fg(c: Color) => fg = c,         bg(c: Color) => bg = c,
         black => fg = Color::Black,     on_black => bg = Color::Black,
         red => fg = Color::Red,         on_red => bg = Color::Red,
@@ -188,7 +77,7 @@ impl Text {
     }
 }
 
-abbrev_debug! {
+crate::util::abbrev_debug! {
     Text;
     write text,
     if fg != Color::Default,
@@ -280,7 +169,7 @@ pub struct Textbox<'a> {
 }
 
 impl<'a> Textbox<'a> {
-    setters! {
+    crate::util::setters! {
         pos(x: usize, y: usize) => pos = XY(x, y),
         size(x: usize, y: usize) => size = XY(x, y),
         scroll(amt: usize) => scroll = amt,
@@ -289,7 +178,7 @@ impl<'a> Textbox<'a> {
     }
 }
 
-abbrev_debug! {
+crate::util::abbrev_debug! {
     Textbox<'a>;
     ignore chunks,
     if pos != XY(0, 0),
@@ -302,8 +191,8 @@ abbrev_debug! {
 impl<'a> Drop for Textbox<'a> {
     fn drop(&mut self) {
         let first_indent = self.first_indent.unwrap_or(self.indent);
-        let (width, height) = self.size.tuple();
-        let (x, y) = self.pos.tuple();
+        let XY(width, height) = self.size;
+        let XY(x, y) = self.pos;
 
         assert!(width > self.indent);
         assert!(width > first_indent);
@@ -397,7 +286,7 @@ impl<'a> Header<'a> {
         self
     }
 
-    setters! {
+    crate::util::setters! {
         profile(name: &str) => profile = name.into(),
         time(now: &str) => time = now.into(),
         selected(tab: usize) => selected = Some(tab),

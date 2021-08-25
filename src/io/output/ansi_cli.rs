@@ -1,6 +1,8 @@
 use std::{io::{Write, stdout}, mem};
 
-use crossterm::{cursor::{Hide, MoveTo, Show}, execute, terminal::{self, DisableLineWrap, EnableLineWrap, EnterAlternateScreen, LeaveAlternateScreen}};
+use crossterm::{cursor::{Hide, Show}, execute, terminal::{self, Clear, ClearType, DisableLineWrap, EnableLineWrap, EnterAlternateScreen, LeaveAlternateScreen}};
+
+use crate::io::XY;
 
 use super::*;
 
@@ -15,14 +17,24 @@ pub struct AnsiScreen {
 impl AnsiScreen {
     pub fn get() -> crossterm::Result<Self> {
         terminal::enable_raw_mode()?;
-        execute!(stdout(), EnterAlternateScreen, DisableLineWrap, Hide)?;
+        execute!(stdout(),
+            EnterAlternateScreen,
+            DisableLineWrap,
+            Hide,
+            Clear(ClearType::All)
+        )?;
         Ok(Self { texts: vec![] })
     }
 }
 
 impl Drop for AnsiScreen {
     fn drop(&mut self) {
-        execute!(stdout(), Show, EnableLineWrap, LeaveAlternateScreen).unwrap();
+        execute!(stdout(),
+            Clear(ClearType::All),
+            Show,
+            EnableLineWrap,
+            LeaveAlternateScreen
+        ).unwrap();
         terminal::disable_raw_mode().unwrap();
     }
 }
@@ -34,7 +46,7 @@ impl Screen for AnsiScreen {
     }
 
     fn write_raw(&mut self, text: Vec<Text>, pos: XY) {
-        let (width, height) = self.size().tuple();
+        let XY(width, height) = self.size();
         if pos.y() > height || pos.x() > width {
             return;
         }
@@ -43,7 +55,7 @@ impl Screen for AnsiScreen {
         }
 
         // TODO: Trim overlaps and actually ensure things are sorted
-        // (for now it just takes advantage of timing to avoid issues)
+        // (for now it just takes advantage of 'timing' to avoid issues)
         let mut col = pos.x();
         for t in text {
             if col >= width {
@@ -65,7 +77,10 @@ impl Screen for AnsiScreen {
             // TODO: update to use crossterm properly
             write!(out, "\n").unwrap();
             for (pos, text) in line {
-                write!(out, "\x1b[{}G\x1b[{};{};{};{}m{}",
+                // TODO: minimize the changes and data sent
+                // (e.g. calculate distance, pick spaces or escape codes)
+                // (e.g. detect what's staying the same and don't re-set it)
+                write!(out, "\x1b[{}G\x1b[0;{};{};{};{}m{}",
                     pos + 1,
                     text.fg as usize + 30,
                     text.bg as usize + 40,

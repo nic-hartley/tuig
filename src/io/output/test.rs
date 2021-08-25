@@ -1,8 +1,8 @@
-use crate::output::XY;
+use crate::io::XY;
 
 use super::Text;
 
-const SIZE: XY = super::XY(80, 24);
+const SIZE: XY = XY(80, 24);
 
 pub struct TestScreen {
     chars: [char; SIZE.x() * SIZE.y()],
