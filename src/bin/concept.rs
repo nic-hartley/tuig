@@ -142,7 +142,8 @@ fn tabswitch(s: &mut dyn Screen) {
     s.textbox(text!(bold "TODO", ": tabswitch")).pos(1, 1).size(1000, 1000);
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let concepts = {
         let mut map: HashMap<&str, fn(&mut dyn Screen)> = HashMap::new();
         map.insert("intro", intro);
