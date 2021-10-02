@@ -1,11 +1,13 @@
 //! Displays the chat window.
 
-use std::mem;
+use std::{collections::BTreeSet, mem};
 
 use crate::{GameState, io::{Action, Key, Screen}};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 struct DM {
+    /// The name of the person we're having a conversation with
+    target: String,
     /// The actual messages in this DM; (by_player, contents)
     msgs: Vec<(bool, String)>,
     /// How many messages have piled up since the player last looked at this chat
@@ -13,10 +15,10 @@ struct DM {
     /// The current options available in this DM
     // TODO: Replace this with something real
     options: Vec<String>,
-    /// The name of the person we're having a conversation with
-    target: String,
     /// Which option is selected (will be zero if there's no options)
     sel: usize,
+    /// Whether the DM is still open or whether they've closed it
+    open: bool,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -25,6 +27,8 @@ pub struct ChatApp {
     dms: Vec<DM>,
     /// Which DM they're currently looking at
     current_dm: usize,
+    /// The other people this one has blocked
+    blocked: BTreeSet<String>,
 }
 
 impl ChatApp {
@@ -75,14 +79,33 @@ impl super::App for ChatApp {
     fn on_event(&mut self, evs: &[String]) {
         for ev in evs {
             let (sender, rest) = ev.split_once(':').unwrap();
-            let (message, options) = ev.split_once(':').unwrap();
-            let options = options.split(',').collect::<Vec<_>>();
-            
+            if self.blocked.contains(sender) {
+                continue;
+            }
+            let (message, options) = rest.split_once(':').unwrap();
+            let options = options.split(',').map(|s| s.to_string()).collect();
+            match self.dms.iter_mut().find(|d| d.target == sender) {
+                Some(dm) => {
+                    dm.msgs.push((false, message.into()));
+                    dm.options = options;
+                    dm.open = true;
+                }
+                None => {
+                    self.dms.push(DM {
+                        msgs: vec![(false, message.into())],
+                        options,
+                        sel: 0,
+                        target: sender.into(),
+                        unread: 1,
+                        open: true,
+                    })
+                }
+            }
         }
     }
 
     fn notifs(&self) -> usize {
-        self.dms.iter().map(|dm| dm.unread).sum()
+        self.dms.iter().filter(|dm| dm.open).map(|dm| dm.unread).sum()
     }
 
     fn render(&self, state: &GameState, screen: &dyn Screen) {
@@ -102,6 +125,7 @@ mod tests {
         ChatApp {
             dms: vec![],
             current_dm: 0,
+            blocked: BTreeSet::new(),
         }
     }
 
@@ -112,7 +136,8 @@ mod tests {
             target: "targette".into(),
             unread: 0,
             options: vec![],
-            sel: 0
+            sel: 0,
+            open: true,
         }
     }
 
@@ -120,13 +145,10 @@ mod tests {
     fn app_dm(options: &[&str], sel: usize) -> ChatApp {
         ChatApp {
             dms: vec![DM {
-                msgs: vec![],
-                target: "targette".into(),
-                unread: 0,
                 options: options.iter().map(|s| s.to_string()).collect(),
-                sel: sel,
+                ..dm()
             }],
-            current_dm: 0,
+            ..app()
         }
     }
 
