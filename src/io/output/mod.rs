@@ -330,6 +330,64 @@ impl<'a> Drop for Header<'a> {
     }
 }
 
+pub struct Vertical<'a> {
+    screen: &'a mut dyn Screen,
+    col: usize,
+    // would love to use a range but they're fucked in Rust
+    start: Option<usize>,
+    end: Option<usize>,
+    char: char,
+}
+
+impl<'a> Vertical<'a> {
+    crate::util::setters! {
+        char(ch: char) => char = ch,
+    }
+}
+
+crate::util::abbrev_debug! {
+    Vertical<'a>;
+    write col,
+    if start != None,
+    if end != None,
+    if char != '|',
+}
+
+impl<'a> Drop for Vertical<'a> {
+    fn drop(&mut self) {
+        todo!()
+    }
+}
+
+pub struct Horizontal<'a> {
+    screen: &'a mut dyn Screen,
+    row: usize,
+    // would love to use a range but they're fucked in Rust
+    start: Option<usize>,
+    end: Option<usize>,
+    char: char,
+}
+
+impl<'a> Horizontal<'a> {
+    crate::util::setters! {
+        char(ch: char) => char = ch,
+    }
+}
+
+crate::util::abbrev_debug! {
+    Horizontal<'a>;
+    write row,
+    if start != None,
+    if end != None,
+    if char != '-',
+}
+
+impl<'a> Drop for Horizontal<'a> {
+    fn drop(&mut self) {
+        todo!()
+    }
+}
+
 /// The single common interface for all the various different screens -- to a console, to a GUI, etc. It also allows
 /// for querying some metadata: size, etc. The Screen defines the *actual representation* of each color,
 ///
@@ -342,6 +400,11 @@ pub trait Screen {
     /// (Don't worry too much about this changing midframe; hopefully resize detection will catch that and hide issues)
     fn size(&self) -> XY;
 
+    /// Directly write a single text element to the screen. By default, just calls [`Screen::write_raw`] with a single
+    /// element [`Vec`], but should generally be overridden to avoid the Vec overhead when reasonable.
+    fn write_raw_single(&mut self, text: Text, pos: XY) {
+        self.write_raw(vec![text], pos)
+    }
     /// Directly write some text to the screen at the position. Does the bare minimum formatting, etc. May mishandle
     /// special chars, e.g. by directly writing them to the console. It's expected that the higher-level methods will
     /// handle that appropriately.
@@ -395,6 +458,26 @@ impl dyn Screen + '_ {
             scroll: 0,
             indent: 0,
             first_indent: None,
+        }
+    }
+
+    pub fn vertical<'a>(&'a mut self, col: usize) -> Vertical<'a> {
+        Vertical {
+            screen: self,
+            col,
+            start: None,
+            end: None,
+            char: '|',
+        }
+    }
+
+    pub fn horizontal<'a>(&'a mut self, row: usize) -> Horizontal<'a> {
+        Horizontal {
+            screen: self,
+            row,
+            start: None,
+            end: None,
+            char: '-',
         }
     }
 }

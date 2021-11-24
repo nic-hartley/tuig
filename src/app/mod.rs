@@ -20,7 +20,7 @@ trait App {
     /// The number of notifications this app has.
     fn notifs(&self) -> usize;
     /// Display the game state on screen.
-    fn render(&self, state: &GameState, screen: &dyn Screen);
+    fn render(&self, state: &GameState, screen: &mut dyn Screen);
 }
 
 mod chat;
