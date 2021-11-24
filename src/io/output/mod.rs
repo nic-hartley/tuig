@@ -201,14 +201,6 @@ impl<'a> Drop for Textbox<'a> {
         let mut line_num = 0;
         let mut line_start = true;
 
-        macro_rules! next_line {
-            ($new_para:expr) => {
-                line_num += 1;
-                line_start = true;
-                col = if $new_para { first_indent } else { self.indent };
-            }
-        }
-
         macro_rules! write_raw {
             ($text:expr) => {
                 if line_num >= self.scroll && line_num - self.scroll < height {
@@ -217,6 +209,14 @@ impl<'a> Drop for Textbox<'a> {
                         XY(x + col, y + line_num - self.scroll)
                     );
                 }
+            }
+        }
+
+        macro_rules! next_line {
+            ($new_para:expr) => {
+                line_num += 1;
+                line_start = true;
+                col = if $new_para { first_indent } else { self.indent };
             }
         }
 
@@ -264,9 +264,8 @@ impl<'a> Drop for Textbox<'a> {
             if !rest.is_empty() {
                 do_wrap!(chunk, rest);
             } else {
-                // ended with a newline, don't bother trying to format the zero remainin characters, that'll just
-                // cause problems
-                // (so just pass on to the next line)
+                // ended with a newline, don't bother trying to format the zero remaining characters, that'll just
+                // cause problems (so just pass on to the next line)
             }
         }
     }
@@ -291,6 +290,14 @@ impl<'a> Header<'a> {
         time(now: &str) => time = now.into(),
         selected(tab: usize) => selected = Some(tab),
     }
+}
+
+crate::util::abbrev_debug! {
+    Header<'a>;
+    if tabs != vec![],
+    write selected,
+    write profile,
+    write time,
 }
 
 impl<'a> Drop for Header<'a> {
@@ -336,8 +343,8 @@ pub trait Screen {
     fn size(&self) -> XY;
 
     /// Directly write some text to the screen at the position. Does the bare minimum formatting, etc. May mishandle
-    /// newlines, e.g. by directly writing them to the screen. It's expected that the higher-level methods will handle
-    /// that appropriately.
+    /// special chars, e.g. by directly writing them to the console. It's expected that the higher-level methods will
+    /// handle that appropriately.
     fn write_raw(&mut self, text: Vec<Text>, pos: XY);
     /// Clear the screen and draw the next frame's worth of stuff.
     fn flush(&mut self);
