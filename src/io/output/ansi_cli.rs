@@ -45,10 +45,6 @@ impl Screen for AnsiScreen {
         XY(x as usize, y as usize)
     }
 
-    fn write_raw_single(&mut self, text: Text, pos: XY) {
-        todo!()
-    }
-
     fn write_raw(&mut self, text: Vec<Text>, pos: XY) {
         let XY(width, height) = self.size();
         if pos.y() > height || pos.x() > width {

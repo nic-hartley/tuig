@@ -355,7 +355,11 @@ crate::util::abbrev_debug! {
 
 impl<'a> Drop for Vertical<'a> {
     fn drop(&mut self) {
-        todo!()
+        let start_y = self.start.unwrap_or(0);
+        let end_y = self.end.unwrap_or(self.screen.size().y());
+        for y in start_y..end_y {
+            self.screen.write_raw_single(Text::of(self.char.to_string()), XY(self.col, y));
+        }
     }
 }
 
@@ -384,7 +388,10 @@ crate::util::abbrev_debug! {
 
 impl<'a> Drop for Horizontal<'a> {
     fn drop(&mut self) {
-        todo!()
+        let start_x = self.start.unwrap_or(0);
+        let end_x = self.end.unwrap_or(self.screen.size().x());
+        let text = self.char.to_string().repeat(end_x - start_x);
+        self.screen.write_raw_single(Text::of(text), XY(start_x, self.row));
     }
 }
 
@@ -429,7 +436,6 @@ impl dyn Screen + '_ {
         if cfg!(feature = "force_ansi_test") {
             return Box::new(ansi_cli::AnsiScreen::get().expect("Failed to initialize forced ANSI CLI output."));
         }
-
         if let Ok(s) = ansi_cli::AnsiScreen::get() {
             return Box::new(s);
         }
