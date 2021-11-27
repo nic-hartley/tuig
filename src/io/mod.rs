@@ -85,5 +85,7 @@ impl Into<(usize, usize)> for XY {
 
 mod input;
 pub use input::*;
+pub use input::test as input_test;
 mod output;
 pub use output::*;
+pub use output::test as output_test;

@@ -4,7 +4,7 @@
 //! - Add the relevant implementation of `Screen`, in a new submodule
 //! - Modify `Screen::get` to properly detect and handle the new screen type, with `cfg!` or runtime checks
 
-mod test;
+pub mod test;
 mod ansi_cli;
 
 use std::fmt;
@@ -56,6 +56,10 @@ impl Text {
         }
     }
 
+    pub fn plain(s: &str) -> Text {
+        Text::of(s.into())
+    }
+
     crate::util::setters! {
         fg(c: Color) => fg = c,         bg(c: Color) => bg = c,
         black => fg = Color::Black,     on_black => bg = Color::Black,
@@ -105,7 +109,7 @@ macro_rules! text {
     ),+ $(,)? ) => {
         vec![
             $(
-                Text::of(
+                $crate::io::Text::of(
                     format!( $text $(, $( $arg ),* )? )
                 ) $( . $name () )*
             ),+
@@ -162,16 +166,24 @@ pub struct Textbox<'a> {
     screen: &'a mut dyn Screen,
     chunks: Vec<Text>,
     pos: XY,
-    size: XY,
+    width: Option<usize>,
+    height: Option<usize>,
     scroll: usize,
     indent: usize,
     first_indent: Option<usize>,
 }
 
 impl<'a> Textbox<'a> {
+    pub fn size(mut self, x: usize, y: usize) -> Self {
+        self.width = Some(x);
+        self.height = Some(y);
+        self
+    }
+
     crate::util::setters! {
         pos(x: usize, y: usize) => pos = XY(x, y),
-        size(x: usize, y: usize) => size = XY(x, y),
+        width(w: usize) => width = Some(w),
+        height(h: usize) => height = Some(h),
         scroll(amt: usize) => scroll = amt,
         indent(amt: usize) => indent = amt,
         first_indent(amt: usize) => first_indent = Some(amt),
@@ -182,7 +194,8 @@ crate::util::abbrev_debug! {
     Textbox<'a>;
     ignore chunks,
     if pos != XY(0, 0),
-    if size != XY(0, 0),
+    if width != None,
+    if height != None,
     if scroll != 0,
     if indent != 0,
     if first_indent != None,
@@ -191,8 +204,11 @@ crate::util::abbrev_debug! {
 impl<'a> Drop for Textbox<'a> {
     fn drop(&mut self) {
         let first_indent = self.first_indent.unwrap_or(self.indent);
-        let XY(width, height) = self.size;
         let XY(x, y) = self.pos;
+
+        let screen_size = self.screen.size();
+        let width = self.width.unwrap_or(screen_size.x() - x);
+        let height = self.height.unwrap_or(screen_size.y() - y);
 
         assert!(width > self.indent);
         assert!(width > first_indent);
@@ -280,6 +296,7 @@ pub struct Header<'a> {
 }
 
 impl<'a> Header<'a> {
+    /// Add a tab to the header being rendered this frame
     pub fn tab(mut self, name: &str, notifs: usize) -> Self {
         self.tabs.push((name.into(), notifs));
         self
@@ -341,6 +358,8 @@ pub struct Vertical<'a> {
 
 impl<'a> Vertical<'a> {
     crate::util::setters! {
+        start(y: usize) => start = Some(y),
+        end(y: usize) => end = Some(y),
         char(ch: char) => char = ch,
     }
 }
@@ -374,6 +393,8 @@ pub struct Horizontal<'a> {
 
 impl<'a> Horizontal<'a> {
     crate::util::setters! {
+        start(x: usize) => start = Some(x),
+        end(x: usize) => end = Some(x),
         char(ch: char) => char = ch,
     }
 }
@@ -422,7 +443,7 @@ pub trait Screen {
     /// Note this **should not** actually send the clear command to the screen.
     fn clear(&mut self);
     /// Actually clear the screen. Used, e.g., when resizing is detected, to prevent weird shearing issues.
-    fn do_clear(&mut self);
+    fn clear_raw(&mut self);
 }
 
 impl dyn Screen + '_ {
@@ -460,7 +481,8 @@ impl dyn Screen + '_ {
             screen: self,
             chunks: text,
             pos: XY(0, 0),
-            size: XY(0, 0),
+            width: None,
+            height: None,
             scroll: 0,
             indent: 0,
             first_indent: None,

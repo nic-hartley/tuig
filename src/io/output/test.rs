@@ -56,7 +56,7 @@ impl super::Screen for TestScreen {
         self.chars = [' '; SIZE.x() * SIZE.y()];
     }
 
-    fn do_clear(&mut self) {
+    fn clear_raw(&mut self) {
         println!("Really clearing screen");
     }
 }

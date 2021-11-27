@@ -2,7 +2,7 @@
 
 use std::{thread::sleep, time::Duration};
 
-use redshell::{io::{Screen, Text}, text};
+use redshell::{io::Screen, text};
 
 fn main() {
     let mut screen = <dyn Screen>::get();

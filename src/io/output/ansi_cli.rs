@@ -97,7 +97,7 @@ impl Screen for AnsiScreen {
         self.texts.clear()
     }
 
-    fn do_clear(&mut self) {
+    fn clear_raw(&mut self) {
         stdout().write_all("\x1b[2J".as_bytes()).unwrap();
     }
 }

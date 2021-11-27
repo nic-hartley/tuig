@@ -1,11 +1,13 @@
 pub mod io;
 pub mod app;
+pub mod constants;
 mod util;
 
 /// The current state of the game, including the state of the UI.
+#[derive(PartialEq, Eq, Clone, Debug, Default)]
 pub struct GameState {
     /// The player's name, of course
-    player_name: String,
+    pub player_name: String,
     /// The apps currently available (in order of tabs)
-    apps: Vec<app::Apps>,
+    pub apps: Vec<app::Apps>,
 }

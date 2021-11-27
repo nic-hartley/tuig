@@ -6,7 +6,7 @@ use crate::{GameState, io::{Action, Screen}};
 /// Apps are only given input and rendered when they're on-screen, but they receive all events. Note, though, that
 /// events may be batched when the app is offscreen, so that systems and the onscreen app can be updated on time.
 #[enum_dispatch::enum_dispatch]
-trait App {
+pub trait App {
     // TODO: Replace String with actual events
 
     /// The name of this app's tab in the header. (should be constant, hence &'static)
@@ -24,9 +24,10 @@ trait App {
 }
 
 mod chat;
-use chat::ChatApp;
+pub use chat::ChatApp;
 
 #[enum_dispatch::enum_dispatch(App)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Apps {
     ChatApp,
 }

@@ -2,7 +2,7 @@
 
 use std::{collections::BTreeSet, mem};
 
-use crate::{GameState, io::{Action, Key, Screen}};
+use crate::{GameState, constants::{gameplay::MAX_USERNAME, graphics::HEADER_HEIGHT}, io::{Action, Key, Screen, Text}};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 struct DM {
@@ -21,7 +21,7 @@ struct DM {
     open: bool,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, Clone, Debug, Default)]
 pub struct ChatApp {
     /// The DMs the player has going
     dms: Vec<DM>,
@@ -34,6 +34,10 @@ pub struct ChatApp {
 impl ChatApp {
     fn dm(&self) -> &DM {
         &self.dms[self.current_dm]
+    }
+
+    fn clear_current_unread(&mut self) {
+        self.dms[self.current_dm].unread = 0;
     }
 }
 
@@ -52,41 +56,53 @@ impl super::App for ChatApp {
                 if self.dm().sel > 0 {
                     self.dms[self.current_dm].sel -= 1
                 }
-                vec![]
             }
             Key::Right => {
                 if self.dm().sel < self.dm().options.len() - 1 {
                     self.dms[self.current_dm].sel += 1
                 }
-                vec![]
             }
             Key::Enter => {
-                if self.dm().options.is_empty() {
-                    vec![]
-                } else {
+                if !self.dm().options.is_empty() {
                     let dm = &mut self.dms[self.current_dm];
                     let mut options = mem::replace(&mut dm.options, vec![]);
                     let selected = options.remove(dm.sel);
                     let res = format!("{}:{}", dm.target, selected);
                     dm.msgs.push((true, selected));
-                    vec![res]
+                    return vec![res];
                 }
             }
-            _ => vec![],
-        }
+            Key::Up => {
+                if self.current_dm > 0 {
+                    self.current_dm -= 1;
+                }
+                self.clear_current_unread();
+            }
+            Key::Down => {
+                if self.current_dm < self.dms.len() - 1 {
+                    self.current_dm += 1;
+                }
+                self.clear_current_unread();
+            }
+            _ => ()
+        };
+        vec![]
     }
 
     fn on_event(&mut self, evs: &[String]) {
         for ev in evs {
             let (sender, rest) = ev.split_once(':').unwrap();
+            let (message, options) = rest.split_once(':').unwrap();
             if self.blocked.contains(sender) {
                 continue;
             }
-            let (message, options) = rest.split_once(':').unwrap();
             let options = options.split(',').map(|s| s.to_string()).collect();
-            match self.dms.iter_mut().find(|d| d.target == sender) {
-                Some(dm) => {
+            match self.dms.iter_mut().enumerate().find(|(_, d)| d.target == sender) {
+                Some((i, dm)) => {
                     dm.msgs.push((false, message.into()));
+                    if i != self.current_dm {
+                        dm.unread += 1;
+                    }
                     dm.options = options;
                     dm.open = true;
                 }
@@ -102,14 +118,73 @@ impl super::App for ChatApp {
                 }
             }
         }
+        self.clear_current_unread();
     }
 
     fn notifs(&self) -> usize {
         self.dms.iter().filter(|dm| dm.open).map(|dm| dm.unread).sum()
     }
 
-    fn render(&self, state: &GameState, screen: &dyn Screen) {
-        todo!()
+    fn render(&self, state: &GameState, screen: &mut dyn Screen) {
+        let size = screen.size();
+        // The width of the side pane, including the vertical divider.
+        let list_pane_size = (size.x() / 10).clamp(15, 30);
+
+        if !self.dms.is_empty() {
+            let dm = self.dm();
+            // per message: 1 for name, 1 for colon, 1 for message contents, 1 for newline
+            // plus 1 + 2 * current_dm.options.len() for the options line including spaces between
+            // TODO: update messages to be Vec<Text>, and update this expression accordingly
+            let chunks = dm.msgs.iter().map(|_| 1 + 1 + 1 + 1).sum::<usize>() + dm.options.len() * 2;
+            let mut output = Vec::with_capacity(chunks);
+            for (from_player, text) in &dm.msgs {
+                let name = if *from_player {
+                    Text::of(format!("{0:>1$}", state.player_name, MAX_USERNAME))
+                } else {
+                    Text::of(format!("{0:>1$}", dm.target, MAX_USERNAME)).cyan()
+                };
+                output.push(name);
+                output.push(Text::plain(": "));
+                output.push(Text::plain(text));
+                output.push(Text::plain("\n"));
+            }
+            for (i, opt) in dm.options.iter().enumerate() {
+                if i == 0 {
+                    output.push(Text::of(format!("{0:>1$}   ", ">", MAX_USERNAME)));
+                } else {
+                    output.push(Text::plain("   "));
+                }
+                if i == dm.sel {
+                    output.push(Text::plain(opt).underline());
+                } else {
+                    output.push(Text::plain(opt));
+                }
+            }
+            screen.textbox(output).pos(0, HEADER_HEIGHT).width(size.x() - list_pane_size);
+        }
+
+        screen.vertical(size.x() - list_pane_size).start(HEADER_HEIGHT);
+        let mut names = Vec::with_capacity(2 * self.dms.len());
+        for (i, dm) in self.dms.iter().enumerate() {
+            if !dm.open {
+                continue;
+            }
+            if dm.unread == 0 {
+                names.push(Text::plain("   "));
+            } else if dm.unread > 9 {
+                names.push(Text::plain(" + ").red());
+            } else {
+                names.push(Text::of(format!(" {} ", dm.unread)).red());
+            }
+            if i == self.current_dm {
+                names.push(Text::of(format!("{}\n", dm.target)).underline())
+            } else {
+                names.push(Text::of(format!("{}\n", dm.target)));
+            }
+        }
+        screen.textbox(names)
+            .pos(size.x() - list_pane_size + 1, HEADER_HEIGHT)
+            .width(list_pane_size + 1);
     }
 }
 
