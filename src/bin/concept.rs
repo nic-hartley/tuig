@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env::args, io::{Write, stdout}, thread::sleep, time::Duration};
 
-use redshell::{io::{Screen, Text, XY}, text};
+use redshell::{io::{Screen, Text, XY, Action, Key}, text, app::{ChatApp, App}, GameState};
 
 // TODO: Any more convenient way to do 'frames' than this? Gotta be...
 
@@ -138,8 +138,66 @@ fn intro(s: &mut dyn Screen) {
     }
 }
 
-fn tabswitch(s: &mut dyn Screen) {
-    s.textbox(text!(bold "TODO", ": tabswitch")).pos(1, 1).size(1000, 1000);
+fn chat_demo(s: &mut dyn Screen) {
+    let mut app = ChatApp::default();
+    let state = GameState {
+        player_name: "player".into(),
+        apps: vec![],
+    };
+    let frames: Vec<(&[&'static str], &[Action])> = vec![
+        (&[
+            "alice:hello there:hi,hello,sup",
+        ], &[]),
+        (&[
+            "bob:so:",
+        ], &[
+            Action::KeyPress { key: Key::Right, ctrl: false, alt: false, shift: false },
+        ]),
+        (&[
+            "alice:buddy:hi,hello,sup",
+        ], &[
+            Action::KeyPress { key: Key::Right, ctrl: false, alt: false, shift: false },
+        ]),
+        (&[], &[
+            Action::KeyPress { key: Key::Enter, ctrl: false, alt: false, shift: false },
+        ]),
+        (&[
+            "bob:hi friend:",
+            "charlie:asdfasdfasdfadsf:",
+            "charlie:adskfljalksdjasldkf:",
+            "bob:u up?:yes,no",
+        ], &[]),
+        (&[
+            "alice:so:",
+        ], &[
+            Action::KeyPress { key: Key::Down, ctrl: false, alt: false, shift: false },
+        ]),
+        (&[
+            "alice:uh:",
+            "bob:hello?:yes hello,no goodbye",
+            "alice:what's the deal with airline tickets:",
+        ], &[]),
+        (&[], &[
+            Action::KeyPress { key: Key::Up, ctrl: false, alt: false, shift: false },
+        ]),
+    ];
+    for (chats, inputs) in frames {
+        for chat in chats.into_iter() {
+            app.on_event(&[chat.to_string()]);
+        }
+        for input in inputs.into_iter() {
+            app.input(input.clone());
+        }
+        app.render(&state, s);
+        s.textbox(text!(
+            "This is a ", bold red "demo", " of the chatbox. No input necessary."
+        ))
+            .pos(0, 0)
+            .height(1);
+        s.flush();
+        sleep(Duration::from_millis(1000));
+    }
+    sleep(Duration::from_secs(1));
 }
 
 #[tokio::main]
@@ -147,7 +205,7 @@ async fn main() {
     let concepts = {
         let mut map: HashMap<&str, fn(&mut dyn Screen)> = HashMap::new();
         map.insert("intro", intro);
-        map.insert("tabswitch", tabswitch);
+        map.insert("chat-demo", chat_demo);
         map
     };
 
