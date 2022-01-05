@@ -13,7 +13,7 @@ use crate::io::XY;
 
 /// The color of a piece of formatted text. Meant to be used through `Text` / `text!`. The numeric values are the ANSI
 /// color codes for each color; that's also where the actual colors are from.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Color {
     Black = 0,
     Red = 1,
@@ -34,6 +34,37 @@ pub enum Color {
     BrightWhite = 67,
 }
 
+impl Color {
+    /// All of the colors supported, not including [`Color::Default`] (because that's to reset, not a real color
+    pub fn all() -> [Color; 16] {
+        [
+            Color::Black,   Color::BrightBlack,
+            Color::Red,     Color::BrightRed,
+            Color::Green,   Color::BrightGreen,
+            Color::Yellow,  Color::BrightYellow,
+            Color::Blue,    Color::BrightBlue,
+            Color::Magenta, Color::BrightMagenta,
+            Color::Cyan,    Color::BrightCyan,
+            Color::White,   Color::BrightWhite,
+        ]
+    }
+
+    /// The name of the color as a string
+    pub fn name(&self) -> &'static str {
+        match self {
+            Color::Black => "black",        Color::BrightBlack => "bright black",
+            Color::Red => "red",            Color::BrightRed => "bright red",
+            Color::Green => "green",        Color::BrightGreen => "bright green",
+            Color::Yellow => "yellow",      Color::BrightYellow => "bright yellow",
+            Color::Blue => "blue",          Color::BrightBlue => "bright blue",
+            Color::Magenta => "magenta",    Color::BrightMagenta => "bright magenta",
+            Color::Cyan => "cyan",          Color::BrightCyan => "bright cyan",
+            Color::White => "white",        Color::BrightWhite => "bright white",
+            Color::Default => "default",
+        }
+    }
+}
+
 /// A single bit of formatted text. Note this isn't really meant to be used on its own, though it can be; the API is
 /// designed to be used through `text!`. To discourage direct use, the internals aren't documented.
 #[derive(Clone)]
@@ -43,6 +74,7 @@ pub struct Text {
     pub bg: Color,
     pub bold: bool,
     pub underline: bool,
+    pub invert: bool,
 }
 
 impl Text {
@@ -53,6 +85,7 @@ impl Text {
             bg: Color::Default,
             bold: false,
             underline: false,
+            invert: false,
         }
     }
 
@@ -72,6 +105,7 @@ impl Text {
         white => fg = Color::White,     on_white => bg = Color::White,
         default => fg = Color::Default, on_default => bg = Color::Default,
         underline => underline = true,  bold => bold = true,
+        invert => invert = true,
     }
 
     fn with_text(&self, new_text: String) -> Text {
@@ -454,7 +488,7 @@ impl dyn Screen + '_ {
         if cfg!(feature = "force_out_test") {
             return Box::new(test::TestScreen::get());
         }
-        if cfg!(feature = "force_ansi_test") {
+        if cfg!(feature = "force_out_ansi") {
             return Box::new(ansi_cli::AnsiScreen::get().expect("Failed to initialize forced ANSI CLI output."));
         }
         if let Ok(s) = ansi_cli::AnsiScreen::get() {

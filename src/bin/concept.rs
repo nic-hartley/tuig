@@ -1,10 +1,43 @@
 use std::{collections::HashMap, env::args, io::{Write, stdout}, thread::sleep, time::Duration};
 
-use redshell::{io::{Screen, Text, XY, Action, Key}, text, app::{ChatApp, App}, GameState};
+use redshell::{io::{Screen, Text, XY, Action, Key, Color}, text, app::{ChatApp, App}, GameState};
 
-// TODO: Any more convenient way to do 'frames' than this? Gotta be...
+fn render_demo(s: &mut dyn Screen) {
+    s.horizontal(1);
+    s.vertical(0);
+    let mut texts = Vec::new();
+    for fg in Color::all() {
+        texts.push(Text::of(format!("{} on:\n", fg.name())));
+        let amt = Color::all().len();
+        const LINES: usize = 2;
+        for (i, bg) in IntoIterator::into_iter(Color::all()).enumerate() {
+            let text = Text::of(format!("{}", bg.name()))
+                .fg(fg).bg(bg);
+            texts.push(text);
+            if i % (amt / LINES) == amt / LINES - 1 {
+                texts.push(Text::plain("\n"));
+            } else if i < amt - 1 {
+                texts.push(Text::plain(" "));
+            }
+        }
+    }
+
+    texts.extend(text!("\n", underline "underline", " ", bold "bold", " ", invert "invert", " "));
+
+    s.textbox(texts).pos(1, 2);
+    s.header()
+        .tab("tab", 1)
+        .tab("tab", 2)
+        .selected(1)
+        .profile("watching the render concept")
+        .time("the time is now");
+    s.flush();
+    // 2 second wait outside of this so wait 10s total
+    sleep(Duration::from_secs(8));
+}
 
 fn intro(s: &mut dyn Screen) {
+    // TODO: Any more convenient way to do 'frames' than this? Gotta be...
     let frames: Vec<(Vec<(&str, usize)>, Vec<Text>, usize)> = vec![
         (vec![], text!(
             "??????????: Hey.\n",
@@ -204,6 +237,7 @@ fn chat_demo(s: &mut dyn Screen) {
 async fn main() {
     let concepts = {
         let mut map: HashMap<&str, fn(&mut dyn Screen)> = HashMap::new();
+        map.insert("render-demo", render_demo);
         map.insert("intro", intro);
         map.insert("chat-demo", chat_demo);
         map

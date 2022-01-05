@@ -23,6 +23,21 @@ impl AnsiScreen {
             Hide,
             Clear(ClearType::All)
         )?;
+        std::panic::set_hook(Box::new(|i| {
+            let _ = execute!(stdout(),
+                Clear(ClearType::All),
+                Show,
+                EnableLineWrap,
+                LeaveAlternateScreen
+            );
+            println!("{}", i);
+            let _ = execute!(stdout(),
+                EnterAlternateScreen,
+                DisableLineWrap,
+                Hide,
+                Clear(ClearType::All)
+            );
+        }));
         Ok(Self { texts: vec![] })
     }
 }
@@ -80,12 +95,13 @@ impl Screen for AnsiScreen {
                 // TODO: minimize the changes and data sent
                 // (e.g. calculate distance, pick spaces or escape codes)
                 // (e.g. detect what's staying the same and don't re-set it)
-                write!(out, "\x1b[{}G\x1b[0;{};{};{};{}m{}",
+                write!(out, "\x1b[{}G\x1b[0;{};{};{};{}{}m{}",
                     pos + 1,
                     text.fg as usize + 30,
                     text.bg as usize + 40,
                     if text.bold { 1 } else { 22 },
                     if text.underline { 4 } else { 24 },
+                    if text.invert { ";7" } else { "" },
                     text.text,
                 ).unwrap();
             }
