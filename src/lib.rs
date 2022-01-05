@@ -1,4 +1,5 @@
 pub mod io;
+pub mod event;
 pub mod app;
 pub mod constants;
 mod util;

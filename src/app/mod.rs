@@ -1,4 +1,4 @@
-use crate::{GameState, io::{Action, Screen}};
+use crate::{GameState, io::{Action, Screen}, event::Event};
 
 /// Each app is a single tab in the game's window view, e.g. chat. They exclusively handle IO: Processing user input
 /// and rendering (part of) game state.
@@ -15,7 +15,7 @@ pub trait App {
     /// Take a single input action, returning any new events generated as a result.
     fn input(&mut self, a: Action) -> Vec<String>;
     /// Receive at least one event, to update the rendered game state.
-    fn on_event(&mut self, evs: &[String]);
+    fn on_event(&mut self, evs: &[Event]);
 
     /// The number of notifications this app has.
     fn notifs(&self) -> usize;

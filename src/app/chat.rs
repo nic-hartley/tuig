@@ -2,14 +2,37 @@
 
 use std::{collections::BTreeSet, mem};
 
-use crate::{GameState, constants::{gameplay::MAX_USERNAME, graphics::HEADER_HEIGHT}, io::{Action, Key, Screen, Text}};
+use crate::{GameState, constants::{gameplay::MAX_USERNAME, graphics::HEADER_HEIGHT}, io::{Action, Key, Screen, Text}, event::Event};
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum Message {
+    Normal {
+        text: String,
+        from_player: bool,    
+    },
+    System(String),
+}
+
+impl Message {
+    fn from_player(text: String) -> Message {
+        Message::Normal { text, from_player: true }
+    }
+
+    fn from_npc(text: String) -> Message {
+        Message::Normal { text, from_player: false }
+    }
+
+    fn system(text: &str) -> Message {
+        Message::System(text.into())
+    }
+}
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 struct DM {
     /// The name of the person we're having a conversation with
     target: String,
     /// The actual messages in this DM; (by_player, contents)
-    msgs: Vec<(bool, String)>,
+    msgs: Vec<Message>,
     /// How many messages have piled up since the player last looked at this chat
     unread: usize,
     /// The current options available in this DM
@@ -68,7 +91,7 @@ impl super::App for ChatApp {
                     let mut options = mem::replace(&mut dm.options, vec![]);
                     let selected = options.remove(dm.sel);
                     let res = format!("{}:{}", dm.target, selected);
-                    dm.msgs.push((true, selected));
+                    dm.msgs.push(Message::from_player(selected));
                     return vec![res];
                 }
             }
@@ -89,32 +112,34 @@ impl super::App for ChatApp {
         vec![]
     }
 
-    fn on_event(&mut self, evs: &[String]) {
+    fn on_event(&mut self, evs: &[Event]) {
         for ev in evs {
-            let (sender, rest) = ev.split_once(':').unwrap();
-            let (message, options) = rest.split_once(':').unwrap();
-            if self.blocked.contains(sender) {
-                continue;
-            }
-            let options = options.split(',').map(|s| s.to_string()).collect();
-            match self.dms.iter_mut().enumerate().find(|(_, d)| d.target == sender) {
-                Some((i, dm)) => {
-                    dm.msgs.push((false, message.into()));
-                    if i != self.current_dm {
-                        dm.unread += 1;
-                    }
-                    dm.options = options;
-                    dm.open = true;
+            if let Event::ChatMessage { from: sender, text: message, options } = ev { 
+                if self.blocked.contains(sender) {
+                    continue;
                 }
-                None => {
-                    self.dms.push(DM {
-                        msgs: vec![(false, message.into())],
-                        options,
-                        sel: 0,
-                        target: sender.into(),
-                        unread: 1,
-                        open: true,
-                    })
+                match self.dms.iter_mut().enumerate().find(|(_, d)| &d.target == sender) {
+                    Some((i, dm)) => {
+                        dm.msgs.push(Message::from_npc(message.clone()));
+                        if i != self.current_dm {
+                            dm.unread += 1;
+                        }
+                        dm.options = options.clone();
+                        dm.open = true;
+                    }
+                    None => {
+                        self.dms.push(DM {
+                            msgs: vec![
+                                Message::system("Chat started"),
+                                Message::from_npc(message.clone()),
+                            ],
+                            options: options.clone(),
+                            sel: 0,
+                            target: sender.into(),
+                            unread: 1,
+                            open: true,
+                        })
+                    }
                 }
             }
         }
@@ -137,16 +162,24 @@ impl super::App for ChatApp {
             // TODO: update messages to be Vec<Text>, and update this expression accordingly
             let chunks = dm.msgs.iter().map(|_| 1 + 1 + 1 + 1).sum::<usize>() + dm.options.len() * 2;
             let mut output = Vec::with_capacity(chunks);
-            for (from_player, text) in &dm.msgs {
-                let name = if *from_player {
-                    Text::of(format!("{0:>1$}", state.player_name, MAX_USERNAME))
-                } else {
-                    Text::of(format!("{0:>1$}", dm.target, MAX_USERNAME)).cyan()
-                };
-                output.push(name);
-                output.push(Text::plain(": "));
-                output.push(Text::plain(text));
-                output.push(Text::plain("\n"));
+            for msg in &dm.msgs {
+                match msg {
+                    Message::Normal { text, from_player } => {
+                        let name = if *from_player {
+                            Text::of(format!("{0:>1$}", state.player_name, MAX_USERNAME))
+                        } else {
+                            Text::of(format!("{0:>1$}", dm.target, MAX_USERNAME)).cyan()
+                        };
+                        output.push(name);
+                        output.push(Text::plain(": "));
+                        output.push(Text::plain(text));
+                        output.push(Text::plain("\n"));
+                    }
+                    Message::System(text) => {
+                        output.push(Text::of(text.clone()).bold());
+                        output.push(Text::plain("\n"));
+                    }
+                }
             }
             for (i, opt) in dm.options.iter().enumerate() {
                 if i == 0 {
@@ -282,14 +315,18 @@ mod tests {
     #[test]
     fn test_receive_option() {
         let mut app = app_dm(&[], 0);
-        app.on_event(&["targette:hello there:hi,no".into()]);
+        app.on_event(&[
+            Event::chat("targette", "hello there", &["hi", "no"]),
+        ]);
         assert_eq!(app.input(ENTER), &["targette:hi"]);
     }
 
     #[test]
     fn test_receive_next_option() {
         let mut app = app_dm(&[], 0);
-        app.on_event(&["targette:hello there:hi,no".into()]);
+        app.on_event(&[
+            Event::chat("targette", "hello there", &["hi", "no"]),
+        ]);
         assert!(app.input(RIGHT).is_empty());
         assert_eq!(app.input(ENTER), &["targette:no"]);
     }

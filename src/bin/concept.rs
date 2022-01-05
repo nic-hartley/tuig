@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env::args, io::{Write, stdout}, thread::sleep, time::Duration};
 
-use redshell::{io::{Screen, Text, XY, Action, Key, Color}, text, app::{ChatApp, App}, GameState};
+use redshell::{io::{Screen, Text, XY, Action, Key, Color}, text, app::{ChatApp, App}, GameState, event::Event};
 
 fn render_demo(s: &mut dyn Screen) {
     s.horizontal(1);
@@ -177,47 +177,45 @@ fn chat_demo(s: &mut dyn Screen) {
         player_name: "player".into(),
         apps: vec![],
     };
-    let frames: Vec<(&[&'static str], &[Action])> = vec![
-        (&[
-            "alice:hello there:hi,hello,sup",
+    let frames: Vec<(_, &[Action])> = vec![
+        (vec![
+            Event::chat("alice", "hello there", &["hi", "hello", "sup"]),
         ], &[]),
-        (&[
-            "bob:so:",
+        (vec![
+            Event::chat("bob", "so", &[]),
         ], &[
             Action::KeyPress { key: Key::Right, ctrl: false, alt: false, shift: false },
         ]),
-        (&[
-            "alice:buddy:hi,hello,sup",
+        (vec![
+            Event::chat("alice", "buddy", &["hi", "hello", "sup"]),
         ], &[
             Action::KeyPress { key: Key::Right, ctrl: false, alt: false, shift: false },
         ]),
-        (&[], &[
+        (vec![], &[
             Action::KeyPress { key: Key::Enter, ctrl: false, alt: false, shift: false },
         ]),
-        (&[
-            "bob:hi friend:",
-            "charlie:asdfasdfasdfadsf:",
-            "charlie:adskfljalksdjasldkf:",
-            "bob:u up?:yes,no",
+        (vec![
+            Event::chat("bob", "hi friend", &[]),
+            Event::chat("charlie", "asdfasdfasdfadsf", &[]),
+            Event::chat("charlie", "adskfljalksdjasldkf", &[]),
+            Event::chat("bob", "u up?", &["yes", "no"]),
         ], &[]),
-        (&[
-            "alice:so:",
+        (vec![
+            Event::chat("alice", "so", &[]),
         ], &[
             Action::KeyPress { key: Key::Down, ctrl: false, alt: false, shift: false },
         ]),
-        (&[
-            "alice:uh:",
-            "bob:hello?:yes hello,no goodbye",
-            "alice:what's the deal with airline tickets:",
+        (vec![
+            Event::chat("alice", "uh", &[]),
+            Event::chat("bob", "hello?", &["yes hello", "no goodbye"]),
+            Event::chat("alice", "what's the deal with airline tickets", &[]),
         ], &[]),
-        (&[], &[
+        (vec![], &[
             Action::KeyPress { key: Key::Up, ctrl: false, alt: false, shift: false },
         ]),
     ];
-    for (chats, inputs) in frames {
-        for chat in chats.into_iter() {
-            app.on_event(&[chat.to_string()]);
-        }
+    for (chats, inputs) in frames.into_iter() {
+        app.on_event(&chats);
         for input in inputs.into_iter() {
             app.input(input.clone());
         }
@@ -237,9 +235,9 @@ fn chat_demo(s: &mut dyn Screen) {
 async fn main() {
     let concepts = {
         let mut map: HashMap<&str, fn(&mut dyn Screen)> = HashMap::new();
-        map.insert("render-demo", render_demo);
+        map.insert("render", render_demo);
         map.insert("intro", intro);
-        map.insert("chat-demo", chat_demo);
+        map.insert("chat", chat_demo);
         map
     };
 
