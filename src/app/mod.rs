@@ -13,7 +13,7 @@ pub trait App {
     fn name(&self) -> &'static str;
 
     /// Take a single input action, returning any new events generated as a result.
-    fn input(&mut self, a: Action) -> Vec<String>;
+    fn input(&mut self, a: Action) -> Vec<Event>;
     /// Receive at least one event, to update the rendered game state.
     fn on_event(&mut self, evs: &[Event]);
 

@@ -179,15 +179,15 @@ fn chat_demo(s: &mut dyn Screen) {
     };
     let frames: Vec<(_, &[Action])> = vec![
         (vec![
-            Event::chat("alice", "hello there", &["hi", "hello", "sup"]),
+            Event::npc_chat("alice", "hello there", &["hi", "hello", "sup"]),
         ], &[]),
         (vec![
-            Event::chat("bob", "so", &[]),
+            Event::npc_chat("bob", "so", &[]),
         ], &[
             Action::KeyPress { key: Key::Right, ctrl: false, alt: false, shift: false },
         ]),
         (vec![
-            Event::chat("alice", "buddy", &["hi", "hello", "sup"]),
+            Event::npc_chat("alice", "buddy", &["hi", "hello", "sup"]),
         ], &[
             Action::KeyPress { key: Key::Right, ctrl: false, alt: false, shift: false },
         ]),
@@ -195,20 +195,20 @@ fn chat_demo(s: &mut dyn Screen) {
             Action::KeyPress { key: Key::Enter, ctrl: false, alt: false, shift: false },
         ]),
         (vec![
-            Event::chat("bob", "hi friend", &[]),
-            Event::chat("charlie", "asdfasdfasdfadsf", &[]),
-            Event::chat("charlie", "adskfljalksdjasldkf", &[]),
-            Event::chat("bob", "u up?", &["yes", "no"]),
+            Event::npc_chat("bob", "hi friend", &[]),
+            Event::npc_chat("charlie", "asdfasdfasdfadsf", &[]),
+            Event::npc_chat("charlie", "adskfljalksdjasldkf", &[]),
+            Event::npc_chat("bob", "u up?", &["yes", "no"]),
         ], &[]),
         (vec![
-            Event::chat("alice", "so", &[]),
+            Event::npc_chat("alice", "so", &[]),
         ], &[
             Action::KeyPress { key: Key::Down, ctrl: false, alt: false, shift: false },
         ]),
         (vec![
-            Event::chat("alice", "uh", &[]),
-            Event::chat("bob", "hello?", &["yes hello", "no goodbye"]),
-            Event::chat("alice", "what's the deal with airline tickets", &[]),
+            Event::npc_chat("alice", "uh", &[]),
+            Event::npc_chat("bob", "hello?", &["yes hello", "no goodbye"]),
+            Event::npc_chat("alice", "what's the deal with airline tickets", &[]),
         ], &[]),
         (vec![], &[
             Action::KeyPress { key: Key::Up, ctrl: false, alt: false, shift: false },

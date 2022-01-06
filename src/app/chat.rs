@@ -69,7 +69,7 @@ impl super::App for ChatApp {
         "chat"
     }
 
-    fn input(&mut self, a: Action) -> Vec<String> {
+    fn input(&mut self, a: Action) -> Vec<Event> {
         let key = match a {
             Action::KeyPress { key, .. } => key,
             _ => return vec![],
@@ -90,9 +90,9 @@ impl super::App for ChatApp {
                     let dm = &mut self.dms[self.current_dm];
                     let mut options = mem::replace(&mut dm.options, vec![]);
                     let selected = options.remove(dm.sel);
-                    let res = format!("{}:{}", dm.target, selected);
+                    let ev = Event::player_chat(&dm.target, &selected);
                     dm.msgs.push(Message::from_player(selected));
-                    return vec![res];
+                    return vec![ev];
                 }
             }
             Key::Up => {
@@ -114,7 +114,7 @@ impl super::App for ChatApp {
 
     fn on_event(&mut self, evs: &[Event]) {
         for ev in evs {
-            if let Event::ChatMessage { from: sender, text: message, options } = ev { 
+            if let Event::NPCChatMessage { from: sender, text: message, options } = ev { 
                 if self.blocked.contains(sender) {
                     continue;
                 }
@@ -183,7 +183,7 @@ impl super::App for ChatApp {
             }
             for (i, opt) in dm.options.iter().enumerate() {
                 if i == 0 {
-                    output.push(Text::of(format!("{0:>1$}   ", ">", MAX_USERNAME)));
+                    output.push(Text::of(format!("{0:>1$}  ", ">", MAX_USERNAME+1)));
                 } else {
                     output.push(Text::plain("   "));
                 }
@@ -284,14 +284,14 @@ mod tests {
     #[test]
     fn test_submit_reply() {
         let mut app = app_dm(&["hello"], 0);
-        assert_eq!(app.input(ENTER), &["targette:hello"]);
+        assert_eq!(app.input(ENTER), &[Event::player_chat("targette", "hello")]);
     }
 
     #[test]
     fn test_select_submit() {
         let mut app = app_dm(&["hello", "goodbye"], 0);
         assert!(app.input(RIGHT).is_empty());
-        assert_eq!(app.input(ENTER), &["targette:goodbye"]);
+        assert_eq!(app.input(ENTER), &[Event::player_chat("targette", "goodbye")]);
     }
 
     #[test]
@@ -300,7 +300,7 @@ mod tests {
         assert!(app.input(RIGHT).is_empty());
         assert!(app.input(RIGHT).is_empty());
         assert!(app.input(RIGHT).is_empty());
-        assert_eq!(app.input(ENTER), &["targette:goodbye"]);
+        assert_eq!(app.input(ENTER), &[Event::player_chat("targette", "goodbye")]);
     }
 
     #[test]
@@ -309,25 +309,25 @@ mod tests {
         assert!(app.input(LEFT).is_empty());
         assert!(app.input(LEFT).is_empty());
         assert!(app.input(LEFT).is_empty());
-        assert_eq!(app.input(ENTER), &["targette:hello"]);
+        assert_eq!(app.input(ENTER), &[Event::player_chat("targette", "hello")]);
     }
 
     #[test]
     fn test_receive_option() {
         let mut app = app_dm(&[], 0);
         app.on_event(&[
-            Event::chat("targette", "hello there", &["hi", "no"]),
+            Event::npc_chat("targette", "hello there", &["hi", "no"]),
         ]);
-        assert_eq!(app.input(ENTER), &["targette:hi"]);
+        assert_eq!(app.input(ENTER), &[Event::player_chat("targette", "hi")]);
     }
 
     #[test]
     fn test_receive_next_option() {
         let mut app = app_dm(&[], 0);
         app.on_event(&[
-            Event::chat("targette", "hello there", &["hi", "no"]),
+            Event::npc_chat("targette", "hello there", &["hi", "no"]),
         ]);
         assert!(app.input(RIGHT).is_empty());
-        assert_eq!(app.input(ENTER), &["targette:no"]);
+        assert_eq!(app.input(ENTER), &[Event::player_chat("targette", "no")]);
     }
 }
