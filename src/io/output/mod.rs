@@ -67,7 +67,7 @@ impl Color {
 
 /// A single bit of formatted text. Note this isn't really meant to be used on its own, though it can be; the API is
 /// designed to be used through `text!`. To discourage direct use, the internals aren't documented.
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Text {
     pub text: String,
     pub fg: Color,
@@ -151,48 +151,6 @@ macro_rules! text {
     };
 }
 
-pub fn wrap_line(
-    width: usize,
-    mut line: &str,
-    col: &mut usize, line_num: &mut usize,
-    /*
-    This parameter is basically just a dirty hack. If it's true, *col is effectively first_indent, so we should
-    hyphenate words that are too long. If it's false, *col marks the end of the last bit of text, so we should
-    wrap, even if it leaves a blank line.
-    */
-    mut starts_fresh: bool
-) -> Vec<String> {
-    assert!(*col < width);
-
-    let mut lines = Vec::new();
-    while line.len() > width - *col {
-        let first_n = &line[..width - *col + 1];
-        let (len, chunk) = if let Some(end_pos) = first_n.rfind(char::is_whitespace) {
-            let len = match first_n[..end_pos].rfind(|c: char| !c.is_whitespace()) {
-                Some(n) => n + 1, // rfind returns the address of the one, we want the one after
-                None => first_n.len(), // not sure if this could happen but just in case
-            };
-            (len, first_n[..len].into())
-        } else if starts_fresh {
-            starts_fresh = false;
-            (0, String::new())
-        } else {
-            (first_n.len()-2, format!("{}-", &first_n[..first_n.len()-2]))
-        };
-        lines.push(chunk);
-        line = line[len..].trim_start();
-        *col = 0;
-        *line_num += 1;
-    }
-    *col = line.len();
-    lines.push(line.into());
-    lines
-}
-
-fn find_break(from: &str) -> Option<usize> {
-    from.rfind(char::is_whitespace)
-}
-
 /// A box of text which can be written to a `Screen`. Note these are meant to be generated on the fly, every frame,
 /// possibly multiple times. They do the actual *writing* when they're dropped, converting the higher-level Textbox
 /// API things to calls of `Screen::raw`.
@@ -273,7 +231,7 @@ impl<'a> Drop for Textbox<'a> {
         macro_rules! do_wrap {
             ($chunk:ident, $line:ident) => {
                 while $line.len() > width - col {
-                    if let Some(break_pos) = find_break(&$line[..width - col]) {
+                    if let Some(break_pos) = $line[..width - col].rfind(char::is_whitespace) {
                         let (subline, rest_of_line) = $line.split_at(break_pos);
                         $line = rest_of_line.trim_start();
 
