@@ -21,6 +21,7 @@ impl Drop for TestScreen {
     }
 }
 
+#[async_trait::async_trait]
 impl super::Screen for TestScreen {
     fn size(&self) -> XY {
         println!("Getting size! (oh no! what's the size?)");
@@ -39,7 +40,7 @@ impl super::Screen for TestScreen {
         }
     }
 
-    fn flush(&mut self) {
+    async fn flush(&mut self) {
         println!("     0         1         2         3         4         5         6         7         80");
         for y in 0..SIZE.y() {
             let start = y * SIZE.x();
@@ -56,7 +57,7 @@ impl super::Screen for TestScreen {
         self.chars = [' '; SIZE.x() * SIZE.y()];
     }
 
-    fn clear_raw(&mut self) {
+    async fn clear_raw(&mut self) {
         println!("Really clearing screen");
     }
 }

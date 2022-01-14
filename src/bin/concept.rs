@@ -1,8 +1,9 @@
-use std::{collections::HashMap, env::args, io::{Write, stdout}, thread::sleep, time::Duration};
+use std::{collections::HashMap, env::args, io::{Write, stdout}, time::Duration, pin::Pin, future::Future};
 
 use redshell::{io::{Screen, Text, XY, Action, Key, Color}, text, app::{ChatApp, App}, GameState, event::Event};
+use tokio::time::sleep;
 
-fn render_demo(s: &mut dyn Screen) {
+async fn render_demo(s: &mut dyn Screen) {
     s.horizontal(1);
     s.vertical(0);
     let mut texts = Vec::new();
@@ -31,13 +32,13 @@ fn render_demo(s: &mut dyn Screen) {
         .selected(1)
         .profile("watching the render concept")
         .time("the time is now");
-    s.flush();
+    s.flush().await;
     // 2 second wait outside of this so wait 10s total
-    sleep(Duration::from_secs(8));
+    sleep(Duration::from_secs(8)).await;
 }
 
-fn intro(s: &mut dyn Screen) {
-    // TODO: Any more convenient way to do 'frames' than this? Gotta be...
+async fn intro(s: &mut dyn Screen) {
+    // TODO: Write the real function and use [`TimedStream::with_delays`] to drive it
     let frames: Vec<(Vec<(&str, usize)>, Vec<Text>, usize)> = vec![
         (vec![], text!(
             "??????????: Hey.\n",
@@ -166,12 +167,12 @@ fn intro(s: &mut dyn Screen) {
             }
         }
         s.textbox(frame).pos(0, 1).size(width, height).indent(12).first_indent(0);
-        s.flush();
-        sleep(Duration::from_millis(delay as u64));
+        s.flush().await;
+        sleep(Duration::from_millis(delay as u64)).await;
     }
 }
 
-fn chat_demo(s: &mut dyn Screen) {
+async fn chat_demo(s: &mut dyn Screen) {
     let mut app = ChatApp::default();
     let state = GameState {
         player_name: "player".into(),
@@ -225,19 +226,20 @@ fn chat_demo(s: &mut dyn Screen) {
         ))
             .pos(0, 0)
             .height(1);
-        s.flush();
-        sleep(Duration::from_millis(1000));
+        s.flush().await;
+        sleep(Duration::from_millis(1000)).await;
     }
-    sleep(Duration::from_secs(1));
+    sleep(Duration::from_secs(1)).await;
 }
 
 #[tokio::main]
 async fn main() {
     let concepts = {
-        let mut map: HashMap<&str, fn(&mut dyn Screen)> = HashMap::new();
-        map.insert("render", render_demo);
-        map.insert("intro", intro);
-        map.insert("chat", chat_demo);
+        type ConceptFn = for<'a> fn(&'a mut dyn Screen) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
+        let mut map: HashMap<&'static str, ConceptFn> = HashMap::new();
+        map.insert("render", |s| Box::pin(render_demo(s)));
+        map.insert("intro", |s| Box::pin(intro(s)));
+        map.insert("chat", |s| Box::pin(chat_demo(s)));
         map
     };
 
@@ -249,12 +251,12 @@ async fn main() {
             stdout().flush().unwrap();
             {
                 let mut screen = <dyn Screen>::get();
-                func(screen.as_mut());
+                func(screen.as_mut()).await;
                 let XY(width, height) = screen.size();
                 let msg = "fin.";
                 write!(stdout(), "\x1b[{};{}H\x1b[107;30m{}\x1b[0m", height, width - msg.len(), msg).unwrap();
                 stdout().flush().unwrap();
-                sleep(Duration::from_secs(2));
+                sleep(Duration::from_secs(2)).await;
             }
             println!(" Done.");
             return;

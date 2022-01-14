@@ -54,6 +54,7 @@ impl Drop for AnsiScreen {
     }
 }
 
+#[async_trait::async_trait]
 impl Screen for AnsiScreen {
     fn size(&self) -> XY {
         let (x, y) = terminal::size().unwrap();
@@ -83,7 +84,7 @@ impl Screen for AnsiScreen {
         }
     }
 
-    fn flush(&mut self) {
+    async fn flush(&mut self) {
         // replace so we can take ownership and .into_iter() instead of .drain()ing
         let lines = mem::replace(&mut self.texts, vec![]);
         let mut out = Vec::<u8>::new();
@@ -113,7 +114,7 @@ impl Screen for AnsiScreen {
         self.texts.clear()
     }
 
-    fn clear_raw(&mut self) {
+    async fn clear_raw(&mut self) {
         stdout().write_all("\x1b[2J".as_bytes()).unwrap();
     }
 }

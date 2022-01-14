@@ -1,5 +1,3 @@
-use tokio::sync::broadcast;
-
 use crate::io::XY;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -30,22 +28,26 @@ pub enum Action {
 
 /// Common interface for all sources of input.
 ///
-/// It's a bit indirect: rather than just returning the next Action, it's used to set up a queue. That queue is what's
-/// actually read from, because tokio provides some guarantees about it that it doesn't provide about general futures.
+/// It's expected this will spawn another task to actually watch the input, then push that into a [`mpsc::channel`]
+/// to eventually be fed out form [`next`].
+#[async_trait::async_trait]
 pub trait Input {
-    /// Attaches a listener. This is a Tokio queue rather than just an iterable so it can be asynchronously waited on
-    /// without losing any data. Note that this queue closing **must not** close the actual input stream; that should
-    /// only happen when the `impl Input` is dropped.
-    fn listen(&mut self) -> broadcast::Receiver<Action>;
+    /// Get the next input event.
+    /// 
+    /// This **must** be cancel-safe. If the returned future is cancelled before data is polled out, no inputs may
+    /// be lost.
+    async fn next(&mut self) -> Action;
+
+    /// Discard any queued but unreceived inputs.
+    async fn flush(&mut self);
 }
 
 impl dyn Input + '_ {
     pub fn get() -> Box<dyn Input> {
-        if cfg!(feature = "force_in_test") {
+        if cfg!(feature = "force_in_blank") {
             return Box::new(test::UntimedStream::of(&[]));
         }
-
-        unimplemented!("other screen types");
+        return Box::new(test::UntimedStream::of(&[]));
     }
 }
 

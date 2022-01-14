@@ -414,7 +414,9 @@ impl<'a> Drop for Horizontal<'a> {
 /// Note that nothing is written until `flush` is called; all of the other methods just edit the internal state. This
 /// prevents any potential issues with flickering, partial updates being visible, etc.
 ///
-/// `flush` is called once every frame, *after* everything has rendered. It 
+/// `flush` is called once every frame, *after* everything has rendered. It's the only thing that should be doing any
+/// actual IO with the screen; everything else should just be caching the frame info.
+#[async_trait::async_trait]
 pub trait Screen {
     /// Get the size of the screen, as of this frame.
     /// (Don't worry too much about this changing midframe; hopefully resize detection will catch that and hide issues)
@@ -429,13 +431,13 @@ pub trait Screen {
     /// special chars, e.g. by directly writing them to the console. It's expected that the higher-level methods will
     /// handle that appropriately.
     fn write_raw(&mut self, text: Vec<Text>, pos: XY);
-    /// Clear the screen and draw the next frame's worth of stuff.
-    fn flush(&mut self);
+    /// Clear the actual screen and draw the next frame's worth of stuff on it.
+    async fn flush(&mut self);
     /// Just clear the (cached write_raw) screen; used to keep the screen relatively smooth even when it's resized.
     /// Note this **should not** actually send the clear command to the screen.
     fn clear(&mut self);
     /// Actually clear the screen. Used, e.g., when resizing is detected, to prevent weird shearing issues.
-    fn clear_raw(&mut self);
+    async fn clear_raw(&mut self);
 }
 
 impl dyn Screen + '_ {
