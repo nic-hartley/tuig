@@ -4,7 +4,7 @@ use crossterm::{cursor::{Hide, Show}, execute, terminal::{self, Clear, ClearType
 
 use crate::io::XY;
 
-use super::*;
+use super::{Text, Screen};
 
 // TODO: Replace all the `unwrap`s with 
 

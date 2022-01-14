@@ -143,7 +143,7 @@ macro_rules! text {
     ),+ $(,)? ) => {
         vec![
             $(
-                $crate::io::Text::of(
+                $crate::io::output::Text::of(
                     format!( $text $(, $( $arg ),* )? )
                 ) $( . $name () )*
             ),+

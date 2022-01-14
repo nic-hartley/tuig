@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env::args, io::{Write, stdout}, time::Duration, pin::Pin, future::Future};
 
-use redshell::{io::{Screen, Text, XY, Action, Key, Color}, text, app::{ChatApp, App}, GameState, event::Event};
+use redshell::{io::{XY, output::{Color, Text, Screen}, input::{Action, Key}}, text, app::{ChatApp, App}, GameState, event::Event};
 use tokio::time::sleep;
 
 async fn render_demo(s: &mut dyn Screen) {

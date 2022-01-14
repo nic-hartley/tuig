@@ -2,7 +2,7 @@
 
 use std::{collections::BTreeSet, mem};
 
-use crate::{GameState, constants::{gameplay::MAX_USERNAME, graphics::HEADER_HEIGHT}, io::{Action, Key, Screen, Text}, event::Event};
+use crate::{GameState, constants::{gameplay::MAX_USERNAME, graphics::HEADER_HEIGHT}, io::{input::{Action, Key}, output::{Screen, Text}}, event::Event};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Message {

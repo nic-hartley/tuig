@@ -83,7 +83,5 @@ impl Into<(usize, usize)> for XY {
     }
 }
 
-mod input;
-pub use input::*;
-mod output;
-pub use output::*;
+pub mod input;
+pub mod output;
