@@ -38,8 +38,9 @@ pub trait Input {
     /// be lost.
     async fn next(&mut self) -> Action;
 
-    /// Discard any queued but unreceived inputs.
-    async fn flush(&mut self);
+    /// Discard any queued but unreceived inputs. Should return immediately. If an input comes in while this function
+    /// is executing, it might be discarded or not, depending on the implementation.
+    fn flush(&mut self);
 }
 
 impl dyn Input + '_ {

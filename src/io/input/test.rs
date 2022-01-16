@@ -1,6 +1,4 @@
-use std::{time::{Duration, Instant}, future::pending};
-
-use tokio::time::sleep;
+use std::{time::{Duration, Instant}, future::{pending, Future}, task::{Context, Poll}, pin::Pin};
 
 use super::{Action, Input};
 
@@ -24,7 +22,7 @@ impl Input for UntimedStream {
         }
     }
 
-    async fn flush(&mut self) {
+    fn flush(&mut self) {
         self.contents.clear();
     }
 }
@@ -44,18 +42,32 @@ impl TimedStream {
 #[async_trait::async_trait]
 impl Input for TimedStream {
     async fn next(&mut self) -> Action {
-        if self.contents.is_empty() {
-            return pending().await;
-        }
-        let next_time = self.start + Duration::from_millis(self.contents[0].1);
-        while Instant::now() < next_time {
-            sleep(next_time - Instant::now()).await;
-        }
-        return self.contents.remove(0).0;
+        NextFromTimedStream { ts: self }.await
     }
 
-    async fn flush(&mut self) {
+    fn flush(&mut self) {
         let start = self.start;
-        self.contents.retain(|(_, delay)| start + Duration::from_millis(*delay) > Instant::now());
+        let now = Instant::now();
+        self.contents.retain(|(_, delay)| start + Duration::from_millis(*delay) > now);
+    }
+}
+
+pub struct NextFromTimedStream<'a> {
+    ts: &'a mut TimedStream,
+}
+
+impl<'a> Future for NextFromTimedStream<'a> {
+    type Output = Action;
+    fn poll(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Self::Output> {
+        let ts = &mut self.as_mut().ts;
+        if ts.contents.is_empty() {
+            return Poll::Pending;
+        }
+        let next_time = ts.start + Duration::from_millis(ts.contents[0].1);
+        if Instant::now() < next_time {
+            Poll::Pending
+        } else {
+            Poll::Ready(ts.contents.remove(0).0)
+        }
     }
 }
