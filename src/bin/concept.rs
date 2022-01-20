@@ -185,15 +185,15 @@ async fn chat_demo(s: &mut dyn Screen) {
         (vec![
             Event::npc_chat("bob", "so", &[]),
         ], &[
-            Action::KeyPress { key: Key::Right, ctrl: false, alt: false, shift: false },
+            Action::KeyPress { key: Key::Right },
         ]),
         (vec![
             Event::npc_chat("alice", "buddy", &["hi", "hello", "sup"]),
         ], &[
-            Action::KeyPress { key: Key::Right, ctrl: false, alt: false, shift: false },
+            Action::KeyPress { key: Key::Right },
         ]),
         (vec![], &[
-            Action::KeyPress { key: Key::Enter, ctrl: false, alt: false, shift: false },
+            Action::KeyPress { key: Key::Enter },
         ]),
         (vec![
             Event::npc_chat("bob", "hi friend", &[]),
@@ -204,7 +204,7 @@ async fn chat_demo(s: &mut dyn Screen) {
         (vec![
             Event::npc_chat("alice", "so", &[]),
         ], &[
-            Action::KeyPress { key: Key::Down, ctrl: false, alt: false, shift: false },
+            Action::KeyPress { key: Key::Down },
         ]),
         (vec![
             Event::npc_chat("alice", "uh", &[]),
@@ -212,7 +212,7 @@ async fn chat_demo(s: &mut dyn Screen) {
             Event::npc_chat("alice", "what's the deal with airline tickets", &[]),
         ], &[]),
         (vec![], &[
-            Action::KeyPress { key: Key::Up, ctrl: false, alt: false, shift: false },
+            Action::KeyPress { key: Key::Up },
         ]),
     ];
     for (chats, inputs) in frames.into_iter() {

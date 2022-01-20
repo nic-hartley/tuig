@@ -8,22 +8,29 @@ pub enum Key {
     F(u8),
     Up, Down, Left, Right,
     Enter,
+    LeftCtrl, RightCtrl,
+    LeftAlt, RightAlt,
+    LeftSuper, RightSuper,
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Action {
+    /// A key was pressed. Note this theoretically handles modifiers by sending them when they're pressed, but
+    /// depending on the input mechanism it may only be able to send them when a non-modifier key is pressed.
     KeyPress {
         key: Key,
-        shift: bool,
-        ctrl: bool,
-        alt: bool,
     },
+    /// A mouse button was clicked at the given location.
     MousePress {
         button: u8,
         pos: XY,
-        click: bool,
     },
-    Unknown(Vec<u8>),
+    /// The mouse has moved to a new location.
+    MouseMove {
+        pos: XY,
+    },
+    /// Some unknown input was received, with a description of what it was
+    Unknown(String),
 }
 
 /// Common interface for all sources of input.
@@ -53,3 +60,4 @@ impl dyn Input + '_ {
 }
 
 pub mod test;
+pub mod ansi_cli;
