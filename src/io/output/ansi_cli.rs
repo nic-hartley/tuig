@@ -16,7 +16,6 @@ pub struct AnsiScreen {
 
 impl AnsiScreen {
     pub fn get() -> crossterm::Result<Self> {
-        terminal::enable_raw_mode()?;
         execute!(stdout(),
             EnterAlternateScreen,
             DisableLineWrap,
