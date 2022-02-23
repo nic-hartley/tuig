@@ -259,27 +259,9 @@ mod tests {
             ..app()
         }
     }
-
-    const ENTER: Action = Action::KeyPress {
-        key: Key::Enter,
-        alt: false,
-        ctrl: false,
-        shift: false,
-    };
-
-    const LEFT: Action = Action::KeyPress {
-        key: Key::Left,
-        alt: false,
-        ctrl: false,
-        shift: false,
-    };
-
-    const RIGHT: Action = Action::KeyPress {
-        key: Key::Right,
-        alt: false,
-        ctrl: false,
-        shift: false,
-    };
+    const ENTER: Action = Action::KeyPress { key: Key::Enter };
+    const LEFT: Action = Action::KeyPress { key: Key::Left };
+    const RIGHT: Action = Action::KeyPress { key: Key::Right };
 
     #[test]
     fn test_submit_reply() {
