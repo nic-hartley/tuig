@@ -235,8 +235,10 @@ async fn chat_demo(s: &mut dyn Screen) {
 async fn mouse_demo(output: &mut dyn Screen) {
     let mut input = AnsiInput::get()
         .expect("Failed to construct input");
+    output.textbox(text!(invert "Press any keyboard button to exit"));
+    output.flush().await;
     loop {
-        output.textbox(text!("Press any keyboard button to exit"));
+        output.textbox(text!(invert "Press any keyboard button to exit"));
         let text;
         let at;
         match input.next().await {
