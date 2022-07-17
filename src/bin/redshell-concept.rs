@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env::args, io::{Write, stdout}, time::Duration, pin::Pin, future::Future};
 
-use redshell::{io::{XY, output::{Color, Text, Screen}, input::{Action, Key}}, text, app::{ChatApp, App}, GameState, event::Event};
+use redshell::{io::{XY, output::{Color, Text, Screen}, input::{Action, Key, ansi_cli::AnsiInput, Input}}, text, app::{ChatApp, App}, GameState, event::Event};
 use tokio::time::sleep;
 
 async fn render_demo(s: &mut dyn Screen) {
@@ -232,6 +232,46 @@ async fn chat_demo(s: &mut dyn Screen) {
     sleep(Duration::from_secs(1)).await;
 }
 
+async fn mouse_demo(output: &mut dyn Screen) {
+    let mut input = AnsiInput::get()
+        .expect("Failed to construct input");
+    loop {
+        output.textbox(text!("Press any keyboard button to exit"));
+        let text;
+        let at;
+        match input.next().await {
+            Action::KeyPress { .. } | Action::KeyRelease { .. } => break,
+            Action::MousePress { button, pos } => {
+                text = format!("{:?} button pressed at {:?}", button, pos);
+                at = pos;
+            }
+            Action::MouseRelease { button, pos } => {
+                text = format!("{:?} button released at {:?}", button, pos);
+                at = pos;
+            }
+            Action::MouseMove { button: Some(b), pos } => {
+                text = format!("Moved to {:?} holding {:?}", pos, b);
+                at = pos;
+            }
+            Action::MouseMove { button: None, pos } => {
+                text = format!("Moved to {:?} holding nothing", pos);
+                at = pos;
+            }
+            Action::Unknown(desc) => {
+                text = format!("Unknown input: {}", desc);
+                at = XY(0, 0);
+            }
+            Action::Error(msg) => {
+                text = format!("Error: {}", msg);
+                at = XY(0, 0);
+            }
+        };
+        output.textbox(text!("{}"(text)))
+            .xy(at);
+        output.flush().await;
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let concepts = {
@@ -240,6 +280,7 @@ async fn main() {
         map.insert("render", |s| Box::pin(render_demo(s)));
         map.insert("intro", |s| Box::pin(intro(s)));
         map.insert("chat", |s| Box::pin(chat_demo(s)));
+        map.insert("mouse", |s| Box::pin(mouse_demo(s)));
         map
     };
 
