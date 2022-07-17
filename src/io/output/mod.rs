@@ -5,7 +5,7 @@
 //! - Modify `Screen::get` to properly detect and handle the new screen type, with `cfg!` or runtime checks
 
 pub mod test;
-mod ansi_cli;
+pub mod ansi_cli;
 
 use std::fmt;
 
@@ -174,6 +174,7 @@ impl<'a> Textbox<'a> {
 
     crate::util::setters! {
         pos(x: usize, y: usize) => pos = XY(x, y),
+        xy(xy: XY) => pos = xy,
         width(w: usize) => width = Some(w),
         height(h: usize) => height = Some(h),
         scroll(amt: usize) => scroll = amt,
