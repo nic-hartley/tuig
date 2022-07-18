@@ -202,6 +202,10 @@ impl<'a> Drop for Textbox<'a> {
         let screen_size = self.screen.size();
         let width = self.width.unwrap_or(screen_size.x() - x);
         let height = self.height.unwrap_or(screen_size.y() - y);
+        if width == 0 || height == 0 {
+            // nothing to draw
+            return;
+        }
 
         assert!(width > self.indent);
         assert!(width > first_indent);
@@ -240,10 +244,18 @@ impl<'a> Drop for Textbox<'a> {
                     } else if line_start {
                         // if we're already at the start of the line, can't exactly push stuff to the next line;
                         // that'd loop forever
-                        let (subline, rest_of_line) = $line.split_at(width - col - 1);
+                        let rest_of_line = if width - col == 1 {
+                            // we can't just take 0 characters, so ignore the hyphen if we only have space for a
+                            // single character
+                            let (subline, rest) = $line.split_at(1);
+                            write_raw!(vec![$chunk.with_text(subline.to_string())]);
+                            rest
+                        } else {
+                            let (subline, rest) = $line.split_at(width - col - 1);
+                            write_raw!(vec![$chunk.with_text(subline.to_string() + "-")]);
+                            rest
+                        };
                         $line = rest_of_line.trim_start();
-
-                        write_raw!(vec![$chunk.with_text(subline.to_string() + "-")]);
                     } else {
                         // if we've just finished another chunk, so it's *not* the beginning of a line, then just go
                         // to the next line for anything that's too long
