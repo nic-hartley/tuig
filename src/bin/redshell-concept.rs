@@ -218,7 +218,8 @@ async fn chat_demo(s: &mut dyn Screen) {
     for (chats, inputs) in frames.into_iter() {
         app.on_event(&chats);
         for input in inputs.into_iter() {
-            app.input(input.clone());
+            let mut _events = vec![];
+            app.input(input.clone(), &mut _events);
         }
         app.render(&state, s);
         s.textbox(text!(

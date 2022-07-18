@@ -1,4 +1,5 @@
-#[derive(Debug, Clone, PartialEq, Eq, )]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Event {
     PlayerChatMessage {
         to: String,
@@ -9,8 +10,6 @@ pub enum Event {
         text: String,
         options: Vec<String>,
     },
-    /// This is only here so that `let` isn't irrefutable. Delete once there's other events.
-    Placeholder,
 }
 
 impl Event {

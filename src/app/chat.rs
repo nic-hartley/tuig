@@ -69,10 +69,12 @@ impl super::App for ChatApp {
         "chat"
     }
 
-    fn input(&mut self, a: Action) -> Vec<Event> {
+    fn input(&mut self, a: Action, events: &mut Vec<Event>) {
         let key = match a {
             Action::KeyPress { key, .. } => key,
-            _ => return vec![],
+            Action::MouseMove { .. } => todo!("Handle mouse move"),
+            Action::MousePress { .. } => todo!("Handle mouse press"),
+            _ => return,
         };
         match key {
             Key::Left => {
@@ -92,7 +94,7 @@ impl super::App for ChatApp {
                     let selected = options.remove(dm.sel);
                     let ev = Event::player_chat(&dm.target, &selected);
                     dm.msgs.push(Message::from_player(selected));
-                    return vec![ev];
+                    events.push(ev);
                 }
             }
             Key::Up => {
@@ -109,7 +111,6 @@ impl super::App for ChatApp {
             }
             _ => ()
         };
-        vec![]
     }
 
     fn on_event(&mut self, evs: &[Event]) {
@@ -259,39 +260,57 @@ mod tests {
             ..app()
         }
     }
+
     const ENTER: Action = Action::KeyPress { key: Key::Enter };
     const LEFT: Action = Action::KeyPress { key: Key::Left };
     const RIGHT: Action = Action::KeyPress { key: Key::Right };
 
+    macro_rules! assert_input {
+        ($app:ident .input ( $($arg:expr),* $(,)? ) == $other:expr) => {
+            {
+                let mut evs = vec![];
+                $app.input($( $arg ),* , &mut evs);
+                assert_eq!(evs, $other);
+            }
+        };
+        ($app:ident .input ( $($arg:expr),* $(,)? ) . $( $val:tt )*) => {
+            {
+                let mut evs = vec![];
+                $app.input($( $arg ),* , &mut evs);
+                assert!(evs.$($val)*);
+            }
+        };
+    }
+
     #[test]
     fn test_submit_reply() {
         let mut app = app_dm(&["hello"], 0);
-        assert_eq!(app.input(ENTER), &[Event::player_chat("targette", "hello")]);
+        assert_input!(app.input(ENTER) == &[Event::player_chat("targette", "hello")]);
     }
 
     #[test]
     fn test_select_submit() {
         let mut app = app_dm(&["hello", "goodbye"], 0);
-        assert!(app.input(RIGHT).is_empty());
-        assert_eq!(app.input(ENTER), &[Event::player_chat("targette", "goodbye")]);
+        assert_input!(app.input(RIGHT).is_empty());
+        assert_input!(app.input(ENTER) == &[Event::player_chat("targette", "goodbye")]);
     }
 
     #[test]
     fn test_select_hit_right() {
         let mut app = app_dm(&["hello", "goodbye"], 0);
-        assert!(app.input(RIGHT).is_empty());
-        assert!(app.input(RIGHT).is_empty());
-        assert!(app.input(RIGHT).is_empty());
-        assert_eq!(app.input(ENTER), &[Event::player_chat("targette", "goodbye")]);
+        assert_input!(app.input(RIGHT).is_empty());
+        assert_input!(app.input(RIGHT).is_empty());
+        assert_input!(app.input(RIGHT).is_empty());
+        assert_input!(app.input(ENTER) == &[Event::player_chat("targette", "goodbye")]);
     }
 
     #[test]
     fn test_select_hit_left() {
         let mut app = app_dm(&["hello", "goodbye"], 1);
-        assert!(app.input(LEFT).is_empty());
-        assert!(app.input(LEFT).is_empty());
-        assert!(app.input(LEFT).is_empty());
-        assert_eq!(app.input(ENTER), &[Event::player_chat("targette", "hello")]);
+        assert_input!(app.input(LEFT).is_empty());
+        assert_input!(app.input(LEFT).is_empty());
+        assert_input!(app.input(LEFT).is_empty());
+        assert_input!(app.input(ENTER) == &[Event::player_chat("targette", "hello")]);
     }
 
     #[test]
@@ -300,7 +319,7 @@ mod tests {
         app.on_event(&[
             Event::npc_chat("targette", "hello there", &["hi", "no"]),
         ]);
-        assert_eq!(app.input(ENTER), &[Event::player_chat("targette", "hi")]);
+        assert_input!(app.input(ENTER) == &[Event::player_chat("targette", "hi")]);
     }
 
     #[test]
@@ -309,7 +328,7 @@ mod tests {
         app.on_event(&[
             Event::npc_chat("targette", "hello there", &["hi", "no"]),
         ]);
-        assert!(app.input(RIGHT).is_empty());
-        assert_eq!(app.input(ENTER), &[Event::player_chat("targette", "no")]);
+        assert_input!(app.input(RIGHT).is_empty());
+        assert_input!(app.input(ENTER) == &[Event::player_chat("targette", "no")]);
     }
 }
