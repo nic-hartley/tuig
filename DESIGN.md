@@ -1,6 +1,4 @@
-# Redshell Design Doc
-
-## Blurb
+# Blurb
 
 Redshell is a cult of hackers bent on tearing down the peaceful and benevolent corporate sponsors who so generously provide us with steady employment, affordable housing, and as many as four hours per month of unencumbered free time to socialize at approved venues. They seek to destroy your way of life and shackle you to their ideals of 'liberty' and 'equality', demanding that you toil for their profit instead of ours. They `know you want out. They want to help you. They want to save you from life-debts, from working yourself to death, from seeing your children stolen when every payday means you owe them more. It won't be easy. It won't be safe. But you'll be free. So what will it be?` Do you want to see your life changed forever?
 
@@ -35,9 +33,9 @@ Then die again, and come back again.
 
 Until the job is done.
 
-## Story
+# Story
 
-### History
+## History
 
 Life under the Corporate Hegemony of Earth and Selene is about what you'd expect.
 Everyone and everything can be bought, for a price, but only a tiny number of people can afford anything at all.
@@ -62,14 +60,28 @@ Behind the scenes, the Redshell software is incredibly complex.
 The collective keeps it updated against CyberZone's countermeasures -- always, somehow, just before those countermeasures can actually be deployed.
 It's available on every system, even single-purpose hardware that's supposed to be locked down.
 
-## Gameplay
+# Interface
 
-### Interface
+The interface is a TUI with several tabs, which are revealed progressively during gameplay.
+When rendered to a GUI, the interface is still text-based; it's just rendered looking like a CRT.
+It has full keyboard-only navigation support, but also supports the mouse for typical mouse-related tasks, including text selection that's much more usable than usual.
 
-The interface is more or less a standard command-line interface.
-If the game is run from an actual console, it'll use that; otherwise, it'll spawn a window designed to look great with the game.
+All of the tabs share a common header, which displays useful information like the current time, the player's in-game handle, and some icons representing the connection status and whether or not the game has been detected as lagging.
+The header also of course includes the actual tabs.
 
-The CLI is as fully featured as it can reasonably be.
-It has autocomplete where possible -- which is a lot more than usual, thanks to the nature of the game -- which is "predicted ahead" by faded-out text.
+On first launch or on creating a new save, the game starts with an introduction, which introduces the player to the world of Redshell and the basic controls of the game.
+In particular, it includes a (skippable) tutorial on the concept of command lines, which is the aspect most laypeople will be unfamiliar with.
 
-For example:
+## Chat
+
+## Shell
+
+## Notes
+
+## Settings
+
+# Gameplay
+
+## Hacking
+
+## Social
