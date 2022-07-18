@@ -93,7 +93,7 @@ fn process_input(actions: mpsc::UnboundedSender<Action>, mut stop: oneshot::Rece
                 }
                 mods! (modifiers, KeyRelease);
             }
-            ct::Event::Resize(..) => todo!("Handle resize events properly"),
+            ct::Event::Resize(..) => (), // handled by polling in the output when it's requested
             ct::Event::Mouse(ct::MouseEvent { row, column: col, kind, modifiers }) => {
                 mods!(modifiers, KeyPress);
                 let pos = io::XY(col as usize, row as usize);
