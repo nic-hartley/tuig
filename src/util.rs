@@ -32,8 +32,8 @@ macro_rules! abbrev_debug {
         $class:ident $( < $( $lt:lifetime ),* > )?;
         $( $key:ident $member:ident $( != $e:expr )? ),* $(,)?
     ) => {
-        impl $( < $( $lt ),* > )?  fmt::Debug for $class $( < $( $lt ),* > )? {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        impl $( < $( $lt ),* > )?  std::fmt::Debug for $class $( < $( $lt ),* > )? {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, concat!(stringify!($class), " {{ "))?;
                 $(
                     $crate::util::abbrev_debug!(@member self f; $key $member $( != $e )?);
