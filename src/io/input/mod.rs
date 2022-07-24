@@ -80,6 +80,12 @@ impl dyn Input + '_ {
         if cfg!(feature = "force_in_blank") {
             return Box::new(test::UntimedStream::of(&[]));
         }
+        if cfg!(feature = "force_in_ansi") {
+            return Box::new(ansi_cli::AnsiInput::get().expect("Failed to initialize forced ANSI CLI input."))
+        }
+        if let Ok(i) = ansi_cli::AnsiInput::get() {
+            return Box::new(i);
+        }
         return Box::new(test::UntimedStream::of(&[]));
     }
 }
