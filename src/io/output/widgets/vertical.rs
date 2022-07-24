@@ -9,6 +9,16 @@ pub struct Vertical<'a> {
 }
 
 impl<'a> Vertical<'a> {
+    pub fn new(screen: &'a mut dyn Screen, col: usize) -> Self {
+        Vertical {
+            screen,
+            col,
+            start: None,
+            end: None,
+            char: '|',
+        }
+    }
+
     crate::util::setters! {
         start(y: usize) => start = Some(y),
         end(y: usize) => end = Some(y),

@@ -9,7 +9,17 @@ pub struct Header<'a> {
 }
 
 impl<'a> Header<'a> {
-    /// Add a tab to the header being rendered this frame
+    pub fn new(screen: &'a mut dyn Screen) -> Self {
+        Self {
+            screen,
+            tabs: Vec::with_capacity(5),
+            selected: None,
+            profile: "".into(),
+            // TODO: Use an actual time type
+            time: "".into(),
+        }
+    }
+
     pub fn tab(mut self, name: &str, notifs: usize) -> Self {
         self.tabs.push((name.into(), notifs));
         self

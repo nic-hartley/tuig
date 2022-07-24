@@ -9,6 +9,16 @@ pub struct Horizontal<'a> {
 }
 
 impl<'a> Horizontal<'a> {
+    pub fn new(screen: &'a mut dyn Screen, row: usize) -> Self {
+        Horizontal {
+            screen,
+            row,
+            start: None,
+            end: None,
+            char: '-',
+        }
+    }
+
     crate::util::setters! {
         start(x: usize) => start = Some(x),
         end(x: usize) => end = Some(x),

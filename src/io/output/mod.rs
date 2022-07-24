@@ -65,47 +65,19 @@ impl dyn Screen + '_ {
 
     /// Write a header to the screen. (Note this must be rewritten every frame!)
     pub fn header<'a>(&'a mut self) -> Header<'a> {
-        Header {
-            screen: self,
-            tabs: Vec::with_capacity(5),
-            selected: None,
-            profile: "".into(),
-            // TODO: Use an actual time type
-            time: "".into(),
-        }
+        Header::new(self)
     }
 
     /// Write a text-box to the screen.
     pub fn textbox<'a>(&'a mut self, text: Vec<Text>) -> Textbox<'a> {
-        Textbox {
-            screen: self,
-            chunks: text,
-            pos: XY(0, 0),
-            width: None,
-            height: None,
-            scroll: 0,
-            indent: 0,
-            first_indent: None,
-        }
+        Textbox::new(self, text)
     }
 
     pub fn vertical<'a>(&'a mut self, col: usize) -> Vertical<'a> {
-        Vertical {
-            screen: self,
-            col,
-            start: None,
-            end: None,
-            char: '|',
-        }
+        Vertical::new(self, col)
     }
 
     pub fn horizontal<'a>(&'a mut self, row: usize) -> Horizontal<'a> {
-        Horizontal {
-            screen: self,
-            row,
-            start: None,
-            end: None,
-            char: '-',
-        }
+        Horizontal::new(self, row)
     }
 }

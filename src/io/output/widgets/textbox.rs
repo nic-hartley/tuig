@@ -15,6 +15,19 @@ pub struct Textbox<'a> {
 }
 
 impl<'a> Textbox<'a> {
+    pub fn new(screen: &'a mut dyn Screen, text: Vec<Text>) -> Self {
+        Self {
+            screen,
+            chunks: text,
+            pos: XY(0, 0),
+            width: None,
+            height: None,
+            scroll: 0,
+            indent: 0,
+            first_indent: None,
+        }
+    }
+
     pub fn size(mut self, x: usize, y: usize) -> Self {
         self.width = Some(x);
         self.height = Some(y);
