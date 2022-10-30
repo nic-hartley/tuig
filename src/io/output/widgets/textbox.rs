@@ -93,6 +93,7 @@ impl<'a> Drop for Textbox<'a> {
             }
             cur_para.push(chunk);
         }
+        paragraphs.push(cur_para);
 
         // space out and word-wrap those paragraphs into lines
         let mut lines = vec![];
@@ -104,13 +105,18 @@ impl<'a> Drop for Textbox<'a> {
                 // the code flow in this for loop is too complex to add this =false at the end, so we make do
                 let was_line_start = line_start;
                 line_start = false;
-                // if it fits without issue, just add it
+                // while there's too much to fit on the next line all at once
                 while pos + chunk.text.len() >= width {
-                    let space_left = width - (pos + chunk.text.len());
+                    // how much space can we fit things into?
+                    let space_left = width - pos - 1;
+                    // the bit of text that will be put at the end of this line
                     let line_end: String;
+                    // the rest of the text, which wraps to following lines
                     let rest: String;
-                    if let Some((pre, post)) = chunk.text[..space_left].rsplit_once(breakable) {
+                    if let Some(idx) = chunk.text[..space_left].rfind(breakable) {
                         // we have a breakable character in time; we break there
+                        let pre = &chunk.text[..idx];
+                        let post = &chunk.text[idx+1..];
                         line_end = pre.into();
                         rest = post.into();
                     } else if !was_line_start {
@@ -133,11 +139,19 @@ impl<'a> Drop for Textbox<'a> {
                         // prevented this!
                         unreachable!("indent or first indent is larger than width")
                     }
+                    // set up the chunk for next iteration
                     chunk.text = rest;
+                    // tack on the end of the line
                     if !line_end.is_empty() {
+                        // (avoiding the allocation if necessary)
                         line.push(chunk.with_text(line_end));
                     }
+                    // actually terminate the line and start the next one
+                    lines.push(line);
+                    line = text!["{0:1$}"("", self.indent)];
+                    pos = self.indent;
                 }
+                // now we can fit the rest on this one line
                 pos += chunk.text.len();
                 line.push(chunk);
             }
@@ -146,12 +160,16 @@ impl<'a> Drop for Textbox<'a> {
 
         let x = self.pos.x();
         let mut y = self.pos.y();
-        let line_subset = if self.scroll_bottom {
-            lines.drain(lines.len()-self.scroll..)
+        let start;
+        if self.scroll_bottom {
+            // we want [height] lines, starting [scroll] away from the bottom
+            let end = lines.len() - self.scroll;
+            start = end - height;
         } else {
-            lines.drain(..self.scroll)
+            // we want [height] lines, starting [scroll] away from the top
+            start = self.scroll;
         };
-        for line in line_subset {
+        for line in lines.into_iter().skip(start).take(height) {
             self.screen.write(XY(x, y), line);
             y += 1;
         }

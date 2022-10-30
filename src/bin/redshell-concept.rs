@@ -34,11 +34,9 @@ async fn render_demo(io: &mut dyn IoSystem) {
         .profile("watching the render concept")
         .time("the time is now");
     io.draw(&s).await.unwrap();
-    // 2 second wait outside of this so wait 10s total
-    sleep(Duration::from_secs(8)).await;
 }
 
-async fn intro(io: &mut dyn IoSystem) {
+async fn intro_demo(io: &mut dyn IoSystem) {
     let mut s = Screen::new(io.size());
     // TODO: Write the real function and use [`TimedStream::with_delays`] to drive it
     let frames: Vec<(Vec<(&str, usize)>, Vec<Text>, usize)> = vec![
@@ -160,15 +158,16 @@ async fn intro(io: &mut dyn IoSystem) {
             "     Admin: No real names, either. So call me Admin.",
         ), 750),
     ];
-    let XY(width, height) = s.size();
     for (tabs, frame, delay) in frames {
+        s.clear();
+        s.resize(io.size());
         if !tabs.is_empty() {
             let mut h = s.header();
             for (name, notifs) in tabs {
                 h = h.tab(name, notifs);
             }
         }
-        s.textbox(frame).pos(0, 1).size(width, height).indent(12).first_indent(0);
+        s.textbox(frame).pos(0, 1).indent(12).first_indent(0);
         io.draw(&s).await.unwrap();
         sleep(Duration::from_millis(delay as u64)).await;
     }
@@ -220,6 +219,8 @@ async fn chat_demo(io: &mut dyn IoSystem) {
         ]),
     ];
     for (chats, inputs) in frames.into_iter() {
+        s.clear();
+        s.resize(io.size());
         app.on_event(&chats);
         for input in inputs.into_iter() {
             let mut _events = vec![];
@@ -242,7 +243,6 @@ async fn mouse_demo(io: &mut dyn IoSystem) {
     s.textbox(text!(invert "Press any keyboard button to exit"));
     io.draw(&s).await.unwrap();
     loop {
-        s.textbox(text!(invert "Press any keyboard button to exit"));
         let text;
         let at;
         match io.input().await.unwrap() {
@@ -272,6 +272,9 @@ async fn mouse_demo(io: &mut dyn IoSystem) {
                 at = XY(0, 0);
             }
         };
+        s.clear();
+        s.resize(io.size());
+        s.textbox(text!(invert "Press any keyboard button to exit"));
         s.textbox(text!("{}"(text))).xy(at);
         io.draw(&s).await.unwrap();
     }
@@ -283,7 +286,7 @@ async fn main() {
         type ConceptFn = for<'a> fn(&'a mut dyn IoSystem) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
         let mut map: HashMap<&'static str, ConceptFn> = HashMap::new();
         map.insert("render", |s| Box::pin(render_demo(s)));
-        map.insert("intro", |s| Box::pin(intro(s)));
+        map.insert("intro", |s| Box::pin(intro_demo(s)));
         map.insert("chat", |s| Box::pin(chat_demo(s)));
         map.insert("mouse", |s| Box::pin(mouse_demo(s)));
         map

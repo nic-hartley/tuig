@@ -59,13 +59,22 @@ impl Screen {
         &self.cells
     }
 
+    pub fn rows(&self) -> Vec<&[Cell]> {
+        let mut res = Vec::with_capacity(self.size.y());
+        for y in 0..self.size.y() {
+            res.push(&self[y]);
+        }
+        res
+    }
+
     pub fn clear(&mut self) {
         self.resize(self.size())
     }
 
     pub fn resize(&mut self, size: XY) {
         self.cells.truncate(0);
-        self.cells.resize(size.x() * size.y(), Cell::BLANK)
+        self.cells.resize(size.x() * size.y(), Cell::BLANK);
+        self.size = size;
     }
 
     pub fn write(&mut self, pos: XY, text: Vec<Text>) {
