@@ -6,6 +6,8 @@ use std::io;
 
 use super::{input::Action, output::Screen, XY};
 
+mod ansi_cli;
+
 #[async_trait::async_trait]
 pub trait IoSystem {
     async fn draw(&mut self, screen: &Screen) -> io::Result<()>;
@@ -14,5 +16,5 @@ pub trait IoSystem {
 }
 
 pub fn load() -> Box<dyn IoSystem> {
-    todo!()
+    Box::new(ansi_cli::AnsiScreen::get().unwrap())
 }

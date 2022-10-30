@@ -1,49 +1,65 @@
-use std::{io::{Write, stdout}, mem};
+use crossterm::{cursor::{Hide, Show, MoveTo, MoveToColumn, MoveDown}, execute, terminal::{self, Clear, ClearType, DisableLineWrap, EnableLineWrap, EnterAlternateScreen, LeaveAlternateScreen}, style::{SetForegroundColor, Color as CrosstermColor, SetBackgroundColor, SetAttribute, Attribute, SetAttributes, ResetColor}};
+use tokio::io::AsyncWriteExt;
 
-use crossterm::{cursor::{Hide, Show}, execute, terminal::{self, Clear, ClearType, DisableLineWrap, EnableLineWrap, EnterAlternateScreen, LeaveAlternateScreen}};
+use crate::io::{XY, output::Screen, output::Color as RedshellColor};
 
-use crate::io::XY;
+use super::IoSystem;
 
-use super::{Text, Screen};
-
-// TODO: Replace all the `unwrap`s with 
-
-pub struct AnsiScreen {
-    /// The text fragments that will be written to screen, plus its horizontal position; one vec per line.
-    /// Each line is sorted from left to right (lower to higher X).
-    texts: Vec<Vec<(usize, Text)>>,
+fn ct4rs_color(rs: RedshellColor) -> CrosstermColor {
+    match rs {
+        RedshellColor::BrightBlack => CrosstermColor::DarkGrey,
+        RedshellColor::Black => CrosstermColor::Black,
+        RedshellColor::BrightRed => CrosstermColor::Red,
+        RedshellColor::Red => CrosstermColor::DarkRed,
+        RedshellColor::BrightGreen => CrosstermColor::Green,
+        RedshellColor::Green => CrosstermColor::DarkGreen,
+        RedshellColor::BrightYellow => CrosstermColor::Yellow,
+        RedshellColor::Yellow => CrosstermColor::DarkYellow,
+        RedshellColor::BrightBlue => CrosstermColor::Blue,
+        RedshellColor::Blue => CrosstermColor::DarkBlue,
+        RedshellColor::BrightMagenta => CrosstermColor::Magenta,
+        RedshellColor::Magenta => CrosstermColor::DarkMagenta,
+        RedshellColor::BrightCyan => CrosstermColor::Cyan,
+        RedshellColor::Cyan => CrosstermColor::DarkCyan,
+        RedshellColor::BrightWhite => CrosstermColor::White,
+        RedshellColor::White => CrosstermColor::Grey,
+        RedshellColor::Default => CrosstermColor::Reset,
+    }
 }
+
+// No need to store anything -- this only ever reads/writes to stdin/stdout.
+pub struct AnsiScreen;
 
 impl AnsiScreen {
     pub fn get() -> crossterm::Result<Self> {
-        execute!(stdout(),
+        execute!(std::io::stdout(),
             EnterAlternateScreen,
             DisableLineWrap,
             Hide,
             Clear(ClearType::All)
         )?;
         std::panic::set_hook(Box::new(|i| {
-            let _ = execute!(stdout(),
+            let _ = execute!(std::io::stdout(),
                 Clear(ClearType::All),
                 Show,
                 EnableLineWrap,
                 LeaveAlternateScreen
             );
             println!("{}", i);
-            let _ = execute!(stdout(),
+            let _ = execute!(std::io::stdout(),
                 EnterAlternateScreen,
                 DisableLineWrap,
                 Hide,
                 Clear(ClearType::All)
             );
         }));
-        Ok(Self { texts: vec![] })
+        Ok(Self)
     }
 }
 
 impl Drop for AnsiScreen {
     fn drop(&mut self) {
-        execute!(stdout(),
+        execute!(std::io::stdout(),
             Clear(ClearType::All),
             Show,
             EnableLineWrap,
@@ -54,66 +70,78 @@ impl Drop for AnsiScreen {
 }
 
 #[async_trait::async_trait]
-impl Screen for AnsiScreen {
+impl IoSystem for AnsiScreen {
     fn size(&self) -> XY {
         let (x, y) = terminal::size().unwrap();
         XY(x as usize, y as usize)
     }
 
-    fn write_raw(&mut self, text: Vec<Text>, pos: XY) {
-        let XY(width, height) = self.size();
-        if pos.y() > height || pos.x() > width {
-            return;
-        }
-        if self.texts.len() != height {
-            self.texts.resize_with(height, || vec![]);
-        }
-
-        // TODO: Trim overlaps and actually ensure things are sorted
-        // (for now it just takes advantage of 'timing' to avoid issues)
-        let mut col = pos.x();
-        for t in text {
-            if col >= width {
-                break;
+    async fn draw(&mut self, screen: &Screen) -> std::io::Result<()> {
+        let mut out = vec![];
+        let mut ch_b = [0u8; 4];
+        crossterm::queue!(&mut out, MoveTo(0, 0))?;
+        for row in screen.rows() {
+            let mut fg = row[0].fg;
+            let mut bg = row[0].bg;
+            let mut bold = row[0].bold;
+            let mut underline = row[0].underline;
+            let mut invert = row[0].invert;
+            let mut attrs = [Attribute::NormalIntensity, Attribute::NoUnderline, Attribute::NoReverse];
+            if bold {
+                attrs[0] = Attribute::Bold;
             }
-            // don't need to trim: no line wrapping in in this screen
-            let len = t.text.len();
-            self.texts[pos.y()].push((col, t));
-            col += len;
-        }
-    }
-
-    async fn flush(&mut self) {
-        // replace so we can take ownership and .into_iter() instead of .drain()ing
-        let lines = mem::replace(&mut self.texts, vec![]);
-        let mut out = Vec::<u8>::new();
-        write!(out, "\x1b[2J\x1b[0;0H").unwrap();
-        for line in lines {
-            // TODO: update to use crossterm properly
-            write!(out, "\n").unwrap();
-            for (pos, text) in line {
-                // TODO: minimize the changes and data sent
-                // (e.g. calculate distance, pick spaces or escape codes)
-                // (e.g. detect what's staying the same and don't re-set it)
-                write!(out, "\x1b[{}G\x1b[0;{};{};{};{}{}m{}",
-                    pos + 1,
-                    text.fg as usize + 30,
-                    text.bg as usize + 40,
-                    if text.bold { 1 } else { 22 },
-                    if text.underline { 4 } else { 24 },
-                    if text.invert { ";7" } else { "" },
-                    text.text,
-                ).unwrap();
+            if underline {
+                attrs[1] = Attribute::Underlined;
             }
+            if invert {
+                attrs[2] = Attribute::Reverse;
+            }
+            crossterm::queue!(&mut out,
+                ResetColor,
+                SetForegroundColor(ct4rs_color(fg)),
+                SetBackgroundColor(ct4rs_color(bg)),
+                SetAttribute(Attribute::Reset),
+                SetAttributes(attrs.as_ref().into()),
+            )?;
+            out.extend_from_slice(row[0].ch.encode_utf8(&mut ch_b).as_bytes());
+
+            for cell in &row[1..] {
+                if cell.fg != fg {
+                    fg = cell.fg;
+                    crossterm::queue!(&mut out, SetForegroundColor(ct4rs_color(fg)))?;
+                }
+                if cell.bg != bg {
+                    bg = cell.bg;
+                    crossterm::queue!(&mut out, SetBackgroundColor(ct4rs_color(bg)))?;
+                }
+                if cell.bold != bold {
+                    bold = cell.bold;
+                    let attr = if bold { Attribute::Bold } else { Attribute::NormalIntensity };
+                    crossterm::queue!(&mut out, SetAttribute(attr))?;
+                }
+                if cell.underline != underline {
+                    underline = cell.underline;
+                    let attr = if underline { Attribute::Underlined } else { Attribute::NoUnderline };
+                    crossterm::queue!(&mut out, SetAttribute(attr))?;
+                }
+                if cell.invert != invert {
+                    invert = cell.invert;
+                    let attr = if invert { Attribute::Reverse } else { Attribute::NoReverse };
+                    crossterm::queue!(&mut out, SetAttribute(attr))?;
+                }
+                out.extend_from_slice(cell.ch.encode_utf8(&mut ch_b).as_bytes());
+            }
+            crossterm::queue!(&mut out,
+                MoveDown(1),
+                MoveToColumn(0),
+            )?;
         }
-        stdout().write_all(&mut out).unwrap();
+        let mut stdout = tokio::io::stdout();
+        stdout.write_all(&out).await?;
+        stdout.flush().await
     }
 
-    fn clear(&mut self) {
-        self.texts.clear()
-    }
-
-    async fn clear_raw(&mut self) {
-        stdout().write_all("\x1b[2J".as_bytes()).unwrap();
+    async fn input(&mut self) -> std::io::Result<crate::io::input::Action> {
+        todo!()
     }
 }
