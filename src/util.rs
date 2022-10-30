@@ -18,7 +18,7 @@ macro_rules! abbrev_debug {
         write!($f, concat!(stringify!($always), ": {:?}, "), $self.$always)?
     };
 
-    (@member $self:ident $f:ident; ignore $always:ident) => {
+    (@member $self:ident $f:ident; ignore $ignore:ident) => {
         write!($f, concat!(stringify!($ignore), ": .., "))?
     };
 
