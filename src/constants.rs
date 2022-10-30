@@ -11,4 +11,3 @@ pub mod graphics {
     /// How many rows the header takes up. Used by apps for relative positioning.
     pub const HEADER_HEIGHT: usize = 1;
 }
-

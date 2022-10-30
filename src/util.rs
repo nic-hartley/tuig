@@ -44,4 +44,4 @@ macro_rules! abbrev_debug {
     };
 }
 
-pub(crate) use {setters, abbrev_debug};
+pub(crate) use {abbrev_debug, setters};

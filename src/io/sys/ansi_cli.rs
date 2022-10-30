@@ -1,16 +1,38 @@
-use std::{io, time::Duration, mem};
+use std::{io, mem, time::Duration};
 
-use crossterm::{cursor::{Hide, Show, MoveTo, MoveToColumn, MoveDown}, execute, terminal::{self, Clear, ClearType, DisableLineWrap, EnableLineWrap, EnterAlternateScreen, LeaveAlternateScreen}, style::{SetForegroundColor, Color as CrosstermColor, SetBackgroundColor, SetAttribute, Attribute, SetAttributes, ResetColor}, event::{self as ct, EnableMouseCapture, DisableMouseCapture}};
-use tokio::{io::AsyncWriteExt, sync::{oneshot, mpsc}};
+use crossterm::{
+    cursor::{Hide, MoveDown, MoveTo, MoveToColumn, Show},
+    event::{self as ct, DisableMouseCapture, EnableMouseCapture},
+    execute,
+    style::{
+        Attribute, Color as CrosstermColor, ResetColor, SetAttribute, SetAttributes,
+        SetBackgroundColor, SetForegroundColor,
+    },
+    terminal::{
+        self, Clear, ClearType, DisableLineWrap, EnableLineWrap, EnterAlternateScreen,
+        LeaveAlternateScreen,
+    },
+};
+use tokio::{
+    io::AsyncWriteExt,
+    sync::{mpsc, oneshot},
+};
 
-use crate::io::{XY, output::Screen, output::{Color as RedshellColor, Cell}, input::{Action, MouseButton, Key}};
+use crate::io::{
+    input::{Action, Key, MouseButton},
+    output::Screen,
+    output::{Cell, Color as RedshellColor},
+    XY,
+};
 
 use super::IoSystem;
 
 macro_rules! mods {
     ( $mods:ident, $action:ident ) => {
         if $mods.contains(ct::KeyModifiers::SHIFT) {
-            try_send!($action { key: Key::LeftShift });
+            try_send!($action {
+                key: Key::LeftShift
+            });
         }
         if $mods.contains(ct::KeyModifiers::CONTROL) {
             try_send!($action { key: Key::LeftCtrl });
@@ -18,7 +40,7 @@ macro_rules! mods {
         if $mods.contains(ct::KeyModifiers::ALT) {
             try_send!($action { key: Key::LeftAlt });
         }
-    }
+    };
 }
 
 fn io4ct_btn(ct: ct::MouseButton) -> MouseButton {
@@ -49,7 +71,7 @@ fn process_input(actions: mpsc::UnboundedSender<Action>, mut stop: oneshot::Rece
             Err(e) => {
                 try_send!(Error(format!("polling: {}", e)));
                 return;
-            },
+            }
         }
         let ev = match crossterm::event::read() {
             Ok(ev) => ev,
@@ -60,12 +82,16 @@ fn process_input(actions: mpsc::UnboundedSender<Action>, mut stop: oneshot::Rece
         };
         match ev {
             ct::Event::Key(ct::KeyEvent { code, modifiers }) => {
-                mods! (modifiers, KeyPress);
+                mods!(modifiers, KeyPress);
                 if code == ct::KeyCode::BackTab {
-                    try_send!(KeyPress { key: Key::LeftShift });
+                    try_send!(KeyPress {
+                        key: Key::LeftShift
+                    });
                     try_send!(KeyPress { key: Key::Tab });
                     try_send!(KeyRelease { key: Key::Tab });
-                    try_send!(KeyRelease { key: Key::LeftShift });
+                    try_send!(KeyRelease {
+                        key: Key::LeftShift
+                    });
                 } else if code == ct::KeyCode::Null {
                     try_send!(Unknown("null character".into()));
                 } else {
@@ -91,24 +117,50 @@ fn process_input(actions: mpsc::UnboundedSender<Action>, mut stop: oneshot::Rece
                     try_send!(KeyPress { key: action_code });
                     try_send!(KeyRelease { key: action_code });
                 }
-                mods! (modifiers, KeyRelease);
+                mods!(modifiers, KeyRelease);
             }
             ct::Event::Resize(..) => (), // handled by polling in the output when it's requested
-            ct::Event::Mouse(ct::MouseEvent { row, column: col, kind, modifiers }) => {
+            ct::Event::Mouse(ct::MouseEvent {
+                row,
+                column: col,
+                kind,
+                modifiers,
+            }) => {
                 mods!(modifiers, KeyPress);
                 let pos = XY(col as usize, row as usize);
                 match kind {
-                    ct::MouseEventKind::Up(btn) => try_send!(MouseRelease { button: io4ct_btn(btn), pos }),
-                    ct::MouseEventKind::Down(btn) => try_send!(MousePress { button: io4ct_btn(btn), pos }),
-                    ct::MouseEventKind::Drag(btn) => try_send!(MouseMove { button: Some(io4ct_btn(btn)), pos }),
+                    ct::MouseEventKind::Up(btn) => try_send!(MouseRelease {
+                        button: io4ct_btn(btn),
+                        pos
+                    }),
+                    ct::MouseEventKind::Down(btn) => try_send!(MousePress {
+                        button: io4ct_btn(btn),
+                        pos
+                    }),
+                    ct::MouseEventKind::Drag(btn) => try_send!(MouseMove {
+                        button: Some(io4ct_btn(btn)),
+                        pos
+                    }),
                     ct::MouseEventKind::Moved => try_send!(MouseMove { button: None, pos }),
                     ct::MouseEventKind::ScrollUp => {
-                        try_send!(MousePress { button: MouseButton::ScrollUp, pos });
-                        try_send!(MousePress { button: MouseButton::ScrollUp, pos });
+                        try_send!(MousePress {
+                            button: MouseButton::ScrollUp,
+                            pos
+                        });
+                        try_send!(MousePress {
+                            button: MouseButton::ScrollUp,
+                            pos
+                        });
                     }
                     ct::MouseEventKind::ScrollDown => {
-                        try_send!(MousePress { button: MouseButton::ScrollDown, pos });
-                        try_send!(MousePress { button: MouseButton::ScrollDown, pos });
+                        try_send!(MousePress {
+                            button: MouseButton::ScrollDown,
+                            pos
+                        });
+                        try_send!(MousePress {
+                            button: MouseButton::ScrollDown,
+                            pos
+                        });
                     }
                 }
                 mods!(modifiers, KeyRelease);
@@ -149,7 +201,11 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
     let mut bold = row[0].bold;
     let mut underline = row[0].underline;
     let mut invert = row[0].invert;
-    let mut attrs = [Attribute::NormalIntensity, Attribute::NoUnderline, Attribute::NoReverse];
+    let mut attrs = [
+        Attribute::NormalIntensity,
+        Attribute::NoUnderline,
+        Attribute::NoReverse,
+    ];
     if bold {
         attrs[0] = Attribute::Bold;
     }
@@ -159,7 +215,8 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
     if invert {
         attrs[2] = Attribute::Reverse;
     }
-    crossterm::queue!(&mut out,
+    crossterm::queue!(
+        &mut out,
         ResetColor,
         SetForegroundColor(ct4rs_color(fg)),
         SetBackgroundColor(ct4rs_color(bg)),
@@ -179,25 +236,34 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
         }
         if cell.bold != bold {
             bold = cell.bold;
-            let attr = if bold { Attribute::Bold } else { Attribute::NormalIntensity };
+            let attr = if bold {
+                Attribute::Bold
+            } else {
+                Attribute::NormalIntensity
+            };
             crossterm::queue!(&mut out, SetAttribute(attr))?;
         }
         if cell.underline != underline {
             underline = cell.underline;
-            let attr = if underline { Attribute::Underlined } else { Attribute::NoUnderline };
+            let attr = if underline {
+                Attribute::Underlined
+            } else {
+                Attribute::NoUnderline
+            };
             crossterm::queue!(&mut out, SetAttribute(attr))?;
         }
         if cell.invert != invert {
             invert = cell.invert;
-            let attr = if invert { Attribute::Reverse } else { Attribute::NoReverse };
+            let attr = if invert {
+                Attribute::Reverse
+            } else {
+                Attribute::NoReverse
+            };
             crossterm::queue!(&mut out, SetAttribute(attr))?;
         }
         out.extend_from_slice(cell.ch.encode_utf8(&mut ch_b).as_bytes());
     }
-    crossterm::queue!(&mut out,
-        MoveDown(1),
-        MoveToColumn(0),
-    )?;
+    crossterm::queue!(&mut out, MoveDown(1), MoveToColumn(0),)?;
 
     Ok(out)
 }
@@ -210,7 +276,8 @@ pub struct AnsiScreen {
 impl AnsiScreen {
     fn init_term() -> crossterm::Result<()> {
         terminal::enable_raw_mode()?;
-        execute!(std::io::stdout(),
+        execute!(
+            std::io::stdout(),
             EnableMouseCapture,
             EnterAlternateScreen,
             DisableLineWrap,
@@ -221,7 +288,8 @@ impl AnsiScreen {
     }
 
     fn clean_term() -> crossterm::Result<()> {
-        execute!(std::io::stdout(),
+        execute!(
+            std::io::stdout(),
             Clear(ClearType::All),
             Show,
             EnableLineWrap,
@@ -242,7 +310,10 @@ impl AnsiScreen {
         let (queue_s, queue_r) = mpsc::unbounded_channel();
         let (stop_s, stop_r) = oneshot::channel();
         tokio::task::spawn_blocking(|| process_input(queue_s, stop_r));
-        Ok(Self { queue: queue_r, stop: Some(stop_s) })
+        Ok(Self {
+            queue: queue_r,
+            stop: Some(stop_s),
+        })
     }
 }
 

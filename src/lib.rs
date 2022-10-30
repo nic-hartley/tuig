@@ -1,7 +1,7 @@
-pub mod io;
-pub mod event;
 pub mod app;
 pub mod constants;
+pub mod event;
+pub mod io;
 mod util;
 
 /// The current state of the game, including the state of the UI.

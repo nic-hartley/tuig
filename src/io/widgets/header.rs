@@ -1,4 +1,10 @@
-use crate::{io::{output::{Screen, Text}, XY}, text1, text};
+use crate::{
+    io::{
+        output::{Screen, Text},
+        XY,
+    },
+    text, text1,
+};
 
 pub struct Header<'a> {
     pub(in super::super) screen: &'a mut Screen,
@@ -61,6 +67,7 @@ impl<'a> Drop for Header<'a> {
 
         self.screen.write(XY(0, 0), text);
         let right_align = self.screen.size().x() - self.time.len();
-        self.screen.write(XY(right_align, 0), text!["{}"(self.time)]);
+        self.screen
+            .write(XY(right_align, 0), text!["{}"(self.time)]);
     }
 }

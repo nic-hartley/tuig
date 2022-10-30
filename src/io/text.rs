@@ -25,28 +25,44 @@ impl Color {
     /// All of the colors supported, not including [`Color::Default`] (because that's to reset, not a real color
     pub fn all() -> [Color; 16] {
         [
-            Color::Black,   Color::BrightBlack,
-            Color::Red,     Color::BrightRed,
-            Color::Green,   Color::BrightGreen,
-            Color::Yellow,  Color::BrightYellow,
-            Color::Blue,    Color::BrightBlue,
-            Color::Magenta, Color::BrightMagenta,
-            Color::Cyan,    Color::BrightCyan,
-            Color::White,   Color::BrightWhite,
+            Color::Black,
+            Color::BrightBlack,
+            Color::Red,
+            Color::BrightRed,
+            Color::Green,
+            Color::BrightGreen,
+            Color::Yellow,
+            Color::BrightYellow,
+            Color::Blue,
+            Color::BrightBlue,
+            Color::Magenta,
+            Color::BrightMagenta,
+            Color::Cyan,
+            Color::BrightCyan,
+            Color::White,
+            Color::BrightWhite,
         ]
     }
 
     /// The name of the color as a string
     pub fn name(&self) -> &'static str {
         match self {
-            Color::Black => "black",        Color::BrightBlack => "bright black",
-            Color::Red => "red",            Color::BrightRed => "bright red",
-            Color::Green => "green",        Color::BrightGreen => "bright green",
-            Color::Yellow => "yellow",      Color::BrightYellow => "bright yellow",
-            Color::Blue => "blue",          Color::BrightBlue => "bright blue",
-            Color::Magenta => "magenta",    Color::BrightMagenta => "bright magenta",
-            Color::Cyan => "cyan",          Color::BrightCyan => "bright cyan",
-            Color::White => "white",        Color::BrightWhite => "bright white",
+            Color::Black => "black",
+            Color::BrightBlack => "bright black",
+            Color::Red => "red",
+            Color::BrightRed => "bright red",
+            Color::Green => "green",
+            Color::BrightGreen => "bright green",
+            Color::Yellow => "yellow",
+            Color::BrightYellow => "bright yellow",
+            Color::Blue => "blue",
+            Color::BrightBlue => "bright blue",
+            Color::Magenta => "magenta",
+            Color::BrightMagenta => "bright magenta",
+            Color::Cyan => "cyan",
+            Color::BrightCyan => "bright cyan",
+            Color::White => "white",
+            Color::BrightWhite => "bright white",
             Color::Default => "default",
         }
     }

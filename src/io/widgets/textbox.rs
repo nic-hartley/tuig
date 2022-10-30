@@ -1,4 +1,10 @@
-use crate::{io::{output::{Screen, Text}, XY}, text};
+use crate::{
+    io::{
+        output::{Screen, Text},
+        XY,
+    },
+    text,
+};
 
 fn breakable(ch: char) -> bool {
     // TODO: There have to be better ways to decide breakability than just "nyehe whitespaec"
@@ -115,10 +121,10 @@ impl<'a> Drop for Textbox<'a> {
                     let line_end: String;
                     // the rest of the text, which wraps to following lines
                     let rest: String;
-                    if let Some(idx) = chunk.text[..space_left+1].rfind(breakable) {
+                    if let Some(idx) = chunk.text[..space_left + 1].rfind(breakable) {
                         // we have a breakable character in time; we break there
                         let pre = &chunk.text[..idx];
-                        let post = &chunk.text[idx+1..];
+                        let post = &chunk.text[idx + 1..];
                         line_end = pre.into();
                         rest = post.into();
                     } else if !was_line_start {

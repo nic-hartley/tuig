@@ -1,6 +1,23 @@
-use std::{collections::HashMap, env::args, io::{Write, stdout}, time::Duration, pin::Pin, future::Future};
+use std::{
+    collections::HashMap,
+    env::args,
+    future::Future,
+    io::{stdout, Write},
+    pin::Pin,
+    time::Duration,
+};
 
-use redshell::{io::{XY, output::{Color, Text, Screen}, input::{Action, Key}, sys::{IoSystem, self}}, text, app::{ChatApp, App}, GameState, event::Event};
+use redshell::{
+    app::{App, ChatApp},
+    event::Event,
+    io::{
+        input::{Action, Key},
+        output::{Color, Screen, Text},
+        sys::{self, IoSystem},
+        XY,
+    },
+    text, GameState,
+};
 use tokio::time::sleep;
 
 async fn render_demo(io: &mut dyn IoSystem) {
@@ -13,8 +30,7 @@ async fn render_demo(io: &mut dyn IoSystem) {
         let amt = Color::all().len();
         const LINES: usize = 2;
         for (i, bg) in IntoIterator::into_iter(Color::all()).enumerate() {
-            let text = Text::of(format!("{}", bg.name()))
-                .fg(fg).bg(bg);
+            let text = Text::of(format!("{}", bg.name())).fg(fg).bg(bg);
             texts.push(text);
             if i % (amt / LINES) == amt / LINES - 1 {
                 texts.push(Text::plain("\n"));
@@ -182,41 +198,45 @@ async fn chat_demo(io: &mut dyn IoSystem) {
         apps: vec![],
     };
     let frames: Vec<(_, &[Action])> = vec![
-        (vec![
-            Event::npc_chat("alice", "hello there", &["hi", "hello", "sup"]),
-        ], &[]),
-        (vec![
-            Event::npc_chat("bob", "so", &[]),
-        ], &[
-            Action::KeyPress { key: Key::Right },
-        ]),
-        (vec![
-            Event::npc_chat("alice", "buddy", &["hi", "hello", "sup"]),
-        ], &[
-            Action::KeyPress { key: Key::Right },
-        ]),
-        (vec![], &[
-            Action::KeyPress { key: Key::Enter },
-        ]),
-        (vec![
-            Event::npc_chat("bob", "hi friend", &[]),
-            Event::npc_chat("charlie", "asdfasdfasdfadsf", &[]),
-            Event::npc_chat("charlie", "adskfljalksdjasldkf", &[]),
-            Event::npc_chat("bob", "u up?", &["yes", "no"]),
-        ], &[]),
-        (vec![
-            Event::npc_chat("alice", "so", &[]),
-        ], &[
-            Action::KeyPress { key: Key::Down },
-        ]),
-        (vec![
-            Event::npc_chat("alice", "uh", &[]),
-            Event::npc_chat("bob", "hello?", &["yes hello", "no goodbye"]),
-            Event::npc_chat("alice", "what's the deal with airline tickets", &[]),
-        ], &[]),
-        (vec![], &[
-            Action::KeyPress { key: Key::Up },
-        ]),
+        (
+            vec![Event::npc_chat(
+                "alice",
+                "hello there",
+                &["hi", "hello", "sup"],
+            )],
+            &[],
+        ),
+        (
+            vec![Event::npc_chat("bob", "so", &[])],
+            &[Action::KeyPress { key: Key::Right }],
+        ),
+        (
+            vec![Event::npc_chat("alice", "buddy", &["hi", "hello", "sup"])],
+            &[Action::KeyPress { key: Key::Right }],
+        ),
+        (vec![], &[Action::KeyPress { key: Key::Enter }]),
+        (
+            vec![
+                Event::npc_chat("bob", "hi friend", &[]),
+                Event::npc_chat("charlie", "asdfasdfasdfadsf", &[]),
+                Event::npc_chat("charlie", "adskfljalksdjasldkf", &[]),
+                Event::npc_chat("bob", "u up?", &["yes", "no"]),
+            ],
+            &[],
+        ),
+        (
+            vec![Event::npc_chat("alice", "so", &[])],
+            &[Action::KeyPress { key: Key::Down }],
+        ),
+        (
+            vec![
+                Event::npc_chat("alice", "uh", &[]),
+                Event::npc_chat("bob", "hello?", &["yes hello", "no goodbye"]),
+                Event::npc_chat("alice", "what's the deal with airline tickets", &[]),
+            ],
+            &[],
+        ),
+        (vec![], &[Action::KeyPress { key: Key::Up }]),
     ];
     for (chats, inputs) in frames.into_iter() {
         s.clear();
@@ -230,8 +250,8 @@ async fn chat_demo(io: &mut dyn IoSystem) {
         s.textbox(text!(
             "This is a ", bold red "demo", " of the chatbox. No input necessary."
         ))
-            .pos(0, 0)
-            .height(1);
+        .pos(0, 0)
+        .height(1);
         io.draw(&s).await.unwrap();
         sleep(Duration::from_millis(1000)).await;
     }
@@ -255,7 +275,10 @@ async fn mouse_demo(io: &mut dyn IoSystem) {
                 text = format!("{:?} button released at {:?}", button, pos);
                 at = pos;
             }
-            Action::MouseMove { button: Some(b), pos } => {
+            Action::MouseMove {
+                button: Some(b),
+                pos,
+            } => {
                 text = format!("Moved to {:?} holding {:?}", pos, b);
                 at = pos;
             }
@@ -303,7 +326,14 @@ async fn main() {
                 func(iosys.as_mut()).await;
                 let XY(width, height) = iosys.size();
                 let msg = "fin.";
-                write!(stdout(), "\x1b[{};{}H\x1b[107;30m{}\x1b[0m", height, width - msg.len(), msg).unwrap();
+                write!(
+                    stdout(),
+                    "\x1b[{};{}H\x1b[107;30m{}\x1b[0m",
+                    height,
+                    width - msg.len(),
+                    msg
+                )
+                .unwrap();
                 stdout().flush().unwrap();
                 sleep(Duration::from_secs(2)).await;
             }

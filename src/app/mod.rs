@@ -1,4 +1,8 @@
-use crate::{GameState, event::Event, io::{output::Screen, input::Action}};
+use crate::{
+    event::Event,
+    io::{input::Action, output::Screen},
+    GameState,
+};
 
 /// Each app is a single tab in the game's window view, e.g. chat. They exclusively handle IO: Processing user input
 /// and rendering (part of) game state.

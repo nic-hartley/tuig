@@ -1,4 +1,4 @@
-use crate::io::output::{Screen, Cell};
+use crate::io::output::{Cell, Screen};
 
 pub struct Horizontal<'a> {
     pub(in super::super) screen: &'a mut Screen,

@@ -44,7 +44,10 @@ pub struct Screen {
 
 impl Screen {
     pub fn new(size: XY) -> Self {
-        let mut res = Self { cells: vec![], size: XY(0, 0) };
+        let mut res = Self {
+            cells: vec![],
+            size: XY(0, 0),
+        };
         res.resize(size);
         res
     }
