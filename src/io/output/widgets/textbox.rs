@@ -106,14 +106,14 @@ impl<'a> Drop for Textbox<'a> {
                 let was_line_start = line_start;
                 line_start = false;
                 // while there's too much to fit on the next line all at once
-                while pos + chunk.text.len() >= width {
+                while pos + chunk.text.len() > width {
                     // how much space can we fit things into?
-                    let space_left = width - pos - 1;
+                    let space_left = width - pos;
                     // the bit of text that will be put at the end of this line
                     let line_end: String;
                     // the rest of the text, which wraps to following lines
                     let rest: String;
-                    if let Some(idx) = chunk.text[..space_left].rfind(breakable) {
+                    if let Some(idx) = chunk.text[..space_left+1].rfind(breakable) {
                         // we have a breakable character in time; we break there
                         let pre = &chunk.text[..idx];
                         let post = &chunk.text[idx+1..];

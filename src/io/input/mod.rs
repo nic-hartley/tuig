@@ -57,38 +57,3 @@ pub enum Action {
     /// Trying to read input let to some kind of error, with a description
     Error(String),
 }
-
-/// Common interface for all sources of input.
-///
-/// It's expected this will spawn another task to actually watch the input, then push that into a [`mpsc::channel`]
-/// to eventually be fed out form [`next`].
-#[async_trait::async_trait]
-pub trait Input {
-    /// Get the next input event.
-    /// 
-    /// This **must** be cancel-safe. If the returned future is cancelled before data is polled out, no inputs may
-    /// be lost.
-    async fn next(&mut self) -> Action;
-
-    /// Discard any queued but unreceived inputs. Should return immediately. If an input comes in while this function
-    /// is executing, it might be discarded or not, depending on the implementation.
-    fn flush(&mut self);
-}
-
-impl dyn Input + '_ {
-    pub fn get() -> Box<dyn Input> {
-        if cfg!(feature = "force_in_blank") {
-            return Box::new(test::UntimedStream::of(&[]));
-        }
-        if cfg!(feature = "force_in_ansi") {
-            return Box::new(ansi_cli::AnsiInput::get().expect("Failed to initialize forced ANSI CLI input."))
-        }
-        if let Ok(i) = ansi_cli::AnsiInput::get() {
-            return Box::new(i);
-        }
-        return Box::new(test::UntimedStream::of(&[]));
-    }
-}
-
-pub mod test;
-pub mod ansi_cli;

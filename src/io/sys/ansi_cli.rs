@@ -1,11 +1,121 @@
-use std::io;
+use std::{io, time::Duration, mem};
 
-use crossterm::{cursor::{Hide, Show, MoveTo, MoveToColumn, MoveDown}, execute, terminal::{self, Clear, ClearType, DisableLineWrap, EnableLineWrap, EnterAlternateScreen, LeaveAlternateScreen}, style::{SetForegroundColor, Color as CrosstermColor, SetBackgroundColor, SetAttribute, Attribute, SetAttributes, ResetColor}};
-use tokio::io::AsyncWriteExt;
+use crossterm::{cursor::{Hide, Show, MoveTo, MoveToColumn, MoveDown}, execute, terminal::{self, Clear, ClearType, DisableLineWrap, EnableLineWrap, EnterAlternateScreen, LeaveAlternateScreen}, style::{SetForegroundColor, Color as CrosstermColor, SetBackgroundColor, SetAttribute, Attribute, SetAttributes, ResetColor}, event::{self as ct, EnableMouseCapture, DisableMouseCapture}};
+use tokio::{io::AsyncWriteExt, sync::{oneshot, mpsc}};
 
-use crate::io::{XY, output::Screen, output::{Color as RedshellColor, Cell}};
+use crate::io::{XY, output::Screen, output::{Color as RedshellColor, Cell}, input::{Action, MouseButton, Key}};
 
 use super::IoSystem;
+
+macro_rules! mods {
+    ( $mods:ident, $action:ident ) => {
+        if $mods.contains(ct::KeyModifiers::SHIFT) {
+            try_send!($action { key: Key::LeftShift });
+        }
+        if $mods.contains(ct::KeyModifiers::CONTROL) {
+            try_send!($action { key: Key::LeftCtrl });
+        }
+        if $mods.contains(ct::KeyModifiers::ALT) {
+            try_send!($action { key: Key::LeftAlt });
+        }
+    }
+}
+
+fn io4ct_btn(ct: ct::MouseButton) -> MouseButton {
+    match ct {
+        ct::MouseButton::Left => MouseButton::Left,
+        ct::MouseButton::Middle => MouseButton::Middle,
+        ct::MouseButton::Right => MouseButton::Right,
+    }
+}
+
+fn process_input(actions: mpsc::UnboundedSender<Action>, mut stop: oneshot::Receiver<()>) {
+    macro_rules! try_send {
+        ( $type:ident $( ($nt:expr) )? $( { $($br:tt)* } )? ) => {
+            match actions.send(Action::$type $(($nt))? $({$($br)*})? ) {
+                Ok(_) => (),
+                Err(_) => return,
+            }
+        }
+    }
+    loop {
+        match stop.try_recv() {
+            Err(oneshot::error::TryRecvError::Empty) => (),
+            _ => return,
+        }
+        match crossterm::event::poll(Duration::from_millis(100)) {
+            Ok(false) => continue,
+            Ok(true) => (),
+            Err(e) => {
+                try_send!(Error(format!("polling: {}", e)));
+                return;
+            },
+        }
+        let ev = match crossterm::event::read() {
+            Ok(ev) => ev,
+            Err(e) => {
+                try_send!(Error(format!("polling: {}", e)));
+                return;
+            }
+        };
+        match ev {
+            ct::Event::Key(ct::KeyEvent { code, modifiers }) => {
+                mods! (modifiers, KeyPress);
+                if code == ct::KeyCode::BackTab {
+                    try_send!(KeyPress { key: Key::LeftShift });
+                    try_send!(KeyPress { key: Key::Tab });
+                    try_send!(KeyRelease { key: Key::Tab });
+                    try_send!(KeyRelease { key: Key::LeftShift });
+                } else if code == ct::KeyCode::Null {
+                    try_send!(Unknown("null character".into()));
+                } else {
+                    let action_code = match code {
+                        ct::KeyCode::Char(c) => Key::Char(c),
+                        ct::KeyCode::F(c) => Key::F(c),
+                        ct::KeyCode::Backspace => Key::Backspace,
+                        ct::KeyCode::Enter => Key::Enter,
+                        ct::KeyCode::Left => Key::Left,
+                        ct::KeyCode::Right => Key::Right,
+                        ct::KeyCode::Up => Key::Up,
+                        ct::KeyCode::Down => Key::Down,
+                        ct::KeyCode::Home => Key::Home,
+                        ct::KeyCode::End => Key::End,
+                        ct::KeyCode::PageUp => Key::PageUp,
+                        ct::KeyCode::PageDown => Key::PageDown,
+                        ct::KeyCode::Tab => Key::Tab,
+                        ct::KeyCode::Delete => Key::Delete,
+                        ct::KeyCode::Insert => Key::Insert,
+                        ct::KeyCode::Esc => Key::Escape,
+                        kc => unreachable!("unhandled keycode {:?}; should be handled earlier", kc),
+                    };
+                    try_send!(KeyPress { key: action_code });
+                    try_send!(KeyRelease { key: action_code });
+                }
+                mods! (modifiers, KeyRelease);
+            }
+            ct::Event::Resize(..) => (), // handled by polling in the output when it's requested
+            ct::Event::Mouse(ct::MouseEvent { row, column: col, kind, modifiers }) => {
+                mods!(modifiers, KeyPress);
+                let pos = XY(col as usize, row as usize);
+                match kind {
+                    ct::MouseEventKind::Up(btn) => try_send!(MouseRelease { button: io4ct_btn(btn), pos }),
+                    ct::MouseEventKind::Down(btn) => try_send!(MousePress { button: io4ct_btn(btn), pos }),
+                    ct::MouseEventKind::Drag(btn) => try_send!(MouseMove { button: Some(io4ct_btn(btn)), pos }),
+                    ct::MouseEventKind::Moved => try_send!(MouseMove { button: None, pos }),
+                    ct::MouseEventKind::ScrollUp => {
+                        try_send!(MousePress { button: MouseButton::ScrollUp, pos });
+                        try_send!(MousePress { button: MouseButton::ScrollUp, pos });
+                    }
+                    ct::MouseEventKind::ScrollDown => {
+                        try_send!(MousePress { button: MouseButton::ScrollDown, pos });
+                        try_send!(MousePress { button: MouseButton::ScrollDown, pos });
+                    }
+                }
+                mods!(modifiers, KeyRelease);
+            }
+        };
+    }
+}
 
 fn ct4rs_color(rs: RedshellColor) -> CrosstermColor {
     match rs {
@@ -92,45 +202,60 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
     Ok(out)
 }
 
-// No need to store anything -- this only ever reads/writes to stdin/stdout.
-pub struct AnsiScreen;
+pub struct AnsiScreen {
+    queue: mpsc::UnboundedReceiver<Action>,
+    stop: Option<oneshot::Sender<()>>,
+}
 
 impl AnsiScreen {
-    pub fn get() -> crossterm::Result<Self> {
+    fn init_term() -> crossterm::Result<()> {
+        terminal::enable_raw_mode()?;
         execute!(std::io::stdout(),
+            EnableMouseCapture,
             EnterAlternateScreen,
             DisableLineWrap,
             Hide,
-            Clear(ClearType::All)
+            Clear(ClearType::All),
         )?;
+        Ok(())
+    }
+
+    fn clean_term() -> crossterm::Result<()> {
+        execute!(std::io::stdout(),
+            Clear(ClearType::All),
+            Show,
+            EnableLineWrap,
+            LeaveAlternateScreen,
+            DisableMouseCapture,
+        )?;
+        terminal::disable_raw_mode()?;
+        Ok(())
+    }
+
+    pub fn get() -> crossterm::Result<Self> {
+        Self::init_term()?;
         std::panic::set_hook(Box::new(|i| {
-            let _ = execute!(std::io::stdout(),
-                Clear(ClearType::All),
-                Show,
-                EnableLineWrap,
-                LeaveAlternateScreen
-            );
+            let _ = Self::clean_term();
             println!("{}", i);
-            let _ = execute!(std::io::stdout(),
-                EnterAlternateScreen,
-                DisableLineWrap,
-                Hide,
-                Clear(ClearType::All)
-            );
+            let _ = Self::init_term();
         }));
-        Ok(Self)
+        let (queue_s, queue_r) = mpsc::unbounded_channel();
+        let (stop_s, stop_r) = oneshot::channel();
+        tokio::task::spawn_blocking(|| process_input(queue_s, stop_r));
+        Ok(Self { queue: queue_r, stop: Some(stop_s) })
     }
 }
 
 impl Drop for AnsiScreen {
     fn drop(&mut self) {
-        execute!(std::io::stdout(),
-            Clear(ClearType::All),
-            Show,
-            EnableLineWrap,
-            LeaveAlternateScreen
-        ).unwrap();
-        terminal::disable_raw_mode().unwrap();
+        let stop = mem::replace(&mut self.stop, None).expect("already dropped");
+        // if the receiver is dead, that's fine; that means the queue won't have anything
+        // else put in it. (and it can happen if e.g. there's an IO error)
+        let _ = stop.send(());
+        while self.queue.try_recv() != Err(mpsc::error::TryRecvError::Disconnected) {
+            // flushing the queue and waiting for it to disconnect in the condition itself
+        }
+        Self::clean_term().expect("failed to clean up terminal");
     }
 }
 
@@ -155,7 +280,7 @@ impl IoSystem for AnsiScreen {
         stdout.flush().await
     }
 
-    async fn input(&mut self) -> std::io::Result<crate::io::input::Action> {
-        todo!()
+    async fn input(&mut self) -> io::Result<crate::io::input::Action> {
+        Ok(self.queue.recv().await.expect("unexpected queue closure"))
     }
 }
