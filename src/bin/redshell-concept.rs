@@ -299,7 +299,7 @@ async fn main() {
             print!("Playing {}... ", name);
             stdout().flush().unwrap();
             {
-                let mut iosys = sys::load();
+                let mut iosys = sys::load_or_die();
                 func(iosys.as_mut()).await;
                 let XY(width, height) = iosys.size();
                 let msg = "fin.";
