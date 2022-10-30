@@ -12,7 +12,6 @@ force_in_blank = []
 
 [dependencies]
 paste = "1.0.5"
-rand = { version = "0.8.4", features = [ "small_rng" ] }
 crossterm = "0.20.0"
 tokio = { version = "1.15.0", features = [ "full" ] }
 enum_dispatch = "0.3.7"
