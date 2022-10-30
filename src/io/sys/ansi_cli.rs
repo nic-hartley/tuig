@@ -1,7 +1,9 @@
+use std::io;
+
 use crossterm::{cursor::{Hide, Show, MoveTo, MoveToColumn, MoveDown}, execute, terminal::{self, Clear, ClearType, DisableLineWrap, EnableLineWrap, EnterAlternateScreen, LeaveAlternateScreen}, style::{SetForegroundColor, Color as CrosstermColor, SetBackgroundColor, SetAttribute, Attribute, SetAttributes, ResetColor}};
 use tokio::io::AsyncWriteExt;
 
-use crate::io::{XY, output::Screen, output::Color as RedshellColor};
+use crate::io::{XY, output::Screen, output::{Color as RedshellColor, Cell}};
 
 use super::IoSystem;
 
@@ -25,6 +27,69 @@ fn ct4rs_color(rs: RedshellColor) -> CrosstermColor {
         RedshellColor::White => CrosstermColor::Grey,
         RedshellColor::Default => CrosstermColor::Reset,
     }
+}
+
+fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
+    let mut out = vec![];
+
+    let mut ch_b = [0u8; 4];
+
+    let mut fg = row[0].fg;
+    let mut bg = row[0].bg;
+    let mut bold = row[0].bold;
+    let mut underline = row[0].underline;
+    let mut invert = row[0].invert;
+    let mut attrs = [Attribute::NormalIntensity, Attribute::NoUnderline, Attribute::NoReverse];
+    if bold {
+        attrs[0] = Attribute::Bold;
+    }
+    if underline {
+        attrs[1] = Attribute::Underlined;
+    }
+    if invert {
+        attrs[2] = Attribute::Reverse;
+    }
+    crossterm::queue!(&mut out,
+        ResetColor,
+        SetForegroundColor(ct4rs_color(fg)),
+        SetBackgroundColor(ct4rs_color(bg)),
+        SetAttribute(Attribute::Reset),
+        SetAttributes(attrs.as_ref().into()),
+    )?;
+    out.extend_from_slice(row[0].ch.encode_utf8(&mut ch_b).as_bytes());
+
+    for cell in &row[1..] {
+        if cell.fg != fg {
+            fg = cell.fg;
+            crossterm::queue!(&mut out, SetForegroundColor(ct4rs_color(fg)))?;
+        }
+        if cell.bg != bg {
+            bg = cell.bg;
+            crossterm::queue!(&mut out, SetBackgroundColor(ct4rs_color(bg)))?;
+        }
+        if cell.bold != bold {
+            bold = cell.bold;
+            let attr = if bold { Attribute::Bold } else { Attribute::NormalIntensity };
+            crossterm::queue!(&mut out, SetAttribute(attr))?;
+        }
+        if cell.underline != underline {
+            underline = cell.underline;
+            let attr = if underline { Attribute::Underlined } else { Attribute::NoUnderline };
+            crossterm::queue!(&mut out, SetAttribute(attr))?;
+        }
+        if cell.invert != invert {
+            invert = cell.invert;
+            let attr = if invert { Attribute::Reverse } else { Attribute::NoReverse };
+            crossterm::queue!(&mut out, SetAttribute(attr))?;
+        }
+        out.extend_from_slice(cell.ch.encode_utf8(&mut ch_b).as_bytes());
+    }
+    crossterm::queue!(&mut out,
+        MoveDown(1),
+        MoveToColumn(0),
+    )?;
+
+    Ok(out)
 }
 
 // No need to store anything -- this only ever reads/writes to stdin/stdout.
@@ -76,66 +141,15 @@ impl IoSystem for AnsiScreen {
         XY(x as usize, y as usize)
     }
 
-    async fn draw(&mut self, screen: &Screen) -> std::io::Result<()> {
-        let mut out = vec![];
-        let mut ch_b = [0u8; 4];
-        crossterm::queue!(&mut out, MoveTo(0, 0))?;
-        for row in screen.rows() {
-            let mut fg = row[0].fg;
-            let mut bg = row[0].bg;
-            let mut bold = row[0].bold;
-            let mut underline = row[0].underline;
-            let mut invert = row[0].invert;
-            let mut attrs = [Attribute::NormalIntensity, Attribute::NoUnderline, Attribute::NoReverse];
-            if bold {
-                attrs[0] = Attribute::Bold;
+    async fn draw(&mut self, screen: &Screen) -> io::Result<()> {
+        let out = tokio::task::block_in_place(|| -> io::Result<Vec<u8>> {
+            let mut out = vec![];
+            crossterm::queue!(&mut out, MoveTo(0, 0))?;
+            for row in screen.rows() {
+                out.extend(render_row(row)?);
             }
-            if underline {
-                attrs[1] = Attribute::Underlined;
-            }
-            if invert {
-                attrs[2] = Attribute::Reverse;
-            }
-            crossterm::queue!(&mut out,
-                ResetColor,
-                SetForegroundColor(ct4rs_color(fg)),
-                SetBackgroundColor(ct4rs_color(bg)),
-                SetAttribute(Attribute::Reset),
-                SetAttributes(attrs.as_ref().into()),
-            )?;
-            out.extend_from_slice(row[0].ch.encode_utf8(&mut ch_b).as_bytes());
-
-            for cell in &row[1..] {
-                if cell.fg != fg {
-                    fg = cell.fg;
-                    crossterm::queue!(&mut out, SetForegroundColor(ct4rs_color(fg)))?;
-                }
-                if cell.bg != bg {
-                    bg = cell.bg;
-                    crossterm::queue!(&mut out, SetBackgroundColor(ct4rs_color(bg)))?;
-                }
-                if cell.bold != bold {
-                    bold = cell.bold;
-                    let attr = if bold { Attribute::Bold } else { Attribute::NormalIntensity };
-                    crossterm::queue!(&mut out, SetAttribute(attr))?;
-                }
-                if cell.underline != underline {
-                    underline = cell.underline;
-                    let attr = if underline { Attribute::Underlined } else { Attribute::NoUnderline };
-                    crossterm::queue!(&mut out, SetAttribute(attr))?;
-                }
-                if cell.invert != invert {
-                    invert = cell.invert;
-                    let attr = if invert { Attribute::Reverse } else { Attribute::NoReverse };
-                    crossterm::queue!(&mut out, SetAttribute(attr))?;
-                }
-                out.extend_from_slice(cell.ch.encode_utf8(&mut ch_b).as_bytes());
-            }
-            crossterm::queue!(&mut out,
-                MoveDown(1),
-                MoveToColumn(0),
-            )?;
-        }
+            Ok(out)
+        })?;
         let mut stdout = tokio::io::stdout();
         stdout.write_all(&out).await?;
         stdout.flush().await
