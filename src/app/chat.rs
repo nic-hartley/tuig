@@ -8,7 +8,7 @@ use crate::{GameState, constants::{gameplay::MAX_USERNAME, graphics::HEADER_HEIG
 enum Message {
     Normal {
         text: String,
-        from_player: bool,    
+        from_player: bool,
     },
     System(String),
 }
@@ -151,7 +151,7 @@ impl super::App for ChatApp {
         self.dms.iter().filter(|dm| dm.open).map(|dm| dm.unread).sum()
     }
 
-    fn render(&self, state: &GameState, screen: &mut dyn Screen) {
+    fn render(&self, state: &GameState, screen: &mut Screen) {
         let size = screen.size();
         // The width of the side pane, including the vertical divider.
         let list_pane_size = (size.x() / 10).clamp(15, 30);

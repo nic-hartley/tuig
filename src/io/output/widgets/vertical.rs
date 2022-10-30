@@ -1,7 +1,7 @@
-use crate::io::{output::{Screen, Text}, XY};
+use crate::io::output::{Screen, Cell};
 
 pub struct Vertical<'a> {
-    pub(in super::super) screen: &'a mut dyn Screen,
+    pub(in super::super) screen: &'a mut Screen,
     pub(in super::super) col: usize,
     pub(in super::super) start: Option<usize>,
     pub(in super::super) end: Option<usize>,
@@ -9,7 +9,7 @@ pub struct Vertical<'a> {
 }
 
 impl<'a> Vertical<'a> {
-    pub fn new(screen: &'a mut dyn Screen, col: usize) -> Self {
+    pub fn new(screen: &'a mut Screen, col: usize) -> Self {
         Vertical {
             screen,
             col,
@@ -39,7 +39,7 @@ impl<'a> Drop for Vertical<'a> {
         let start_y = self.start.unwrap_or(0);
         let end_y = self.end.unwrap_or(self.screen.size().y());
         for y in start_y..end_y {
-            self.screen.write_raw_single(Text::of(self.char.to_string()), XY(self.col, y));
+            self.screen[y][self.col] = Cell::plain(self.char);
         }
     }
 }

@@ -1,9 +1,10 @@
 use std::{collections::HashMap, env::args, io::{Write, stdout}, time::Duration, pin::Pin, future::Future};
 
-use redshell::{io::{XY, output::{Color, Text, Screen}, input::{Action, Key, ansi_cli::AnsiInput, Input}}, text, app::{ChatApp, App}, GameState, event::Event};
+use redshell::{io::{XY, output::{Color, Text, Screen}, input::{Action, Key}, sys::{IoSystem, self}}, text, app::{ChatApp, App}, GameState, event::Event};
 use tokio::time::sleep;
 
-async fn render_demo(s: &mut dyn Screen) {
+async fn render_demo(io: &mut dyn IoSystem) {
+    let mut s = Screen::new(io.size());
     s.horizontal(1);
     s.vertical(0);
     let mut texts = Vec::new();
@@ -32,12 +33,13 @@ async fn render_demo(s: &mut dyn Screen) {
         .selected(1)
         .profile("watching the render concept")
         .time("the time is now");
-    s.flush().await;
+    io.draw(&s).await.unwrap();
     // 2 second wait outside of this so wait 10s total
     sleep(Duration::from_secs(8)).await;
 }
 
-async fn intro(s: &mut dyn Screen) {
+async fn intro(io: &mut dyn IoSystem) {
+    let mut s = Screen::new(io.size());
     // TODO: Write the real function and use [`TimedStream::with_delays`] to drive it
     let frames: Vec<(Vec<(&str, usize)>, Vec<Text>, usize)> = vec![
         (vec![], text!(
@@ -167,12 +169,14 @@ async fn intro(s: &mut dyn Screen) {
             }
         }
         s.textbox(frame).pos(0, 1).size(width, height).indent(12).first_indent(0);
-        s.flush().await;
+        io.draw(&s).await.unwrap();
         sleep(Duration::from_millis(delay as u64)).await;
     }
 }
 
-async fn chat_demo(s: &mut dyn Screen) {
+async fn chat_demo(io: &mut dyn IoSystem) {
+    let mut s = Screen::new(io.size());
+
     let mut app = ChatApp::default();
     let state = GameState {
         player_name: "player".into(),
@@ -221,28 +225,27 @@ async fn chat_demo(s: &mut dyn Screen) {
             let mut _events = vec![];
             app.input(input.clone(), &mut _events);
         }
-        app.render(&state, s);
+        app.render(&state, &mut s);
         s.textbox(text!(
             "This is a ", bold red "demo", " of the chatbox. No input necessary."
         ))
             .pos(0, 0)
             .height(1);
-        s.flush().await;
+        io.draw(&s).await.unwrap();
         sleep(Duration::from_millis(1000)).await;
     }
     sleep(Duration::from_secs(1)).await;
 }
 
-async fn mouse_demo(output: &mut dyn Screen) {
-    let mut input = AnsiInput::get()
-        .expect("Failed to construct input");
-    output.textbox(text!(invert "Press any keyboard button to exit"));
-    output.flush().await;
+async fn mouse_demo(io: &mut dyn IoSystem) {
+    let mut s = Screen::new(io.size());
+    s.textbox(text!(invert "Press any keyboard button to exit"));
+    io.draw(&s).await.unwrap();
     loop {
-        output.textbox(text!(invert "Press any keyboard button to exit"));
+        s.textbox(text!(invert "Press any keyboard button to exit"));
         let text;
         let at;
-        match input.next().await {
+        match io.input().await.unwrap() {
             Action::KeyPress { .. } | Action::KeyRelease { .. } => break,
             Action::MousePress { button, pos } => {
                 text = format!("{:?} button pressed at {:?}", button, pos);
@@ -269,16 +272,15 @@ async fn mouse_demo(output: &mut dyn Screen) {
                 at = XY(0, 0);
             }
         };
-        output.textbox(text!("{}"(text)))
-            .xy(at);
-        output.flush().await;
+        s.textbox(text!("{}"(text))).xy(at);
+        io.draw(&s).await.unwrap();
     }
 }
 
 #[tokio::main]
 async fn main() {
     let concepts = {
-        type ConceptFn = for<'a> fn(&'a mut dyn Screen) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
+        type ConceptFn = for<'a> fn(&'a mut dyn IoSystem) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
         let mut map: HashMap<&'static str, ConceptFn> = HashMap::new();
         map.insert("render", |s| Box::pin(render_demo(s)));
         map.insert("intro", |s| Box::pin(intro(s)));
@@ -294,9 +296,9 @@ async fn main() {
             print!("Playing {}... ", name);
             stdout().flush().unwrap();
             {
-                let mut screen = <dyn Screen>::get();
-                func(screen.as_mut()).await;
-                let XY(width, height) = screen.size();
+                let mut iosys = sys::load();
+                func(iosys.as_mut()).await;
+                let XY(width, height) = iosys.size();
                 let msg = "fin.";
                 write!(stdout(), "\x1b[{};{}H\x1b[107;30m{}\x1b[0m", height, width - msg.len(), msg).unwrap();
                 stdout().flush().unwrap();

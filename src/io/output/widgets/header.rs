@@ -1,7 +1,7 @@
 use crate::{io::{output::{Screen, Text}, XY}, text1, text};
 
 pub struct Header<'a> {
-    pub(in super::super) screen: &'a mut dyn Screen,
+    pub(in super::super) screen: &'a mut Screen,
     pub(in super::super) tabs: Vec<(String, usize)>,
     pub(in super::super) selected: Option<usize>,
     pub(in super::super) profile: String,
@@ -9,7 +9,7 @@ pub struct Header<'a> {
 }
 
 impl<'a> Header<'a> {
-    pub fn new(screen: &'a mut dyn Screen) -> Self {
+    pub fn new(screen: &'a mut Screen) -> Self {
         Self {
             screen,
             tabs: Vec::with_capacity(5),
@@ -43,7 +43,6 @@ crate::util::abbrev_debug! {
 impl<'a> Drop for Header<'a> {
     fn drop(&mut self) {
         let mut text = Vec::with_capacity(self.tabs.len() * 3 + 1);
-        let mut width = 0;
         for (i, (name, notifs)) in self.tabs.iter().enumerate() {
             match self.selected {
                 Some(n) if n == i => text.push(Text::of(name.into()).underline()),
@@ -56,16 +55,12 @@ impl<'a> Drop for Header<'a> {
             } else {
                 text.extend(text!(red " + ", "| "));
             }
-            width += name.len() + 5; // 5 for " n | "
         }
 
         text.push(text1!("you are {}"(self.profile)));
-        width += 8 + self.profile.len();
 
-        // this weird construction ensures that, if we manually highlight the header, the whole line gets highlighted
-        // and doesn't have any weird gaps.
-        let space_left = self.screen.size().x() - width;
-        text.push(text1!("{:>1$}"(self.time, space_left)));
-        self.screen.write_raw(text, XY(0, 0));
+        self.screen.write(XY(0, 0), text);
+        let right_align = self.screen.size().x() - self.time.len();
+        self.screen.write(XY(right_align, 0), text!["{}"(self.time)]);
     }
 }

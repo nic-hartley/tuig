@@ -1,7 +1,7 @@
-use crate::io::{output::{Text, Screen}, XY};
+use crate::io::output::{Screen, Cell};
 
 pub struct Horizontal<'a> {
-    pub(in super::super) screen: &'a mut dyn Screen,
+    pub(in super::super) screen: &'a mut Screen,
     pub(in super::super) row: usize,
     pub(in super::super) start: Option<usize>,
     pub(in super::super) end: Option<usize>,
@@ -9,7 +9,7 @@ pub struct Horizontal<'a> {
 }
 
 impl<'a> Horizontal<'a> {
-    pub fn new(screen: &'a mut dyn Screen, row: usize) -> Self {
+    pub fn new(screen: &'a mut Screen, row: usize) -> Self {
         Horizontal {
             screen,
             row,
@@ -38,7 +38,8 @@ impl<'a> Drop for Horizontal<'a> {
     fn drop(&mut self) {
         let start_x = self.start.unwrap_or(0);
         let end_x = self.end.unwrap_or(self.screen.size().x());
-        let text = self.char.to_string().repeat(end_x - start_x);
-        self.screen.write_raw_single(Text::of(text), XY(start_x, self.row));
+        for x in start_x..end_x {
+            self.screen[self.row][x] = Cell::plain(self.char);
+        }
     }
 }

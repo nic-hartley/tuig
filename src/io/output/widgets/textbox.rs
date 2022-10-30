@@ -1,21 +1,27 @@
-use crate::io::{output::{Screen, Text}, XY};
+use crate::{io::{output::{Screen, Text}, XY}, text};
+
+fn breakable(ch: char) -> bool {
+    // TODO: There have to be better ways to decide breakability than just "nyehe whitespaec"
+    ch.is_whitespace()
+}
 
 /// A box of text which can be written to a `Screen`. Note these are meant to be generated on the fly, every frame,
 /// possibly multiple times. They do the actual *writing* when they're dropped, converting the higher-level Textbox
 /// API things to calls of `Screen::raw`.
 pub struct Textbox<'a> {
-    pub(in super::super) screen: &'a mut dyn Screen,
+    pub(in super::super) screen: &'a mut Screen,
     pub(in super::super) chunks: Vec<Text>,
     pub(in super::super) pos: XY,
     pub(in super::super) width: Option<usize>,
     pub(in super::super) height: Option<usize>,
     pub(in super::super) scroll: usize,
+    pub(in super::super) scroll_bottom: bool,
     pub(in super::super) indent: usize,
     pub(in super::super) first_indent: Option<usize>,
 }
 
 impl<'a> Textbox<'a> {
-    pub fn new(screen: &'a mut dyn Screen, text: Vec<Text>) -> Self {
+    pub fn new(screen: &'a mut Screen, text: Vec<Text>) -> Self {
         Self {
             screen,
             chunks: text,
@@ -23,6 +29,7 @@ impl<'a> Textbox<'a> {
             width: None,
             height: None,
             scroll: 0,
+            scroll_bottom: false,
             indent: 0,
             first_indent: None,
         }
@@ -40,6 +47,7 @@ impl<'a> Textbox<'a> {
         width(w: usize) => width = Some(w),
         height(h: usize) => height = Some(h),
         scroll(amt: usize) => scroll = amt,
+        scroll_bottom(v: bool) => scroll_bottom = v,
         indent(amt: usize) => indent = amt,
         first_indent(amt: usize) => first_indent = Some(amt),
     }
@@ -52,6 +60,7 @@ crate::util::abbrev_debug! {
     if width != None,
     if height != None,
     if scroll != 0,
+    if scroll_bottom != false,
     if indent != 0,
     if first_indent != None,
 }
@@ -72,85 +81,79 @@ impl<'a> Drop for Textbox<'a> {
         assert!(width > self.indent);
         assert!(width > first_indent);
 
-        let mut col = first_indent;
-        let mut line_num = 0;
-        let mut line_start = true;
-
-        macro_rules! write_raw {
-            ($text:expr) => {
-                if line_num >= self.scroll && line_num - self.scroll < height {
-                    self.screen.write_raw(
-                        $text,
-                        XY(x + col, y + line_num - self.scroll)
-                    );
-                }
+        // break the chunks into paragraphs on newlines
+        let mut paragraphs = vec![];
+        let mut cur_para = vec![];
+        for mut chunk in std::mem::replace(&mut self.chunks, vec![]) {
+            while let Some((line, rest)) = chunk.text.split_once('\n') {
+                cur_para.push(chunk.with_text(line.into()));
+                paragraphs.push(cur_para);
+                cur_para = vec![];
+                chunk.text = rest.into();
             }
+            cur_para.push(chunk);
         }
 
-        macro_rules! next_line {
-            ($new_para:expr) => {
-                line_num += 1;
-                line_start = true;
-                col = if $new_para { first_indent } else { self.indent };
-            }
-        }
-
-        macro_rules! do_wrap {
-            ($chunk:ident, $line:ident) => {
-                while $line.len() > width - col {
-                    if let Some(break_pos) = $line[..width - col].rfind(char::is_whitespace) {
-                        let (subline, rest_of_line) = $line.split_at(break_pos);
-                        $line = rest_of_line.trim_start();
-
-                        write_raw!(vec![$chunk.with_text(subline.into())]);
-                    } else if line_start {
-                        // if we're already at the start of the line, can't exactly push stuff to the next line;
-                        // that'd loop forever
-                        let rest_of_line = if width - col == 1 {
-                            // we can't just take 0 characters, so ignore the hyphen if we only have space for a
-                            // single character
-                            let (subline, rest) = $line.split_at(1);
-                            write_raw!(vec![$chunk.with_text(subline.to_string())]);
-                            rest
-                        } else {
-                            // otherwise we have enough room for at least one character plus a hyphen
-                            let (subline, rest) = $line.split_at(width - col - 1);
-                            write_raw!(vec![$chunk.with_text(subline.to_string() + "-")]);
-                            rest
-                        };
-                        $line = rest_of_line.trim_start();
+        // space out and word-wrap those paragraphs into lines
+        let mut lines = vec![];
+        for para in paragraphs {
+            let mut line: Vec<Text> = text!["{0:1$}"("", first_indent)];
+            let mut pos = first_indent;
+            let mut line_start = true;
+            for mut chunk in para {
+                // the code flow in this for loop is too complex to add this =false at the end, so we make do
+                let was_line_start = line_start;
+                line_start = false;
+                // if it fits without issue, just add it
+                while pos + chunk.text.len() >= width {
+                    let space_left = width - (pos + chunk.text.len());
+                    let line_end: String;
+                    let rest: String;
+                    if let Some((pre, post)) = chunk.text[..space_left].rsplit_once(breakable) {
+                        // we have a breakable character in time; we break there
+                        line_end = pre.into();
+                        rest = post.into();
+                    } else if !was_line_start {
+                        // no breakable character, but we're not at the start of the line, so let's try
+                        // ending the line here and getting to the next one
+                        line_end = String::new();
+                        rest = chunk.text;
+                    } else if space_left > 1 {
+                        // break the word with a hyphen, since there's space for it
+                        let (pre, post) = chunk.text.split_at(space_left - 1);
+                        line_end = format!("{}-", pre);
+                        rest = post.into();
+                    } else if space_left == 1 {
+                        // no room for a hyphen, so just pull one letter off
+                        let (pre, post) = chunk.text.split_at(1);
+                        line_end = pre.into();
+                        rest = post.into();
                     } else {
-                        // if we've just finished another chunk, so it's *not* the beginning of a line, then just go
-                        // to the next line for anything that's too long
-                        // (that means we don't do anything here; this branch is just for documentation)
+                        // at the start of a line, but 0 space left -- the asserts above should have
+                        // prevented this!
+                        unreachable!("indent or first indent is larger than width")
                     }
-                    next_line!(false);
-                }
-                if $line.len() > 0 {
-                    write_raw!(vec![$chunk.with_text($line.into())]);
-                    #[allow(unused_assignments)] {
-                        col += $line.len();
-                        line_start = false;
+                    chunk.text = rest;
+                    if !line_end.is_empty() {
+                        line.push(chunk.with_text(line_end));
                     }
                 }
+                pos += chunk.text.len();
+                line.push(chunk);
             }
+            lines.push(line);
         }
 
-        for chunk in &self.chunks {
-            let mut rest = &chunk.text[..];
-            while let Some(nl_pos) = rest.find('\n') {
-                let (mut line, new_rest) = rest.split_at(nl_pos);
-                rest = &new_rest[1..];
-
-                do_wrap!(chunk, line);
-                next_line!(true);
-            }
-            if !rest.is_empty() {
-                do_wrap!(chunk, rest);
-            } else {
-                // ended with a newline, don't bother trying to format the zero remaining characters, that'll just
-                // cause problems (so just pass on to the next line)
-            }
+        let x = self.pos.x();
+        let mut y = self.pos.y();
+        let line_subset = if self.scroll_bottom {
+            lines.drain(lines.len()-self.scroll..)
+        } else {
+            lines.drain(..self.scroll)
+        };
+        for line in line_subset {
+            self.screen.write(XY(x, y), line);
+            y += 1;
         }
     }
 }
