@@ -91,7 +91,9 @@ impl<'a> Drop for Textbox<'a> {
                 cur_para = vec![];
                 chunk.text = rest.into();
             }
-            cur_para.push(chunk);
+            if !chunk.text.is_empty() {
+                cur_para.push(chunk);
+            }
         }
         paragraphs.push(cur_para);
 

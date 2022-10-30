@@ -4,12 +4,10 @@
 //! - Add the relevant implementation of `Screen`, in a new submodule
 //! - Modify `Screen::get` to properly detect and handle the new screen type, with `cfg!` or runtime checks
 
-mod text;
 use std::ops;
 
-pub use text::*;
-mod widgets;
-pub use widgets::*;
+pub use super::text::*;
+pub use super::widgets::*;
 
 use super::XY;
 
@@ -33,7 +31,7 @@ impl Cell {
         invert: false,
     };
 
-    fn plain(ch: char) -> Self {
+    pub fn plain(ch: char) -> Self {
         Self { ch, ..Self::BLANK }
     }
 }

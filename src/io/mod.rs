@@ -5,6 +5,12 @@ use std::{fmt, ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div, DivAss
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct XY(pub usize, pub usize);
 
+pub mod input;
+pub mod output;
+pub mod sys;
+pub mod text;
+pub mod widgets;
+
 impl XY {
     pub const fn x(&self) -> usize {
         self.0
@@ -82,7 +88,3 @@ impl Into<(usize, usize)> for XY {
         (self.0, self.1)
     }
 }
-
-pub mod input;
-pub mod output;
-pub mod sys;
