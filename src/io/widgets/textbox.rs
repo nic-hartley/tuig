@@ -172,7 +172,7 @@ impl<'a> Drop for Textbox<'a> {
         if self.scroll_bottom {
             // we want [height] lines, starting [scroll] away from the bottom
             let end = lines.len() - self.scroll;
-            start = end - height;
+            start = end.saturating_sub(height);
         } else {
             // we want [height] lines, starting [scroll] away from the top
             start = self.scroll;
