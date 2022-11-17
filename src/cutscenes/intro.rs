@@ -14,6 +14,10 @@ async fn sleep(s: f32) {
 
 fn rngat(seed: u64, x: usize, y: usize, xor: u64) -> SmallRng {
     let pos_seed = seed ^ xor ^ (x as u64) ^ (y as u64).rotate_left(32);
+    // SmallRng is the right choice here because for this use we only care about the appearance of randomness, not
+    // true unpredictability, and it's massively faster to initialize and generate than the higher-quality RNGs.
+    // Further, we're not trying to generate the same values across different platforms, or even across different
+    // runs on the same platform.
     SmallRng::seed_from_u64(pos_seed)
 }
 
@@ -37,19 +41,20 @@ fn cellat(seed: u64, x: usize, y: usize) -> Cell {
 }
 
 async fn charsplash(io: &mut dyn IoSystem) -> io::Result<()> {
-    const SHIFT_LEN: f32 = 0.5;
+    const SHIFT_LEN: f32 = 1.5;
+    // one blank->fill stage at the beginning, one fill->blank stage at the end
     const NUM_STAGES: usize = 3;
 
     let mut screen = Screen::new(io.size());
 
-    let mut seeds = [0u64; NUM_STAGES + 1];
+    let mut seeds = [0u64; NUM_STAGES];
     thread_rng().fill(&mut seeds);
     let seeds = seeds;
     let start = Instant::now();
     loop {
         let time = Instant::now().duration_since(start).as_secs_f32();
         let stage = (time / SHIFT_LEN) as usize;
-        if stage > NUM_STAGES {
+        if stage >= NUM_STAGES {
             break;
         }
         let within = (time / SHIFT_LEN).fract();
@@ -67,7 +72,7 @@ async fn charsplash(io: &mut dyn IoSystem) -> io::Result<()> {
                         cellat(seeds[stage-1], x, y)
                     }
                 } else {
-                    if stage == NUM_STAGES {
+                    if stage == NUM_STAGES - 1 {
                         // if we're in the final stage, we go to a blank cell
                         Cell::BLANK
                     } else {
@@ -83,7 +88,7 @@ async fn charsplash(io: &mut dyn IoSystem) -> io::Result<()> {
         // wait until either the screen is resized, or a brief (randomized) period passes
         tokio::select! {
             _ = io.input() => {}
-            _ = sleep(randf(0.03, 0.06)) => {}
+            _ = sleep(randf(0.02, 0.04)) => {}
         }
     }
 
