@@ -53,140 +53,7 @@ async fn render_demo(io: &mut dyn IoSystem) {
 }
 
 async fn intro_demo(io: &mut dyn IoSystem) {
-    let mut s = Screen::new(io.size());
-    // TODO: Write the real function and use [`TimedStream::with_delays`] to drive it
-    let frames: Vec<(Vec<(&str, usize)>, Vec<Text>, usize)> = vec![
-        (vec![], text!(
-            "??????????: Hey.\n",
-            "??????????: You ever used Redshell before?\n",
-            "> ", green underline "no", "  ", red "yes",
-        ), 500),
-        (vec![], text!(
-            "??????????: Hey.\n",
-            "??????????: You ever used Redshell before?\n",
-            "> ", green underline "no", "  ", red "yes", bold "  (arrow keys to select, enter to submit)"
-        ), 1000),
-        (vec![], text!(
-            "??????????: Hey.\n",
-            "??????????: You ever used Redshell before?\n",
-            "> ", green "no", "  ", red underline "yes",
-        ), 500),
-        (vec![], text!(
-            "??????????: Hey.\n",
-            "??????????: You ever used Redshell before?\n",
-            "> ", green underline "no", "  ", red "yes",
-        ), 250),
-        (vec![], text!(
-            "??????????: Hey.\n",
-            "??????????: You ever used Redshell before?\n",
-            "       you: no\n",
-        ), 500),
-        (vec![], text!(
-            "??????????: Hey.\n",
-            "??????????: You ever used Redshell before?\n",
-            "       you: no\n",
-            "??????????: Cool. Let me explain how it works, then. You familiar with a command line?\n",
-            "> ", green "not at all", "  ", yellow underline "a little", "  ", red "intimately",
-        ), 1000),
-        (vec![], text!(
-            "??????????: Hey.\n",
-            "??????????: You ever used Redshell before?\n",
-            "       you: no\n",
-            "??????????: Cool. Let me explain how it works, then. You familiar with a command line?\n",
-            "> ", green "not at all", "  ", yellow "a little", "  ", red underline "intimately",
-        ), 100),
-        (vec![], text!(
-            "??????????: Hey.\n",
-            "??????????: You ever used Redshell before?\n",
-            "       you: no\n",
-            "??????????: Cool. Let me explain how it works, then. You familiar with a command line?\n",
-            "       you: intimately",
-        ), 200),
-        (vec![], text!(
-            "??????????: Hey.\n",
-            "??????????: You ever used Redshell before?\n",
-            "       you: no\n",
-            "??????????: Cool. Let me explain how it works, then. You familiar with a command line?\n",
-            "       you: intimately\n",
-            "??????????: Good, that'll make this easier. A moment...",
-        ), 1000),
-        (vec![], text!(
-            "??????????: Hey.\n",
-            "??????????: You ever used Redshell before?\n",
-            "       you: no\n",
-            "??????????: Cool. Let me explain how it works, then. You familiar with a command line?\n",
-            "       you: intimately\n",
-            "??????????: Good, that'll make this easier.\n",
-            "??????????: This is the chat window.",
-        ), 250),
-        (vec![("chat", 0)], text!(
-            "??????????: Hey.\n",
-            "??????????: You ever used Redshell before?\n",
-            "       you: no\n",
-            "??????????: Cool. Let me explain how it works, then. You familiar with a command line?\n",
-            "       you: intimately\n",
-            "??????????: Good, that'll make this easier.\n",
-            "??????????: This is the chat window.",
-        ), 750),
-        (vec![("chat", 0)], text!(
-            "??????????: Hey.\n",
-            "??????????: You ever used Redshell before?\n",
-            "       you: no\n",
-            "??????????: Cool. Let me explain how it works, then. You familiar with a command line?\n",
-            "       you: intimately\n",
-            "??????????: Good, that'll make this easier.\n",
-            "??????????: This is the chat window.\n",
-            "??????????: Everyone you talk you on Redshell? You'll talk through this. Nothing in person.",
-        ), 1500),
-        (vec![("chat", 0)], text!(
-            "??????????: Hey.\n",
-            "??????????: You ever used Redshell before?\n",
-            "       you: no\n",
-            "??????????: Cool. Let me explain how it works, then. You familiar with a command line?\n",
-            "       you: intimately\n",
-            "??????????: Good, that'll make this easier.\n",
-            "??????????: This is the chat window.\n",
-            "??????????: Everyone you talk you on Redshell? You'll talk through this. Nothing in person.\n",
-            "??????????: Too dangerous.",
-        ), 500),
-        (vec![("chat", 0)], text!(
-            "??????????: Hey.\n",
-            "??????????: You ever used Redshell before?\n",
-            "       you: no\n",
-            "??????????: Cool. Let me explain how it works, then. You familiar with a command line?\n",
-            "       you: intimately\n",
-            "??????????: Good, that'll make this easier.\n",
-            "??????????: This is the chat window.\n",
-            "??????????: Everyone you talk you on Redshell? You'll talk through this. Nothing in person.\n",
-            "??????????: Too dangerous.\n",
-            "??????????: No real names, either. So call me Admin.",
-        ), 250),
-        (vec![("chat", 0)], text!(
-            "     Admin: Hey.\n",
-            "     Admin: You ever used Redshell before?\n",
-            "       you: no\n",
-            "     Admin: Cool. Let me explain how it works, then. You familiar with a command line?\n",
-            "       you: intimately\n",
-            "     Admin: Good, that'll make this easier.\n",
-            "     Admin: This is the chat window.\n",
-            "     Admin: Everyone you talk you on Redshell? You'll talk through this. Nothing in person.\n",
-            "     Admin: Too dangerous.\n",
-            "     Admin: No real names, either. So call me Admin.",
-        ), 750),
-    ];
-    for (tabs, frame, delay) in frames {
-        s.clear();
-        s.resize(io.size());
-        if !tabs.is_empty() {
-            let mut h = s.header();
-            for (name, notifs) in tabs {
-                h = h.tab(name, notifs);
-            }
-        }
-        s.textbox(frame).pos(0, 1).indent(12).first_indent(0);
-        io.draw(&s).await.unwrap();
-        sleep(Duration::from_millis(delay as u64)).await;
-    }
+    redshell::cutscenes::intro(io).await.expect("Failed to run intro")
 }
 
 async fn chat_demo(io: &mut dyn IoSystem) {
@@ -239,7 +106,6 @@ async fn chat_demo(io: &mut dyn IoSystem) {
         (vec![], &[Action::KeyPress { key: Key::Up }]),
     ];
     for (chats, inputs) in frames.into_iter() {
-        s.clear();
         s.resize(io.size());
         app.on_event(&chats);
         for input in inputs.into_iter() {
@@ -295,7 +161,6 @@ async fn mouse_demo(io: &mut dyn IoSystem) {
                 at = XY(0, 0);
             }
         };
-        s.clear();
         s.resize(io.size());
         s.textbox(text!(invert "Press any keyboard button to exit"));
         s.textbox(text!("{}"(text))).xy(at);
