@@ -54,6 +54,8 @@ pub enum Action {
         button: Option<MouseButton>,
         pos: XY,
     },
+    /// Allows pushing redraw notifications, rather than having to update constantly and risk missing it
+    Resized,
     /// Some unknown input was received, with a description of what it was
     Unknown(String),
     /// Trying to read input let to some kind of error, with a description

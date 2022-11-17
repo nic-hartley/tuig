@@ -1,3 +1,5 @@
+use rand::{seq::SliceRandom, Rng, prelude::Distribution, distributions::Standard};
+
 /// The color of a piece of formatted text. Meant to be used through `Text` / `text!`. The numeric values are the ANSI
 /// color codes for each color; that's also where the actual colors are from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -65,6 +67,12 @@ impl Color {
             Color::BrightWhite => "bright white",
             Color::Default => "default",
         }
+    }
+}
+
+impl Distribution<Color> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Color {
+        *Color::all().choose(rng).unwrap()
     }
 }
 

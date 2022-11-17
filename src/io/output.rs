@@ -22,7 +22,7 @@ pub struct Cell {
 }
 
 impl Cell {
-    const BLANK: Self = Self {
+    pub const BLANK: Self = Self {
         ch: ' ',
         fg: Color::White,
         bg: Color::Black,

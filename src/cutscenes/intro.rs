@@ -1,149 +1,101 @@
-use std::{io, time::Duration};
+use std::{time::{Duration, Instant}, io};
 
-use crate::{io::{sys::IoSystem, output::Screen, text::Text, input::{Action, Key}, widgets::Textbox}, text1};
+use rand::{prelude::*, distributions::Standard};
 
-pub struct Intro<'io> {
-    io: &'io mut dyn IoSystem,
-    screen: Screen,
-    lines: Vec<(String, bool)>,
-    headers: Vec<(String, usize)>,
+use crate::{io::{output::{Screen, Cell}, sys::IoSystem}, text};
+
+fn randf(min: f32, max: f32) -> f32 {
+    thread_rng().gen_range(min..max)
 }
 
-impl<'io> Intro<'io> {
-    pub fn new(io: &'io mut dyn IoSystem) -> Self {
-        let sz = io.size();
-        Self { io, screen: Screen::new(sz), lines: vec![], headers: vec![] }
+async fn sleep(s: f32) {
+    tokio::time::sleep(Duration::from_secs_f32(s)).await
+}
+
+fn rngat(seed: u64, x: usize, y: usize, xor: u64) -> SmallRng {
+    let pos_seed = seed ^ xor ^ (x as u64) ^ (y as u64).rotate_left(32);
+    SmallRng::seed_from_u64(pos_seed)
+}
+
+fn fadeat(seed: u64, x: usize, y: usize) -> f32 {
+    rngat(seed, x, y, 0x5CA1AB1E7E1ECA57).gen()
+}
+
+fn cellat(seed: u64, x: usize, y: usize) -> Cell {
+    const CHARS: [char; 92] = [
+        'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
+        'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+        '1','2','3','4','5','6','7','8','9','0',
+        '!','@','#','$','%','^','&','*','(',')',
+        ',','.','<','>','[',']','{','}','`','~','/','?','\\','|','\'','"',';',':','-','_',
+    ];
+    Cell {
+        ch: *CHARS.choose(&mut rngat(seed, x, y, 0xBE1A7EDDECEA5ED)).unwrap(),
+        fg: rngat(seed, x, y, 0xCA11AB1ECA55E77E).gen(),
+        ..Cell::BLANK
     }
+}
 
-    fn prev_lines(&self) -> Vec<Text> {
-        self.lines.iter().map(|(text, from_admin)| {
-            let line = if *from_admin {
-                format!("     ADMIN: {}\n", text)
-            } else {
-                format!("         >  {}\n", text)
-            };
-            Text::of(line)
-        }).collect()
-    }
+async fn charsplash(io: &mut dyn IoSystem) -> io::Result<()> {
+    const SHIFT_LEN: f32 = 0.5;
+    const NUM_STAGES: usize = 3;
 
-    async fn render(&mut self) -> io::Result<()> {
-        self.screen.resize(self.io.size());
-        self.screen.textbox(self.prev_lines())
-            .scroll_bottom(true);
-        self.io.draw(&self.screen).await
-    }
+    let mut screen = Screen::new(io.size());
 
-    async fn admin(&mut self, delay: u64, text: &str) -> io::Result<()> {
-        tokio::time::sleep(Duration::from_millis(delay)).await;
-        self.lines.push((text.into(), true));
+    let mut seeds = [0u64; NUM_STAGES + 1];
+    thread_rng().fill(&mut seeds);
+    let seeds = seeds;
+    let start = Instant::now();
+    loop {
+        let time = Instant::now().duration_since(start).as_secs_f32();
+        let stage = (time / SHIFT_LEN) as usize;
+        if stage > NUM_STAGES {
+            break;
+        }
+        let within = (time / SHIFT_LEN).fract();
 
-        self.render().await
-    }
-
-    async fn choose<'s>(&mut self, options: &[&'s str]) -> io::Result<&'s str> {
-        let prev_src = self.prev_lines();
-        let mut selected = 0;
-        loop {
-            // draw the current screen
-            let mut lines = prev_src.clone();
-            lines.push(text1!(">"));
-            for (i, option) in options.iter().enumerate() {
-                lines.push(text1!("  "));
-                let opt = if i == selected {
-                    text1!(underline "{}"(option))
+        screen.resize(io.size());
+        for y in 0..screen.size().y() {
+            for x in 0..screen.size().x() {
+                let before_flip = within < fadeat(seeds[stage], x, y);
+                let cell_val = if before_flip {
+                    if stage == 0 {
+                        // if we're in the first stage, we go from a blank cell
+                        Cell::BLANK
+                    } else {
+                        // otherwise we generate the cell from the previous stage
+                        cellat(seeds[stage-1], x, y)
+                    }
                 } else {
-                    text1!("{}"(option))
+                    if stage == NUM_STAGES {
+                        // if we're in the final stage, we go to a blank cell
+                        Cell::BLANK
+                    } else {
+                        // otherwise we generate the cell from the current stage
+                        cellat(seeds[stage], x, y)
+                    }
                 };
-                lines.push(opt);
-            }
-            self.screen.resize(self.io.size());
-            self.screen.textbox(lines)
-                .scroll_bottom(true);
-            self.io.draw(&self.screen).await?;
-
-            // handle input events
-            if let Action::KeyPress { key } = self.io.input().await? {
-                match key {
-                    Key::Left => if selected > 0 {
-                        selected -= 1;
-                    }
-                    Key::Right => if selected < options.len() - 1 {
-                        selected += 1
-                    }
-                    Key::Enter => break,
-                    _ => (),
-                }
+                screen[y][x] = cell_val;
             }
         }
-        self.lines.push((options[selected].into(), false));
-        self.render().await?;
-        Ok(options[selected])
+        io.draw(&screen).await?;
+
+        // wait until either the screen is resized, or a brief (randomized) period passes
+        tokio::select! {
+            _ = io.input() => {}
+            _ = sleep(randf(0.03, 0.06)) => {}
+        }
     }
 
-    /// special function for this choice for the mini-tutorial
-    async fn first_choice(&mut self) -> io::Result<&'static str> {
-        // TODO: handle timeout and extra prompt
-        self.choose(&["yes", "no"]).await
-    }
+    screen.resize(io.size());
+    io.draw(&screen).await?;
 
-    async fn cli_intro(&mut self) -> io::Result<()> {
-        self.admin(0, "the CLI intro will eventually go here").await
-    }
+    Ok(())
+}
 
-    pub async fn run(&mut self) -> io::Result<()> {
-        macro_rules! admin {
-            ($($delay:literal => $text:literal),* $(,)?) => {
-                $(
-                    self.admin($delay, $text).await?
-                );*
-            }
-        }
-        macro_rules! choose {
-            ($( $text:literal => $($expr:expr $(,)?)? )*) => {
-                match self.choose(&[ $($text),* ]).await? {
-                    $(
-                        $text => $( $expr, )?
-                    )*
-                    _ => unreachable!("choose returned option not selected"),
-                }
-            }
-        }
-
-        admin! {
-            1000 => "hey.",
-            1500 => "you ever use redshell before?",
-        }
-        match self.first_choice().await? {
-            "yes" => {
-                admin!(1000 => "you don't need this explained, then");
-                return Ok(());
-            }
-            "no" => admin!(700 => "let's go over the basics"),
-            _ => unreachable!("first choice returned nonexistent option ;-;"),
-        }
-
-        admin!(1500 => "have you used a command line?");
-        choose! {
-            "never" => self.cli_intro().await?,
-            "a little" => {
-                admin!(500 => "do you know what a command and arguments are?");
-                choose! {
-                    "yes" => admin!(300 => "you'll do just fine."),
-                    "maybe" => {
-                        admin!(300 => "let's review, then.");
-                        self.cli_intro().await?;
-                    }
-                    "no" => {
-                        admin!(300 => "an introduction, then.");
-                        self.cli_intro().await?;
-                    }
-                }
-            }
-            "lots" => admin!(500 => "we'll skip that bit, then..."),
-        }
-
-        
-
-        todo!()
-    }
+pub async fn run(io: &mut dyn IoSystem) -> io::Result<()> {
+    // First we do the fun fuzzy character thing.
+    // This bit is a little complex to make sure it handles resizing right.
+    charsplash(io).await?;
+    Ok(())
 }

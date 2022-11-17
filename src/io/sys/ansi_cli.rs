@@ -119,7 +119,7 @@ fn process_input(actions: mpsc::UnboundedSender<Action>, mut stop: oneshot::Rece
                 }
                 mods!(modifiers, KeyRelease);
             }
-            ct::Event::Resize(..) => (), // handled by polling in the output when it's requested
+            ct::Event::Resize(..) => try_send!(Resized),
             ct::Event::Mouse(ct::MouseEvent {
                 row,
                 column: col,

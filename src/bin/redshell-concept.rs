@@ -152,6 +152,10 @@ async fn mouse_demo(io: &mut dyn IoSystem) {
                 text = format!("Moved to {:?} holding nothing", pos);
                 at = pos;
             }
+            Action::Resized => {
+                text = format!("Window resized");
+                at = XY(0, 0);
+            }
             Action::Unknown(desc) => {
                 text = format!("Unknown input: {}", desc);
                 at = XY(0, 0);

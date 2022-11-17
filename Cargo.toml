@@ -27,3 +27,4 @@ crossterm = { version = "0.20.0", optional = true }
 tokio = { version = "1.15.0", features = [ "full" ] }
 enum_dispatch = "0.3.7"
 async-trait = "0.1.52"
+rand = { version = "0.8.5", features = ["small_rng"] }
