@@ -1,8 +1,8 @@
 use std::{time::{Duration, Instant}, io};
 
-use rand::{prelude::*, distributions::Standard};
+use rand::prelude::*;
 
-use crate::{io::{output::{Screen, Cell}, sys::IoSystem}, text};
+use crate::io::{output::{Screen, Cell}, sys::IoSystem};
 
 fn randf(min: f32, max: f32) -> f32 {
     thread_rng().gen_range(min..max)
