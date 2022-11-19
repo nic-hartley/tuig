@@ -1,7 +1,7 @@
 [package]
 name = "redshell"
-version = "0.0.2"
-edition = "2018"
+version = "0.0.3"
+edition = "2021"
 description = "A console-based hacking game. Currently building the engine to support dual TUI/GUI interfaces."
 license = "BSD-3-Clause"
 
