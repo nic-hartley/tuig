@@ -2,11 +2,7 @@ use std::{time::{Duration, Instant}, io};
 
 use rand::prelude::*;
 
-use crate::io::{output::{Screen, Cell}, sys::IoSystem};
-
-fn randf(min: f32, max: f32) -> f32 {
-    thread_rng().gen_range(min..max)
-}
+use crate::io::{output::{Screen, Cell}, sys::IoSystem, text::Color};
 
 async fn sleep(s: f32) {
     tokio::time::sleep(Duration::from_secs_f32(s)).await
@@ -40,47 +36,71 @@ fn cellat(seed: u64, x: usize, y: usize) -> Cell {
     }
 }
 
-async fn charsplash(io: &mut dyn IoSystem) -> io::Result<()> {
-    const SHIFT_LEN: f32 = 1.5;
-    // one blank->fill stage at the beginning, one fill->blank stage at the end
-    const NUM_STAGES: usize = 3;
+fn leaveat(seed: u64, x: usize, y: usize) -> bool {
+    rngat(seed, x, y, 0xBA11AD0FBADA55E5).gen_bool(0.01)
+}
 
-    let mut screen = Screen::new(io.size());
+/// Play the wave, then return the seed of the last shift (which produces the leftovers)
+pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<u64> {
+    // the unit of width here is fractions of the screen width; time is in seconds
 
-    let mut seeds = [0u64; NUM_STAGES];
-    thread_rng().fill(&mut seeds);
-    let seeds = seeds;
+    // the width of one shift
+    const SHIFT_WIDTH: f32 = 0.1;
+    // how many shifts there are in the wave
+    const SHIFT_COUNT: usize = 2;
+    // how fast the wave moves right
+    const WAVE_SPEED: f32 = 0.5;
+    // the width of the whole wave
+    const WAVE_WIDTH: f32 = SHIFT_WIDTH * SHIFT_COUNT as f32;
+
+    let seeds: [u64; SHIFT_COUNT] = thread_rng().gen();
     let start = Instant::now();
+
     loop {
-        let time = Instant::now().duration_since(start).as_secs_f32();
-        let stage = (time / SHIFT_LEN) as usize;
-        if stage >= NUM_STAGES {
+        let now = Instant::now();
+        let since_start = now.duration_since(start).as_secs_f32();
+        let wave_lead = since_start * WAVE_SPEED;
+        let wave_trail = wave_lead - WAVE_WIDTH;
+        if wave_trail > 1.0 {
             break;
         }
-        let within = (time / SHIFT_LEN).fract();
 
         screen.resize(io.size());
-        for y in 0..screen.size().y() {
-            for x in 0..screen.size().x() {
-                let before_flip = within < fadeat(seeds[stage], x, y);
-                let cell_val = if before_flip {
-                    if stage == 0 {
-                        // if we're in the first stage, we go from a blank cell
-                        Cell::BLANK
+        for x in 0..screen.size().x() {
+            let pct = x as f32 / screen.size().x() as f32;
+            if pct > wave_lead {
+                // everything past the leading edge is blank
+                for y in 0..screen.size().y() {
+                    screen[y][x] = Cell::BLANK;
+                }
+            } else if pct < wave_trail {
+                // almost everything past the trailing edge is blank
+                for y in 0..screen.size().y() {
+                    if leaveat(seeds[SHIFT_COUNT-1], x, y) {
+                        screen[y][x] = cellat(seeds[SHIFT_COUNT-1], x, y);
                     } else {
-                        // otherwise we generate the cell from the previous stage
-                        cellat(seeds[stage-1], x, y)
+                        // leave it blank
                     }
-                } else {
-                    if stage == NUM_STAGES - 1 {
-                        // if we're in the final stage, we go to a blank cell
-                        Cell::BLANK
+                }
+            } else {
+                let shift_pos = (wave_lead - pct) / SHIFT_WIDTH;
+                let from_shift = shift_pos as usize;
+                let to_shift = from_shift + 1;
+                let within = shift_pos.fract();
+    
+                for y in 0..screen.size().y() {
+                    if within < fadeat(seeds[from_shift], x, y) {
+                        if from_shift > 0 {
+                            screen[y][x] = cellat(seeds[from_shift], x, y);
+                        }
                     } else {
-                        // otherwise we generate the cell from the current stage
-                        cellat(seeds[stage], x, y)
+                        if to_shift < SHIFT_COUNT {
+                            screen[y][x] = cellat(seeds[to_shift], x, y);
+                        } else if leaveat(seeds[from_shift], x, y) {
+                            screen[y][x] = cellat(seeds[from_shift], x, y);
+                        }
                     }
-                };
-                screen[y][x] = cell_val;
+                }
             }
         }
         io.draw(&screen).await?;
@@ -88,10 +108,93 @@ async fn charsplash(io: &mut dyn IoSystem) -> io::Result<()> {
         // wait until either the screen is resized, or a brief (randomized) period passes
         tokio::select! {
             _ = io.input() => {}
-            _ = sleep(randf(0.02, 0.04)) => {}
+            _ = sleep(0.01) => {}
         }
     }
 
+    Ok(seeds[SHIFT_COUNT-1])
+}
+
+pub async fn cleanup_wave(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64) -> io::Result<()> {
+    // render the sparkles, accounting for resizes, until the timer is done
+    let timer = sleep(1.0);
+    tokio::pin!(timer);
+    loop {
+        screen.resize(io.size());
+        for y in 0..screen.size().y() {
+            for x in 0..screen.size().x() {
+                if leaveat(seed, x, y) {
+                    screen[y][x] = cellat(seed, x, y);
+                }
+            }
+        }
+
+        tokio::select! {
+            _ = &mut timer => break,
+            _ = io.input() => {}
+        }
+    }
+
+    // draw the wipe
+    const WAVE_SPEED: f32 = 1.0;
+    const WAVE_WIDTH: f32 = 0.025;
+    const SMEAR_WIDTH: f32 = 0.025;
+    // from darkest to lightest
+    const SMEAR_BGS: [Color; 6] = [
+        Color::Black, Color::Blue, Color::Red, Color::Cyan, Color::Yellow, Color::White,
+    ];
+    let start = Instant::now();
+    loop {
+        let now = Instant::now();
+        let since_start = now.duration_since(start).as_secs_f32();
+        let smear_lead = since_start * WAVE_SPEED;
+        let wave_lead = smear_lead - SMEAR_WIDTH;
+        let wave_trail = wave_lead - WAVE_WIDTH;
+        let smear_trail = wave_trail - SMEAR_WIDTH;
+        if smear_trail > 1.0 {
+            break;
+        }
+
+        screen.resize(io.size());
+        for x in 0..screen.size().x() {
+            let pct = 1.0 - (x as f32 / screen.size().x() as f32);
+
+            for y in 0..screen.size().y() {
+                let mut cell;
+                if pct > smear_lead {
+                    // ahead of the leading edge: just render the cell normally
+                    cell = if leaveat(seed, x, y) { cellat(seed, x, y) } else { Cell::BLANK };
+                } else if pct > wave_lead {
+                    // start smearing: lighten background color accordingly
+                    let smear_amt = (pct - wave_lead) / SMEAR_WIDTH;
+                    let smear_idx = SMEAR_BGS.len() - 1 - (smear_amt * SMEAR_BGS.len() as f32) as usize;
+                    let smear_bg = SMEAR_BGS[smear_idx];
+                    cell = if leaveat(seed, x, y) { cellat(seed, x, y) } else { Cell::BLANK };
+                    cell.bg = smear_bg;
+                } else if pct > wave_trail {
+                    // just a blank white line
+                    cell = Cell::BLANK;
+                    cell.bg = Color::BrightWhite;
+                } else if pct > smear_trail {
+                    // smear backwards
+                    let smear_amt = (pct - smear_trail) / SMEAR_WIDTH;
+                    let smear_idx = (smear_amt * SMEAR_BGS.len() as f32) as usize;
+                    let smear_bg = SMEAR_BGS[smear_idx];
+                    cell = Cell::BLANK;
+                    cell.bg = smear_bg;
+                } else {
+                    cell = Cell::BLANK;
+                }
+                screen[y][x] = cell;
+            }
+        }
+        io.draw(&screen).await?;
+
+        tokio::select! {
+            _ = io.input() => {}
+            _ = sleep(0.01) => {}
+        }
+    }
     screen.resize(io.size());
     io.draw(&screen).await?;
 
@@ -99,8 +202,12 @@ async fn charsplash(io: &mut dyn IoSystem) -> io::Result<()> {
 }
 
 pub async fn run(io: &mut dyn IoSystem) -> io::Result<()> {
-    // First we do the fun fuzzy character thing.
-    // This bit is a little complex to make sure it handles resizing right.
-    charsplash(io).await?;
+    let mut screen = Screen::new(io.size());
+
+    let seed = sprinkler_wave(io, &mut screen).await?;
+    cleanup_wave(io, &mut screen, seed).await?;
+
+    
+
     Ok(())
 }
