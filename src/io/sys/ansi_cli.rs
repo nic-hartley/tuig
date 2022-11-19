@@ -218,9 +218,9 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
     crossterm::queue!(
         &mut out,
         ResetColor,
+        SetAttribute(Attribute::Reset),
         SetForegroundColor(ct4rs_color(fg)),
         SetBackgroundColor(ct4rs_color(bg)),
-        SetAttribute(Attribute::Reset),
         SetAttributes(attrs.as_ref().into()),
     )?;
     out.extend_from_slice(row[0].ch.encode_utf8(&mut ch_b).as_bytes());
