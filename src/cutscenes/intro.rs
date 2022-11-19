@@ -128,6 +128,7 @@ pub async fn cleanup_wave(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64)
                 }
             }
         }
+        io.draw(&screen).await?;
 
         tokio::select! {
             _ = &mut timer => break,
