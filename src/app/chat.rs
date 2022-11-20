@@ -13,7 +13,7 @@ use crate::{
     GameState,
 };
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 enum Message {
     Normal { text: String, from_player: bool },
     System(String),
@@ -39,7 +39,7 @@ impl Message {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 struct DM {
     /// The name of the person we're having a conversation with
     target: String,
@@ -56,7 +56,7 @@ struct DM {
     open: bool,
 }
 
-#[derive(PartialEq, Eq, Clone, Debug, Default)]
+#[derive(PartialEq, Eq, Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct ChatApp {
     /// The DMs the player has going
     dms: Vec<DM>,

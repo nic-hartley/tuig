@@ -31,7 +31,7 @@ mod chat;
 pub use chat::ChatApp;
 
 #[enum_dispatch::enum_dispatch(App)]
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub enum Apps {
     ChatApp,
 }

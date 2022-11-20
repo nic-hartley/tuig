@@ -1,51 +1,68 @@
 //! Saving and loading to files, specifically.
 
-use std::{path::{PathBuf, Path}, io, time::SystemTime, env};
+use std::{path::{PathBuf, Path}, io};
 
-use tokio::{fs::{read_dir, File, ReadDir}, io::AsyncReadExt};
+use tokio::{fs::{read_dir, File, OpenOptions, remove_file}, io::{AsyncReadExt, AsyncWriteExt}, task::block_in_place};
+use rand::prelude::*;
 
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct SaveData {
-    pub name: String,
-    pub date: SystemTime,
-    pub prog_str: String,
+use crate::GameState;
+
+use super::{SaveSystem, Metadata, SaveHandle};
+
+const EXT: &str = "rse";
+const QUICKSAVE: &str = "quicksave";
+const MAGIC: &[u8] = b"RDSHSAVE";
+
+fn bc2io_err(e: bincode::Error) -> io::Error {
+    match *e {
+        // impossible errors
+        bincode::ErrorKind::Custom(m) => unreachable!("mysterious serde error: {}", m),
+        bincode::ErrorKind::DeserializeAnyNotSupported => unreachable!("not using deserialize_any"),
+        bincode::ErrorKind::SequenceMustHaveLength => unreachable!("mysterious sudden unsized iterable"),
+        // more possible ones
+        bincode::ErrorKind::Io(e) => e,
+        other => io::Error::new(io::ErrorKind::InvalidData, format!("invalid file data: {}", other)),
+    }
 }
 
-pub struct SaveDir(ReadDir);
+/// [`Directory`]'s [`SaveSystem::Handle`] implementation.
+pub struct Handle(File);
 
-impl SaveDir {
-    /// Try to figure out the default directory, based on things like the target platform and 
-    pub fn default_dir() -> Option<PathBuf> {
+#[async_trait::async_trait]
+impl SaveHandle for Handle {
+    type System = Directory;
 
-        if cfg!(linux) {
-            if let Some(cfg) = env::var_os("CONFIG") {
-                return Some(Path::new(&cfg).join("redshell/saves"));
-            } else if let Some(home) = env::var_os("HOME") {
-                return Some(Path::new(&home).join(".redshell/saves"));
-            }
-        }
-        None
+    async fn load(self) -> Result<GameState, io::Error> {
+        let slot_std = self.0.into_std().await;
+        block_in_place(|| bincode::deserialize_from(slot_std)).map_err(bc2io_err)
     }
 
-    /// Attempt to open a directory as a save directory.
-    /// 
-    /// Note that this succeeding does **not** imply that reading any individual save will succeed -- this only checks
-    /// that the directory itself is accessible, as of when you opened it. The files could be owned by another user,
-    /// or stored on a network share that disconnects, or whatever else. There are many reasons iteration could fail.
-    pub async fn open(dir: impl AsRef<Path>) -> io::Result<Self> {
-        read_dir(dir).await.map(Self)
+    async fn save(self, data: &GameState) -> Result<(), io::Error> {
+        let slot_std = self.0.into_std().await;
+        block_in_place(|| bincode::serialize_into(slot_std, data)).map_err(bc2io_err)
+    }
+}
+
+/// Handle saves out of a directory.
+pub struct Directory(PathBuf);
+
+impl Directory {
+    /// Read saves from the default location, based on the platform. This will panic if it doesn't know the platform
+    /// being targeted.
+    pub fn new() -> Self {
+        todo!()
     }
 
-    /// Load a single save file at an exact filepath.
-    /// 
-    /// If it's successful, this function returns the save file's metadata and a [`tokio::fs::File`], which you can
-    /// read the actual save data from. It doesn't parse the save itself because this function is also used to build
-    /// the *list* of saves, and parsing and storing every save would be an enormous amount of memory consumed for
-    /// basically no reason.
-    pub async fn load_one(path: impl AsRef<Path>) -> io::Result<(SaveData, File)> {
+    /// Read saves from a specific location.
+    pub fn open(path: impl AsRef<Path>) -> Self {
+        Self(path.as_ref().into())
+    }
+
+    /// Get the metadata and handle for a single specific file.
+    pub async fn list_one(path: impl AsRef<Path>) -> io::Result<(Metadata, Handle)> {
         // test file metadata first since that's fastest
         match path.as_ref().extension() {
-            Some(ext) if ext == "rse" => (),
+            Some(ext) if ext == EXT => (),
             // TODO: io::ErrorKind::InvalidFilename
             _ => return Err(io::Error::new(io::ErrorKind::InvalidInput, "extension must be .rse")),
         }
@@ -56,11 +73,13 @@ impl SaveDir {
         }
 
         // open the file for initial parsing
-        let mut file = File::open(path.as_ref()).await?;
+        let mut file = OpenOptions::new()
+            .read(true).write(true).truncate(false)
+            .open(path.as_ref()).await?;
 
         let mut magic = [0u8; 8];
         file.read_exact(&mut magic).await?;
-        if &magic != b"RDSHSAVE" {
+        if &magic != MAGIC {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "missing magic bytes"));
         }
 
@@ -75,44 +94,66 @@ impl SaveDir {
         file.read_exact(&mut header_b).await?;
 
         let header = bincode::deserialize(&header_b)
-            .map_err(|e| match *e {
-                bincode::ErrorKind::Io(_) => unreachable!("didn't deserialize from Read"),
-                bincode::ErrorKind::Custom(m) => unreachable!("mysterious serde error: {}", m),
-                bincode::ErrorKind::DeserializeAnyNotSupported => unreachable!("not using deserialize_any"),
-                bincode::ErrorKind::SequenceMustHaveLength => unreachable!("mysterious sudden unsized iterable"),
-                other => io::Error::new(io::ErrorKind::InvalidData, format!("invalid file data: {}", other)),
-            })?;
+            .map_err(bc2io_err)?;
 
-        Ok((header, file))
+        Ok((header, Handle(file)))
     }
 
-    /// Attempt to load all of the available saves in the directory. Any items which failed to load for any reason are
-    /// silently omitted and if iteration of the directory fails (e.g. due to intermittent errors) the list will just
-    /// end right then.
-    pub async fn load_all(self) -> Vec<(SaveData, File)> {
-        let mut res = self.load_all_verbose().await.into_iter()
-            .filter_map(|(_, res)| res.ok())
-            .collect::<Vec<_>>();
-    
-        // order by the date of the save file (default ascending order)
-        res.sort_unstable_by_key(|(sd, _)| sd.date);
-        // newest first (descending order)
-        res.reverse();
-    
-        res
+    pub async fn save_to(mut file: File, metadata: Metadata) -> io::Result<Handle> {
+        let mut data = Vec::with_capacity(10);
+        data.extend_from_slice(MAGIC);
+        let header_len = bincode::serialized_size(&metadata).unwrap();
+        if header_len > u16::MAX as u64 {
+            // TODO: io::ErrorKind::FileTooLarge
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "metadata is too long to serialize"));
+        }
+        data.extend_from_slice(&(header_len as u16).to_le_bytes());
+        bincode::serialize_into(&mut data, &metadata).unwrap();
+        file.write_all(&data).await?;
+        Ok(Handle(file))
     }
+}
 
-    /// Similar to [`Self::load_all`] but returns more information. In particular, returns every file it attempted to
-    /// load, as well as the result of trying to load it. If directory iteration fails, the list will just end.
-    pub async fn load_all_verbose(mut self) -> Vec<(PathBuf, io::Result<(SaveData, File)>)> {
+#[async_trait::async_trait]
+impl SaveSystem for Directory {
+    type Handle = Handle;
+    type Error = io::Error;
+
+    async fn list_verbose(&self) -> Result<Vec<Result<(Metadata, Self::Handle), Self::Error>>, Self::Error> {
+        let mut reader = read_dir(&self.0).await?;
         let mut res = vec![];
         loop {
-            let entry = match self.0.next_entry().await {
+            let entry = match reader.next_entry().await {
                 Ok(Some(entry)) => entry,
                 _ => break,
             };
-            res.push((entry.path(), Self::load_one(entry.path()).await));
+            res.push(Self::list_one(entry.path()).await);
         }
-        res
+        Ok(res)
+    }
+
+    async fn new_slot(&self, metadata: Metadata) -> Result<Handle, Self::Error> {
+        let file = loop {
+            let id = format!("{:08x}.{}", thread_rng().gen::<u32>(), EXT);
+            match OpenOptions::new().create_new(true).write(true).open(self.0.join(id)).await {
+                Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
+                other => break other?,
+            }
+        };
+
+        Self::save_to(file, metadata).await
+    }
+
+    async fn quicksave(&self) -> Result<Self::Handle, Self::Error> {
+        // the quicksave slot is a file named `quicksave.rse` in the save directory, but because it requires no save
+        // metadata (it's the quicksave) we can just... open it.
+        OpenOptions::new().create(true).write(true).truncate(false)
+            .open(self.0.join(QUICKSAVE))
+            .await.map(Handle)
+    }
+
+    async fn cleanup(self) -> Result<(), Self::Error> {
+        // all we need to do is delete the quicksave; everything else is handled by `Drop` impls
+        remove_file(self.0.join(QUICKSAVE)).await
     }
 }

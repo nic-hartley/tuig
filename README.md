@@ -27,7 +27,8 @@ This will make extremely heavy use of features, so I'll explain my intended setu
 
 - `sys_*` are the IO subsystems available. At least one must be selected.
   - `sys_gui_*` are the various flavors of GUI rendering backend
+- `save_*` are the saving/loading subsystems available. Select as many as you want, though some are only compatible with certain platforms.
 - `plat_*` are the platforms available to be targeted. At most one must be selected.
-  - These swap out the `main` function in the `redshell` binary, and pick the `sys_*` appropriate for the target.
+  - These swap out the `main` function in the `redshell` binary, and pick the `sys_*`/`save_*` appropriate for the target.
 
 If you're doing anything besides developing on `redshell` itself you almost certainly want to pick **only** a `plat_*` feature and nothing else.

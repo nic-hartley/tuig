@@ -3,10 +3,11 @@ pub mod constants;
 pub mod cutscenes;
 pub mod event;
 pub mod io;
+pub mod saves;
 mod util;
 
 /// The current state of the game, including the state of the UI.
-#[derive(PartialEq, Eq, Clone, Debug, Default)]
+#[derive(PartialEq, Eq, Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct GameState {
     /// The player's name, of course
     pub player_name: String,
