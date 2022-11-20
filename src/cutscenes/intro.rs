@@ -2,7 +2,7 @@ use std::{time::{Duration, Instant}, io};
 
 use rand::prelude::*;
 
-use crate::io::{output::{Screen, Cell}, sys::IoSystem, text::Color};
+use crate::io::{output::{Screen, Cell}, sys::IoSystem, clifmt::Color};
 
 async fn sleep(s: f32) {
     tokio::time::sleep(Duration::from_secs_f32(s)).await

@@ -11,7 +11,7 @@ pub struct XY(pub usize, pub usize);
 pub mod input;
 pub mod output;
 pub mod sys;
-pub mod text;
+pub mod clifmt;
 pub mod widgets;
 
 impl XY {

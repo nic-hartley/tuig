@@ -6,7 +6,7 @@
 
 use std::ops;
 
-pub use super::text::*;
+pub use super::clifmt::*;
 pub use super::widgets::*;
 
 use super::XY;

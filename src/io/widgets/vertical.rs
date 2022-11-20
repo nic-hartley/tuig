@@ -1,4 +1,4 @@
-use crate::io::{output::{Cell, Screen}, text::Color};
+use crate::io::{output::{Cell, Screen}, clifmt::Color};
 
 pub struct Vertical<'a> {
     pub(in super::super) screen: &'a mut Screen,
