@@ -11,31 +11,6 @@ pub use super::widgets::*;
 
 use super::XY;
 
-#[derive(Clone, Copy)]
-pub struct Cell {
-    pub ch: char,
-    pub fg: Color,
-    pub bg: Color,
-    pub bold: bool,
-    pub underline: bool,
-    pub invert: bool,
-}
-
-impl Cell {
-    pub const BLANK: Self = Self {
-        ch: ' ',
-        fg: Color::White,
-        bg: Color::Black,
-        bold: false,
-        underline: false,
-        invert: false,
-    };
-
-    pub fn plain(ch: char) -> Self {
-        Self { ch, ..Self::BLANK }
-    }
-}
-
 /// A render target
 pub struct Screen {
     cells: Vec<Cell>,
@@ -82,14 +57,7 @@ impl Screen {
         let XY(mut x, y) = pos;
         for chunk in text {
             for char in chunk.text.chars() {
-                self[y][x] = Cell {
-                    ch: char,
-                    fg: chunk.fg,
-                    bg: chunk.bg,
-                    bold: chunk.bold,
-                    underline: chunk.underline,
-                    invert: chunk.invert,
-                };
+                self[y][x] = Cell::of(char).fmt_of(&chunk);
                 x += 1;
             }
         }

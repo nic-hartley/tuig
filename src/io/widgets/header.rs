@@ -1,7 +1,7 @@
 use crate::{
     io::{
         output::{Screen, Text},
-        XY,
+        XY, clifmt::FormattedExt,
     },
     text, text1,
 };
@@ -36,14 +36,6 @@ impl<'a> Header<'a> {
         time(now: &str) => time = now.into(),
         selected(tab: usize) => selected = Some(tab),
     }
-}
-
-crate::util::abbrev_debug! {
-    Header<'a>;
-    if tabs != vec![],
-    write selected,
-    write profile,
-    write time,
 }
 
 impl<'a> Drop for Header<'a> {

@@ -12,7 +12,7 @@ use redshell::{
     event::Event,
     io::{
         input::{Action, Key},
-        output::{Color, Screen, Text},
+        output::{Color, Screen, Text, FormattedExt},
         sys::{self, IoSystem},
         XY,
     },

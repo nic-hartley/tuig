@@ -22,7 +22,7 @@ use crate::io::{
     input::{Action, Key, MouseButton},
     output::Screen,
     output::{Cell, Color as RedshellColor},
-    XY,
+    XY, clifmt::Formatted,
 };
 
 use super::IoSystem;
@@ -196,11 +196,11 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
 
     let mut ch_b = [0u8; 4];
 
-    let mut fg = row[0].fg;
-    let mut bg = row[0].bg;
-    let mut bold = row[0].bold;
-    let mut underline = row[0].underline;
-    let mut invert = row[0].invert;
+    let mut fg = row[0].get_fmt().fg;
+    let mut bg = row[0].get_fmt().bg;
+    let mut bold = row[0].get_fmt().bold;
+    let mut underline = row[0].get_fmt().underline;
+    let mut invert = row[0].get_fmt().invert;
     let mut attrs = [
         Attribute::NormalIntensity,
         Attribute::NoUnderline,
@@ -226,16 +226,16 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
     out.extend_from_slice(row[0].ch.encode_utf8(&mut ch_b).as_bytes());
 
     for cell in &row[1..] {
-        if cell.fg != fg {
-            fg = cell.fg;
+        if cell.get_fmt().fg != fg {
+            fg = cell.get_fmt().fg;
             crossterm::queue!(&mut out, SetForegroundColor(ct4rs_color(fg)))?;
         }
-        if cell.bg != bg {
-            bg = cell.bg;
+        if cell.get_fmt().bg != bg {
+            bg = cell.get_fmt().bg;
             crossterm::queue!(&mut out, SetBackgroundColor(ct4rs_color(bg)))?;
         }
-        if cell.bold != bold {
-            bold = cell.bold;
+        if cell.get_fmt().bold != bold {
+            bold = cell.get_fmt().bold;
             let attr = if bold {
                 Attribute::Bold
             } else {
@@ -243,8 +243,8 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
             };
             crossterm::queue!(&mut out, SetAttribute(attr))?;
         }
-        if cell.underline != underline {
-            underline = cell.underline;
+        if cell.get_fmt().underline != underline {
+            underline = cell.get_fmt().underline;
             let attr = if underline {
                 Attribute::Underlined
             } else {
@@ -252,8 +252,8 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
             };
             crossterm::queue!(&mut out, SetAttribute(attr))?;
         }
-        if cell.invert != invert {
-            invert = cell.invert;
+        if cell.get_fmt().invert != invert {
+            invert = cell.get_fmt().invert;
             let attr = if invert {
                 Attribute::Reverse
             } else {
@@ -263,7 +263,7 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
         }
         out.extend_from_slice(cell.ch.encode_utf8(&mut ch_b).as_bytes());
     }
-    crossterm::queue!(&mut out, MoveDown(1), MoveToColumn(0),)?;
+    crossterm::queue!(&mut out, MoveDown(1), MoveToColumn(0))?;
 
     Ok(out)
 }

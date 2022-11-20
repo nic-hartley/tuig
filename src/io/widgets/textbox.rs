@@ -59,18 +59,6 @@ impl<'a> Textbox<'a> {
     }
 }
 
-crate::util::abbrev_debug! {
-    Textbox<'a>;
-    ignore chunks,
-    if pos != XY(0, 0),
-    if width != None,
-    if height != None,
-    if scroll != 0,
-    if scroll_bottom != false,
-    if indent != 0,
-    if first_indent != None,
-}
-
 impl<'a> Drop for Textbox<'a> {
     fn drop(&mut self) {
         let first_indent = self.first_indent.unwrap_or(self.indent);

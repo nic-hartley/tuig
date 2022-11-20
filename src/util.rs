@@ -13,35 +13,4 @@ macro_rules! setters {
     };
 }
 
-macro_rules! abbrev_debug {
-    (@member $self:ident $f:ident; write $always:ident) => {
-        write!($f, concat!(stringify!($always), ": {:?}, "), $self.$always)?
-    };
-
-    (@member $self:ident $f:ident; ignore $ignore:ident) => {
-        write!($f, concat!(stringify!($ignore), ": .., "))?
-    };
-
-    (@member $self:ident $f:ident; if $sometimes:ident != $default:expr) => {
-        if $self.$sometimes != $default {
-            write!($f, concat!(stringify!($sometimes), ": {:?}, "), $self.$sometimes)?
-        }
-    };
-
-    (
-        $class:ident $( < $( $lt:lifetime ),* > )?;
-        $( $key:ident $member:ident $( != $e:expr )? ),* $(,)?
-    ) => {
-        impl $( < $( $lt ),* > )?  std::fmt::Debug for $class $( < $( $lt ),* > )? {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, concat!(stringify!($class), " {{ "))?;
-                $(
-                    $crate::util::abbrev_debug!(@member self f; $key $member $( != $e )?);
-                )*
-                write!(f, ".. }}")
-            }
-        }
-    };
-}
-
-pub(crate) use {abbrev_debug, setters};
+pub(crate) use setters;

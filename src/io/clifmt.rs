@@ -86,11 +86,14 @@ impl Distribution<Color> for Standard {
     }
 }
 
-/// A single bit of formatted text. Note this isn't really meant to be used on its own, though it can be; the API is
-/// designed to be used through `text!`. To discourage direct use, the internals aren't documented.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Text {
-    pub text: String,
+impl Default for Color {
+    fn default() -> Self {
+        Self::Default
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Format {
     pub fg: Color,
     pub bg: Color,
     pub bold: bool,
@@ -98,35 +101,122 @@ pub struct Text {
     pub invert: bool,
 }
 
-impl Text {
-    pub fn of(s: String) -> Text {
-        Text {
-            text: s,
-            fg: Color::Default,
-            bg: Color::Default,
-            bold: false,
-            underline: false,
-            invert: false,
-        }
-    }
+impl Format {
+    pub const NONE: Self = Format {
+        fg: Color::Default,
+        bg: Color::Default,
+        bold: false,
+        underline: false,
+        invert: false,
+    };
+}
 
+macro_rules! fmt_fn {
+    ( $(
+        $name:ident
+        $(( $( $arg:ident: $type:ty ),* $(,)? ))?
+        =>
+        $field:ident $(.$subfield:ident)*
+        = $val:expr
+    ),* $(,)? ) => { $(
+        #[must_use]
+        fn $name(mut self $($(, $arg: $type )*)? ) -> Self {
+            self.get_fmt_mut().$field $(.$subfield)* = $val;
+            self
+        }
+    )* };
+}
+
+pub trait Formatted {
+    fn get_fmt(&self) -> &Format;
+    fn get_fmt_mut(&mut self) -> &mut Format;
+}
+
+pub trait FormattedExt: Formatted + Sized {
+    #[must_use]
+    fn fmt(mut self, fmt: Format) -> Self {
+        *self.get_fmt_mut() = fmt;
+        self
+    }
+    #[must_use]
+    fn fmt_of(mut self, rhs: &dyn Formatted) -> Self {
+        *self.get_fmt_mut() = rhs.get_fmt().clone();
+        self
+    }
+    fmt_fn! {
+        fg(c: Color) => fg = c,
+        bg(c: Color) => bg = c,
+        black => fg = Color::Black,
+        on_black => bg = Color::Black,
+        red => fg = Color::Red,
+        on_red => bg = Color::Red,
+        green => fg = Color::Green,
+        on_green => bg = Color::Green,
+        yellow => fg = Color::Yellow,
+        on_yellow => bg = Color::Yellow,
+        blue => fg = Color::Blue,
+        on_blue => bg = Color::Blue,
+        magenta => fg = Color::Magenta,
+        on_magenta => bg = Color::Magenta,
+        cyan => fg = Color::Cyan,
+        on_cyan => bg = Color::Cyan,
+        white => fg = Color::White,
+        on_white => bg = Color::White,
+        default => fg = Color::Default,
+        on_default => bg = Color::Default,
+        underline => underline = true,
+        bold => bold = true,
+        invert => invert = true,
+    }
+}
+
+impl<F: Formatted> FormattedExt for F {}
+
+macro_rules! fmt_type {
+    (
+        $( #[$($attr:meta),* $(,)?] )*
+        $svis:vis struct $name:ident { $( $fvis:vis $field:ident: $type:ty ),* $(,)? }
+    ) => {
+        $( #[$($attr),*] )*
+        $svis struct $name {
+            $( $fvis $field: $type, )*
+            _fmt: $crate::io::clifmt::Format,
+        }
+        impl $crate::io::clifmt::Formatted for $name {
+            fn get_fmt(&self) -> &$crate::io::clifmt::Format {
+                &self._fmt
+            }
+            fn get_fmt_mut(&mut self) -> &mut $crate::io::clifmt::Format {
+                &mut self._fmt
+            }
+        }
+        impl $name {
+            pub const fn of( $($field: $type),* ) -> Self {
+                Self {
+                    $( $field, )*
+                    _fmt: $crate::io::clifmt::Format::NONE,
+                }
+            }
+            pub fn data(mut self $(, $field: $type)*) -> Self {
+                $(
+                    self.$field = $field;
+                )*
+                self
+            }
+        }
+    };
+}
+
+fmt_type!(
+    /// A single bit of formatted text. Note this isn't really meant to be used on its own, though it can be; the API
+    /// is designed to be used through `text!`. To discourage direct use, the internals aren't documented.
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    pub struct Text { pub text: String }
+);
+
+impl Text {
     pub fn plain(s: &str) -> Text {
         Text::of(s.into())
-    }
-
-    crate::util::setters! {
-        fg(c: Color) => fg = c,         bg(c: Color) => bg = c,
-        black => fg = Color::Black,     on_black => bg = Color::Black,
-        red => fg = Color::Red,         on_red => bg = Color::Red,
-        green => fg = Color::Green,     on_green => bg = Color::Green,
-        yellow => fg = Color::Yellow,   on_yellow => bg = Color::Yellow,
-        blue => fg = Color::Blue,       on_blue => bg = Color::Blue,
-        magenta => fg = Color::Magenta, on_magenta => bg = Color::Magenta,
-        cyan => fg = Color::Cyan,       on_cyan => bg = Color::Cyan,
-        white => fg = Color::White,     on_white => bg = Color::White,
-        default => fg = Color::Default, on_default => bg = Color::Default,
-        underline => underline = true,  bold => bold = true,
-        invert => invert = true,
     }
 
     pub(super) fn with_text(&self, new_text: String) -> Text {
@@ -134,15 +224,6 @@ impl Text {
         res.text = new_text.into();
         res
     }
-}
-
-crate::util::abbrev_debug! {
-    Text;
-    write text,
-    if fg != Color::Default,
-    if bg != Color::Default,
-    if bold != false,
-    if underline != false,
 }
 
 #[macro_export]
@@ -163,12 +244,26 @@ macro_rules! text {
     ( $(
         $( $name:ident )* $text:literal $( ( $( $arg:expr ),* $(,)? ) )?
     ),+ $(,)? ) => {
-        vec![
-            $(
-                $crate::io::output::Text::of(
-                    format!( $text $(, $( $arg ),* )? )
-                ) $( . $name () )*
-            ),+
-        ]
+        {
+            #[allow(unused_imports)]
+            use $crate::io::clifmt::{FormattedExt as _};
+            vec![
+                $(
+                    $crate::io::clifmt::Text::of(
+                        format!( $text $(, $( $arg ),* )? )
+                    ) $( . $name () )*
+                ),+
+            ]
+        }
     };
+}
+
+fmt_type! {
+    /// A single character that's been formatted. This is really only meant to be used in `Screen`.
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    pub struct Cell { pub ch: char }
+}
+
+impl Cell {
+    pub const BLANK: Cell = Cell::of(' ');
 }

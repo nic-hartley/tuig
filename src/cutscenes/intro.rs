@@ -2,7 +2,7 @@ use std::{time::{Duration, Instant}, io};
 
 use rand::prelude::*;
 
-use crate::io::{output::{Screen, Cell}, sys::IoSystem, clifmt::Color};
+use crate::io::{output::{Screen, Cell}, sys::IoSystem, clifmt::{Color, FormattedExt}};
 
 async fn sleep(s: f32) {
     tokio::time::sleep(Duration::from_secs_f32(s)).await
@@ -29,11 +29,9 @@ fn cellat(seed: u64, x: usize, y: usize) -> Cell {
         '!','@','#','$','%','^','&','*','(',')',
         ',','.','<','>','[',']','{','}','`','~','/','?','\\','|','\'','"',';',':','-','_',
     ];
-    Cell {
-        ch: *CHARS.choose(&mut rngat(seed, x, y, 0xBE1A7EDDECEA5ED)).unwrap(),
-        fg: rngat(seed, x, y, 0xCA11AB1ECA55E77E).gen(),
-        ..Cell::BLANK
-    }
+    let ch = *CHARS.choose(&mut rngat(seed, x, y, 0xBE1A7EDDECEA5ED)).unwrap();
+    let fg = rngat(seed, x, y, 0xCA11AB1ECA55E77E).gen();
+    Cell::of(ch).fg(fg)
 }
 
 fn leaveat(seed: u64, x: usize, y: usize) -> bool {
@@ -171,18 +169,18 @@ pub async fn cleanup_wave(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64)
                     let smear_idx = SMEAR_BGS.len() - 1 - (smear_amt * SMEAR_BGS.len() as f32) as usize;
                     let smear_bg = SMEAR_BGS[smear_idx];
                     cell = if leaveat(seed, x, y) { cellat(seed, x, y) } else { Cell::BLANK };
-                    cell.bg = smear_bg;
+                    cell = cell.bg(smear_bg);
                 } else if pct > wave_trail {
                     // just a blank white line
                     cell = Cell::BLANK;
-                    cell.bg = Color::BrightWhite;
+                    cell = cell.bg(Color::BrightWhite);
                 } else if pct > smear_trail {
                     // smear backwards
                     let smear_amt = (pct - smear_trail) / SMEAR_WIDTH;
                     let smear_idx = (smear_amt * SMEAR_BGS.len() as f32) as usize;
                     let smear_bg = SMEAR_BGS[smear_idx];
                     cell = Cell::BLANK;
-                    cell.bg = smear_bg;
+                    cell = cell.bg(smear_bg);
                 } else {
                     cell = Cell::BLANK;
                 }

@@ -7,7 +7,7 @@ use crate::{
     event::Event,
     io::{
         input::{Action, Key},
-        output::{Screen, Text},
+        output::{Screen, Text}, clifmt::FormattedExt,
     },
     GameState,
 };
