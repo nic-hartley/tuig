@@ -1,9 +1,9 @@
 use crate::{
     io::{
         output::{Screen, Text},
-        XY,
+        XY, clifmt::{FormattedExt, Formatted},
     },
-    text,
+    text, text1,
 };
 
 fn breakable(ch: char) -> bool {
@@ -12,6 +12,7 @@ fn breakable(ch: char) -> bool {
 }
 
 /// Ancillary data which might be useful
+#[derive(PartialEq, Eq, Clone)]
 pub struct TextboxData {
     /// How many total lines there were, after word wrapping.
     pub lines: usize,
@@ -155,14 +156,19 @@ impl<'a> Textbox<'a> {
                     // set up the chunk for next iteration
                     chunk.text = rest;
                     // tack on the end of the line
+                    let rem_space = width - (pos + line_end.len());
                     if !line_end.is_empty() {
                         // (avoiding the allocation if necessary)
                         line.push(chunk.with_text(line_end));
+                    }
+                    if rem_space > 0 {
+                        line.push(text1!("{0:1$}"("", rem_space)).bg(chunk.get_fmt().bg));
                     }
                     // actually terminate the line and start the next one
                     lines.push(line);
                     line = text!["{0:1$}"("", self.indent)];
                     pos = self.indent;
+                    line_start = true;
                 }
                 // now we can fit the rest on this one line
                 pos += chunk.text.len();
@@ -199,15 +205,193 @@ impl<'a> Textbox<'a> {
 
 impl<'a> Drop for Textbox<'a> {
     fn drop(&mut self) {
-        // should have 0 allocations to generate the dummy textbox, and the empty textbox should immediately quit
-        // trying to render (assuming DCE doesn't notice the screen isn't used and delete it all anyway)
-        let dummy = Textbox {
-            screen: None, chunks: vec![], pos: XY(0, 0),
-            width: None, height: None,
-            scroll: 0, scroll_bottom: false,
-            indent: 0, first_indent: None
+        match self.screen {
+            Some(_) => {
+                // this textbox hasn't been rendered, so do that now
+                // (this dummy textbox has 0 allocations and should trigger a NOP rendering/drop)
+                let dummy = Textbox {
+                    screen: None, chunks: vec![], pos: XY(0, 0),
+                    width: None, height: None,
+                    scroll: 0, scroll_bottom: false,
+                    indent: 0, first_indent: None
+                };
+                let me = std::mem::replace(self, dummy);
+                // ignore the data
+                let _ = me.render();
+            }
+            None => (),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::ops::{RangeBounds, Bound};
+
+    use crate::{io::clifmt::{Cell, FormattedExt, Color, Formatted}, text1};
+
+    use super::*;
+
+    const FILLER: &str = "0123456789abcdef";
+
+    fn charat(x: usize, y: usize) -> char {
+        // compare:
+        // [(...)%FILLER.len()]
+        // .chars().cycle().nth(...).unwrap()
+        // .chars().nth((...)%FILLER.len()).unwrap()
+        // unfortunately the first one is invalid
+        FILLER.chars().cycle().nth(x*5+y*3).unwrap()
+    }
+
+    /// Generate a screen filled with miscellaneous "random" data, to fairly reliably check that stuff was left blank
+    /// by the code under test. (This isn't cryptographically secure or anything!)
+    fn screen(x: usize, y: usize) -> Screen {
+        let mut s = Screen::new(XY(x, y));
+        for px in 0..x {
+            for py in 0..y {
+                s[py][px] = Cell::of(charat(px, py)).bg(Color::Black);
+            }
+        }
+        s
+    }
+
+    fn assert_cell_blank(s: &Screen, x: usize, y: usize) {
+        let cell = &s[y][x];
+        assert!(
+            cell.ch == charat(x, y) && cell.get_fmt().bg == Color::Black,
+            "mismatched cell at {}, {}: expected blank, got {:?}", x, y, cell,
+        );
+    }
+
+    fn assert_area_blank(s: &Screen, x: impl RangeBounds<usize>, y: impl RangeBounds<usize>) {
+        fn min(r: &impl RangeBounds<usize>) -> usize {
+                match r.start_bound() {
+                Bound::Included(v) => *v,
+                Bound::Excluded(v) => v - 1,
+                Bound::Unbounded => 0,
+            }
+        }
+        fn max(r: &impl RangeBounds<usize>, m: usize) -> usize {
+                match r.end_bound() {
+                Bound::Included(v) => v + 1,
+                Bound::Excluded(v) => *v,
+                Bound::Unbounded => m,
+            }
+        }
+        let min_x = min(&x);
+        let max_x = max(&x, s.size().x());
+        let min_y = min(&y);
+        let max_y = max(&y, s.size().y());
+        for x in min_x..max_x {
+            for y in min_y..max_y {
+                assert_cell_blank(s, x, y)
+            }
+        }
+    }
+
+    fn assert_cell_fmt(s: &Screen, x: usize, y: usize, c: Cell) {
+        assert!(
+            s[y][x] == c,
+            "mismatched cell at {}, {}: expected {:?}, got {:?}", x, y, c, s[y][x]
+        );
+    }
+
+    fn assert_area_fmt(s: &Screen, x: usize, y: usize, t: Text) {
+        for (i, ch) in t.text.chars().enumerate() {
+            assert_cell_fmt(s, x+i, y, Cell::of(ch).fmt_of(&t));
+        }
+    }
+
+    macro_rules! screen_assert {
+        ( $sc:ident: $(
+            $( fmt $fmt_x:expr, $fmt_y:expr, $text:literal $( $mod:ident )* )?
+            $( blank $blank_x:expr, $blank_y:expr )?
+        ),* ) => {
+            $(
+                $(
+                    assert_area_fmt(&$sc, $fmt_x, $fmt_y, text1!($($mod)* $text));
+                )?
+                $(
+                    assert_area_blank(&$sc, $blank_x, $blank_y);
+                )?
+            )*
         };
-        let me = std::mem::replace(self, dummy);
-        let _ = me.render();
+    }
+
+    #[test]
+    fn blank_textbox_renders_nothing() {
+        let mut sc = screen(50, 30);
+        sc.textbox(vec![]);
+        screen_assert!(sc:
+            blank .., ..
+        );
+    }
+
+    #[test]
+    fn basic_textbox_renders_right() {
+        let mut sc = screen(50, 30);
+        sc.textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "));
+        screen_assert!(sc:
+            // end of the line and beyond
+            blank 20.., 1..=1,
+            // rest of the lines
+            blank 1.., 2..,
+            // and the formatted text
+            fmt 0, 0, "bleh ",
+            fmt 5, 0, "blah " red,
+            fmt 10, 0, "bluh " green underline,
+            fmt 15, 0, "bloh " blue on_magenta,
+        );
+    }
+
+    #[test]
+    fn textbox_positioning_works() {
+        let mut sc = screen(50, 30);
+        sc.textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh ")).pos(4, 3);
+        screen_assert!(sc:
+            // blank top 3 rows (0, 1, 2)
+            blank .., ..3,
+            // blank rows after 4
+            blank .., 4..,
+            // blank 0, 1, 2, 3 in row 3
+            blank ..4, 3..=3,
+            // blank rest of the line
+            blank 24.., 3..=3,
+            // then the formatted text
+            fmt 4, 3, "bleh ",
+            fmt 9, 3, "blah " red,
+            fmt 14, 3, "bluh " green underline,
+            fmt 19, 3, "bloh " blue on_magenta,
+        );
+    }
+
+    #[test]
+    fn textbox_wraps_words_and_overwrites() {
+        let mut sc = screen(50, 30);
+        sc.textbox(text!("these are some words which will eveeeentually be wrapped!")).pos(40, 0);
+        screen_assert!(sc:
+            blank ..40, ..,
+            fmt 40, 0, "these are ",
+            fmt 40, 1, "some words",
+            fmt 40, 2, "which will",
+            fmt 40, 3, "eveeeentu-",
+            fmt 40, 4, "ally be   ",
+            fmt 40, 5, "wrapped!", // last line isn't filled in!
+        );
+    }
+
+    #[test]
+    fn textbox_wrap_carries_formatting() {
+        let mut sc = screen(50, 30);
+        sc.textbox(text!("these are some words which will ", green "eveeeentually", " be wrapped!")).pos(40, 0);
+        screen_assert!(sc:
+            blank ..40, ..,
+            fmt 40, 0, "these are ",
+            fmt 40, 1, "some words",
+            fmt 40, 2, "which will",
+            fmt 40, 3, "eveeeentu-" green,
+            fmt 40, 4, "ally" green, fmt 44, 4, " be   ",
+            fmt 40, 5, "wrapped!",
+        );
     }
 }
