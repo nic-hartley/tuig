@@ -11,11 +11,25 @@ fn breakable(ch: char) -> bool {
     ch.is_whitespace()
 }
 
+/// Ancillary data which might be useful
+pub struct TextboxData {
+    /// How many total lines there were, after word wrapping.
+    pub lines: usize,
+    /// How many lines on the screen the textbox occupied, accounting for the requested height, the 
+    pub height: usize,
+    /// How far down from the top the displayed text started.
+    pub scroll: usize,
+}
+
+impl TextboxData {
+    const EMPTY: Self = Self { height: 0, lines: 0, scroll: 0 };
+}
+
 /// A box of text which can be written to a `Screen`. Note these are meant to be generated on the fly, every frame,
 /// possibly multiple times. They do the actual *writing* when they're dropped, converting the higher-level Textbox
 /// API things to calls of `Screen::raw`.
 pub struct Textbox<'a> {
-    pub(in super::super) screen: &'a mut Screen,
+    pub(in super::super) screen: Option<&'a mut Screen>,
     pub(in super::super) chunks: Vec<Text>,
     pub(in super::super) pos: XY,
     pub(in super::super) width: Option<usize>,
@@ -29,7 +43,7 @@ pub struct Textbox<'a> {
 impl<'a> Textbox<'a> {
     pub fn new(screen: &'a mut Screen, text: Vec<Text>) -> Self {
         Self {
-            screen,
+            screen: Some(screen),
             chunks: text,
             pos: XY(0, 0),
             width: None,
@@ -57,19 +71,22 @@ impl<'a> Textbox<'a> {
         indent(amt: usize) => indent = amt,
         first_indent(amt: usize) => first_indent = Some(amt),
     }
-}
 
-impl<'a> Drop for Textbox<'a> {
-    fn drop(&mut self) {
+    pub fn render(mut self) -> TextboxData {
+        let screen = match std::mem::replace(&mut self.screen, None) {
+            Some(s) => s,
+            None => return TextboxData::EMPTY,
+        };
+
         let first_indent = self.first_indent.unwrap_or(self.indent);
         let XY(x, y) = self.pos;
 
-        let screen_size = self.screen.size();
+        let screen_size = screen.size();
         let width = self.width.unwrap_or(screen_size.x() - x);
         let height = self.height.unwrap_or(screen_size.y() - y);
         if width == 0 || height == 0 {
             // nothing to draw
-            return;
+            return TextboxData::EMPTY;
         }
 
         assert!(width > self.indent);
@@ -156,18 +173,41 @@ impl<'a> Drop for Textbox<'a> {
 
         let x = self.pos.x();
         let mut y = self.pos.y();
+
         let start;
         if self.scroll_bottom {
             // we want [height] lines, starting [scroll] away from the bottom
             let end = lines.len() - self.scroll;
             start = end.saturating_sub(height);
+            // make sure the text fills from the bottom instead of the top
+            let real_height = end - start;
+            y += height - real_height;
         } else {
             // we want [height] lines, starting [scroll] away from the top
             start = self.scroll;
         };
+
+        let mut data = TextboxData { lines: lines.len(), height: 0, scroll: start };
         for line in lines.into_iter().skip(start).take(height) {
-            self.screen.write(XY(x, y), line);
+            screen.write(XY(x, y), line);
             y += 1;
+            data.height += 1;
         }
+        data
+    }
+}
+
+impl<'a> Drop for Textbox<'a> {
+    fn drop(&mut self) {
+        // should have 0 allocations to generate the dummy textbox, and the empty textbox should immediately quit
+        // trying to render (assuming DCE doesn't notice the screen isn't used and delete it all anyway)
+        let dummy = Textbox {
+            screen: None, chunks: vec![], pos: XY(0, 0),
+            width: None, height: None,
+            scroll: 0, scroll_bottom: false,
+            indent: 0, first_indent: None
+        };
+        let me = std::mem::replace(self, dummy);
+        let _ = me.render();
     }
 }
