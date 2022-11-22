@@ -155,14 +155,14 @@ impl<'a> Textbox<'a> {
                     }
                     // set up the chunk for next iteration
                     chunk.text = rest;
-                    // tack on the end of the line
-                    let rem_space = width - (pos + line_end.len());
+                    // tack on the end of the line, if it's not empty
                     if !line_end.is_empty() {
-                        // (avoiding the allocation if necessary)
+                        let rem_space = width - (pos + line_end.len());
                         line.push(chunk.with_text(line_end));
-                    }
-                    if rem_space > 0 {
-                        line.push(text1!("{0:1$}"("", rem_space)).bg(chunk.get_fmt().bg));
+                        // then make sure the formatting continues into the next line
+                        if rem_space > 0 {
+                            line.push(text1!("{0:1$}"("", rem_space)).bg(chunk.get_fmt().bg));
+                        }
                     }
                     // actually terminate the line and start the next one
                     lines.push(line);
@@ -386,12 +386,29 @@ mod test {
         sc.textbox(text!("these are some words which will ", green "eveeeentually", " be wrapped!")).pos(40, 0);
         screen_assert!(sc:
             blank ..40, ..,
+            blank .., 6..,
             fmt 40, 0, "these are ",
             fmt 40, 1, "some words",
             fmt 40, 2, "which will",
             fmt 40, 3, "eveeeentu-" green,
             fmt 40, 4, "ally" green, fmt 44, 4, " be   ",
             fmt 40, 5, "wrapped!",
+        );
+    }
+
+    #[test]
+    fn textbox_linefill_carries_formatting() {
+        let mut sc = screen(50, 30);
+        sc.textbox(text!("these are some words which will eveeeentually ", on_blue "be wrapped", "!")).pos(40, 0);
+        screen_assert!(sc:
+            blank ..40, ..,
+            blank .., 6..,
+            fmt 40, 0, "these are ",
+            fmt 40, 1, "some words",
+            fmt 40, 2, "which will",
+            fmt 40, 3, "eveeeentu-",
+            fmt 40, 4, "ally ", fmt 45, 4, "be   " on_blue,
+            fmt 40, 5, "wrapped" on_blue, fmt 47, 5, "!",
         );
     }
 }
