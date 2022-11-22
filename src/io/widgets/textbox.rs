@@ -84,7 +84,9 @@ impl<'a> Textbox<'a> {
 
         let screen_size = screen.size();
         let width = self.width.unwrap_or(screen_size.x() - x);
+        let width = width.min(screen_size.x() - x);
         let height = self.height.unwrap_or(screen_size.y() - y);
+        let mut height = height.min(screen_size.y() - y);
         if width == 0 || height == 0 {
             // nothing to draw
             return TextboxData::EMPTY;
@@ -188,6 +190,7 @@ impl<'a> Textbox<'a> {
             // make sure the text fills from the bottom instead of the top
             let real_height = end - start;
             y += height - real_height;
+            height = real_height;
         } else {
             // we want [height] lines, starting [scroll] away from the top
             start = self.scroll;
@@ -330,7 +333,7 @@ mod test {
     #[test]
     fn basic_textbox_renders_right() {
         let mut sc = screen(50, 30);
-        sc.textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "));
+        let res = sc.textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh ")).render();
         screen_assert!(sc:
             // end of the line and beyond
             blank 20.., 1..=1,
@@ -342,12 +345,15 @@ mod test {
             fmt 10, 0, "bluh " green underline,
             fmt 15, 0, "bloh " blue on_magenta,
         );
+        assert_eq!(res.height, 1);
+        assert_eq!(res.lines, 1);
+        assert_eq!(res.scroll, 0);
     }
 
     #[test]
     fn textbox_positioning_works() {
         let mut sc = screen(50, 30);
-        sc.textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh ")).pos(4, 3);
+        let res = sc.textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh ")).pos(4, 3).render();
         screen_assert!(sc:
             // blank top 3 rows (0, 1, 2)
             blank .., ..3,
@@ -363,14 +369,18 @@ mod test {
             fmt 14, 3, "bluh " green underline,
             fmt 19, 3, "bloh " blue on_magenta,
         );
+        assert_eq!(res.height, 1);
+        assert_eq!(res.lines, 1);
+        assert_eq!(res.scroll, 0);
     }
 
     #[test]
     fn textbox_wraps_words_and_overwrites() {
         let mut sc = screen(50, 30);
-        sc.textbox(text!("these are some words which will eveeeentually be wrapped!")).pos(40, 0);
+        let res = sc.textbox(text!("these are some words which will eveeeentually be wrapped!")).pos(40, 0).render();
         screen_assert!(sc:
             blank ..40, ..,
+            blank .., 6..,
             fmt 40, 0, "these are ",
             fmt 40, 1, "some words",
             fmt 40, 2, "which will",
@@ -378,6 +388,9 @@ mod test {
             fmt 40, 4, "ally be   ",
             fmt 40, 5, "wrapped!", // last line isn't filled in!
         );
+        assert_eq!(res.height, 6);
+        assert_eq!(res.lines, 6);
+        assert_eq!(res.scroll, 0);
     }
 
     #[test]
@@ -410,5 +423,55 @@ mod test {
             fmt 40, 4, "ally ", fmt 45, 4, "be   " on_blue,
             fmt 40, 5, "wrapped" on_blue, fmt 47, 5, "!",
         );
+    }
+
+    #[test]
+    fn textbox_size_truncates() {
+        let mut sc = screen(50, 30);
+        let res = sc.textbox(text!("these are some words which will eveeeentually be wrapped!")).pos(40, 0).size(10, 3).render();
+        screen_assert!(sc:
+            blank ..40, ..,
+            blank .., 3..,
+            fmt 40, 0, "these are ",
+            fmt 40, 1, "some words",
+            fmt 40, 2, "which will",
+        );
+        assert_eq!(res.height, 3);
+        assert_eq!(res.lines, 6);
+        assert_eq!(res.scroll, 0);
+    }
+
+    #[test]
+    fn textbox_scroll_moves_view() {
+        let mut sc = screen(50, 30);
+        let res = sc.textbox(text!("these are some words which will eveeeentually be wrapped!")).pos(40, 0).scroll(2).render();
+        screen_assert!(sc:
+            blank ..40, ..,
+            blank .., 4..,
+            fmt 40, 0, "which will",
+            fmt 40, 1, "eveeeentu-",
+            fmt 40, 2, "ally be   ",
+            fmt 40, 3, "wrapped!",
+        );
+        assert_eq!(res.height, 4);
+        assert_eq!(res.lines, 6);
+        assert_eq!(res.scroll, 2);
+    }
+
+    #[test]
+    fn textbox_scroll_bottom_moves_view() {
+        let mut sc = screen(50, 30);
+        let res = sc.textbox(text!("these are some words which will eveeeentually be wrapped!")).pos(40, 0).size(10, 4).scroll(1).scroll_bottom(true).render();
+        screen_assert!(sc:
+            blank ..40, ..,
+            blank .., 4..,
+            fmt 40, 0, "some words",
+            fmt 40, 1, "which will",
+            fmt 40, 2, "eveeeentu-",
+            fmt 40, 3, "ally be   ",
+        );
+        assert_eq!(res.height, 4);
+        assert_eq!(res.lines, 6);
+        assert_eq!(res.scroll, 1);
     }
 }
