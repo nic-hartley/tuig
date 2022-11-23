@@ -26,4 +26,6 @@ jobs:
     - run: rustup update
     - run: rustup default ${{ matrix.rust }}
     - run: cargo check
+      continue-on-error: ${{ matrix.failable }}
     - run: cargo test
+      continue-on-error: ${{ matrix.failable }}
