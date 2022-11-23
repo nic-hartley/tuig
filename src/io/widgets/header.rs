@@ -1,7 +1,8 @@
 use crate::{
     io::{
+        clifmt::FormattedExt,
         output::{Screen, Text},
-        XY, clifmt::FormattedExt,
+        XY,
     },
     text, text1,
 };

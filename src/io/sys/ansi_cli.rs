@@ -19,10 +19,11 @@ use tokio::{
 };
 
 use crate::io::{
+    clifmt::Formatted,
     input::{Action, Key, MouseButton},
     output::Screen,
     output::{Cell, Color as RedshellColor},
-    XY, clifmt::Formatted,
+    XY,
 };
 
 use super::IoSystem;

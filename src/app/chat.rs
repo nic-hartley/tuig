@@ -6,8 +6,9 @@ use crate::{
     constants::{gameplay::MAX_USERNAME, graphics::HEADER_HEIGHT},
     event::Event,
     io::{
+        clifmt::FormattedExt,
         input::{Action, Key},
-        output::{Screen, Text}, clifmt::FormattedExt,
+        output::{Screen, Text},
     },
     GameState,
 };

@@ -8,10 +8,10 @@ use std::{
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct XY(pub usize, pub usize);
 
+pub mod clifmt;
 pub mod input;
 pub mod output;
 pub mod sys;
-pub mod clifmt;
 pub mod widgets;
 
 impl XY {
