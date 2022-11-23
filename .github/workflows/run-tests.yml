@@ -13,7 +13,7 @@ jobs:
   test:
     strategy:
       matrix:
-        rust: [stable, nightly]
+        rust: [stable, nightly, 1.59]
         platform: [windows, macos, ubuntu]
         # TODO: features: [plat_x86, plat_steam, etc]
         include:
