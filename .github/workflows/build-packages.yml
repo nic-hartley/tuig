@@ -1,0 +1,22 @@
+name: Build packages
+run-name: Building deployable packages for ${{github.ref}}
+on:
+  push:
+    tags:
+    - v*
+jobs:
+  raw-x86-binary:
+    strategy:
+      matrix:
+        platform: [ubuntu, windows, macos]
+    runs-on: ${{ matrix.platform }}-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: rustup update
+    - run: cargo build --release
+    - uses: actions/upload-artifact@v3
+      with:
+        name: raw-x86-binary
+        path: |
+          target/release/redshell
+          target/release/redshell-concept
