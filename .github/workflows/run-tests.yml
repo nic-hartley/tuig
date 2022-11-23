@@ -2,6 +2,7 @@ name: Run tests
 run-name: Running tests after ${{github.ref}} ${{github.event_name}}
 on:
   push:
+    tags-ignore: *
 jobs:
   fmt-and-check:
     runs-on: ubuntu-latest
