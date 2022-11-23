@@ -2,6 +2,8 @@ name: Run tests
 run-name: Testing ${{github.ref_name}} (${{github.sha}})
 on:
   push:
+    tags-ignore: '*'
+    branches: '*'
 jobs:
   fmt-and-check:
     runs-on: ubuntu-latest
