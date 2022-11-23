@@ -20,7 +20,8 @@ jobs:
     - run: cargo build --release
     - uses: actions/upload-artifact@v3
       with:
-        name: raw-x86-binary
+        name: raw-x86-binary-${{ matrix.platform }}
         path: |
           target/release/redshell${{matrix.ext}}
           target/release/redshell-concept${{matrix.ext}}
+        if-no-files-found: error
