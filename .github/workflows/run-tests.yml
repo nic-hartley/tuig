@@ -20,6 +20,7 @@ jobs:
         - failable: true
         - rust: stable
           failable: false
+    name: ${{ matrix.platform }} rustc-${{ matrix.rust }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
     - uses: actions/checkout@v3
