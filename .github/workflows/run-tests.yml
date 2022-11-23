@@ -1,0 +1,26 @@
+name: Run tests
+run-name: Running tests after ${{github.ref}} ${{github.action}}
+on:
+  push:
+jobs:
+  fmt-and-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: cargo fmt --check
+  test:
+    strategy:
+      matrix:
+        rust: [stable, nightly, 1.65, 1.64, 1.63]
+        platform: [windows, macos, ubuntu]
+        # TODO: features: [plat_x86, plat_steam, etc]
+        include:
+        - failable: true
+        - rust: stable
+          failable: false
+    runs-on: ${{ matrix.platform }}-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: rustup default ${{ matrix.rust }}
+    - run: cargo check
+    - run: cargo test
