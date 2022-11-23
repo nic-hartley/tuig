@@ -1,5 +1,5 @@
 name: Run tests
-run-name: Running tests after ${{github.ref}} ${{github.event_name}}
+run-name: Testing ${{github.ref}}
 on:
   push:
     tags-ignore: *

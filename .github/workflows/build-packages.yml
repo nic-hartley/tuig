@@ -1,5 +1,5 @@
 name: Build packages
-run-name: Building deployable packages for ${{github.ref}}
+run-name: Building deployables from ${{github.ref}}
 on:
   push:
     tags:
