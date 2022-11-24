@@ -144,26 +144,24 @@ pub trait FormattedExt: Formatted + Sized {
         self
     }
     fmt_fn! {
-        fg(c: Color) => fg = c,
-        bg(c: Color) => bg = c,
-        black => fg = Color::Black,
-        on_black => bg = Color::Black,
-        red => fg = Color::Red,
-        on_red => bg = Color::Red,
-        green => fg = Color::Green,
-        on_green => bg = Color::Green,
-        yellow => fg = Color::Yellow,
-        on_yellow => bg = Color::Yellow,
-        blue => fg = Color::Blue,
-        on_blue => bg = Color::Blue,
-        magenta => fg = Color::Magenta,
-        on_magenta => bg = Color::Magenta,
-        cyan => fg = Color::Cyan,
-        on_cyan => bg = Color::Cyan,
-        white => fg = Color::White,
-        on_white => bg = Color::White,
-        default => fg = Color::Default,
-        on_default => bg = Color::Default,
+        fg(c: Color) => fg = c,                         bg(c: Color) => bg = c,
+        black => fg = Color::Black,                     on_black => bg = Color::Black,
+        bright_black => fg = Color::BrightBlack,        on_bright_black => bg = Color::BrightBlack,
+        red => fg = Color::Red,                         on_red => bg = Color::Red,
+        bright_red => fg = Color::BrightRed,            on_bright_red => bg = Color::BrightRed,
+        green => fg = Color::Green,                     on_green => bg = Color::Green,
+        bright_green => fg = Color::BrightGreen,        on_bright_green => bg = Color::BrightGreen,
+        yellow => fg = Color::Yellow,                   on_yellow => bg = Color::Yellow,
+        bright_yellow => fg = Color::BrightYellow,      on_bright_yellow => bg = Color::BrightYellow,
+        blue => fg = Color::Blue,                       on_blue => bg = Color::Blue,
+        bright_blue => fg = Color::BrightBlue,          on_bright_blue => bg = Color::BrightBlue,
+        magenta => fg = Color::Magenta,                 on_magenta => bg = Color::Magenta,
+        bright_magenta => fg = Color::BrightMagenta,    on_bright_magenta => bg = Color::BrightMagenta,
+        cyan => fg = Color::Cyan,                       on_cyan => bg = Color::Cyan,
+        bright_cyan => fg = Color::BrightCyan,          on_bright_cyan => bg = Color::BrightCyan,
+        white => fg = Color::White,                     on_white => bg = Color::White,
+        bright_white => fg = Color::BrightWhite,        on_bright_white => bg = Color::BrightWhite,
+        default => fg = Color::Default,                 on_default => bg = Color::Default,
         underline => underline = true,
         bold => bold = true,
         invert => invert = true,
@@ -244,7 +242,9 @@ macro_rules! text1 {
 #[macro_export]
 macro_rules! text {
     ( $(
-        $( $name:ident )* $text:literal $( ( $( $arg:expr ),* $(,)? ) )?
+        $( $name:ident )*
+        $text:literal
+        $( ( $( $arg:expr ),* $(,)? ) )?
     ),+ $(,)? ) => {
         {
             #[allow(unused_imports)]
@@ -266,6 +266,17 @@ fmt_type! {
     pub struct Cell { pub ch: char }
 }
 
+#[macro_export]
+macro_rules! cell {
+    ( $( $name:ident )* $( $char:literal )? ) => {
+        {
+            #[allow(unused_imports)]
+            use $crate::io::clifmt::{FormattedExt as _};
+            Cell::of($($char)?) $( .$name() )*
+        }
+    };
+}
+
 impl Cell {
-    pub const BLANK: Cell = Cell::of(' ');
+    pub const BLANK: Cell = cell!(' ');
 }

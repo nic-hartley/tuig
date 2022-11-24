@@ -269,7 +269,7 @@ mod test {
         let mut s = Screen::new(XY(x, y));
         for px in 0..x {
             for py in 0..y {
-                s[py][px] = Cell::of(charat(px, py)).bg(Color::Black);
+                s[py][px] = Cell::of(charat(px, py)).on_black();
             }
         }
         s

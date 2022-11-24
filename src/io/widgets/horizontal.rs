@@ -1,4 +1,10 @@
-use crate::io::output::{Cell, Screen};
+use crate::{
+    cell,
+    io::{
+        clifmt::{Color, FormattedExt},
+        output::{Cell, Screen},
+    },
+};
 
 pub struct Horizontal<'a> {
     pub(in super::super) screen: &'a mut Screen,
@@ -15,13 +21,20 @@ impl<'a> Horizontal<'a> {
             row,
             start: None,
             end: None,
-            fill: Cell::of('|'),
+            fill: cell!('-'),
         }
     }
 
     crate::util::setters! {
         start(x: usize) => start = Some(x),
         end(x: usize) => end = Some(x),
+        fill(c: Cell) => fill = c,
+    }
+
+    pub fn color(mut self, c: Color) -> Self {
+        let new_fill = self.fill.clone().fg(c);
+        self.fill = new_fill;
+        self
     }
 }
 

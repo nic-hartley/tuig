@@ -1,14 +1,17 @@
-use std::{
-    io,
-    time::{Duration, Instant},
-};
+use std::{io, time::Duration};
 
 use rand::prelude::*;
+use tokio::time::{sleep_until, Instant};
 
-use crate::io::{
-    clifmt::{Color, FormattedExt},
-    output::{Cell, Screen},
-    sys::IoSystem,
+use crate::{
+    cell,
+    io::{
+        clifmt::{FormattedExt, Text},
+        input::{Action, Key},
+        output::{Cell, Screen},
+        sys::IoSystem,
+    },
+    text, text1,
 };
 
 async fn sleep(s: f32) {
@@ -55,9 +58,9 @@ pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::R
     // the width of one shift
     const SHIFT_WIDTH: f32 = 0.1;
     // how many shifts there are in the wave
-    const SHIFT_COUNT: usize = 2;
+    const SHIFT_COUNT: usize = 3;
     // how fast the wave moves right
-    const WAVE_SPEED: f32 = 0.5;
+    const WAVE_SPEED: f32 = 0.75;
     // the width of the whole wave
     const WAVE_WIDTH: f32 = SHIFT_WIDTH * SHIFT_COUNT as f32;
 
@@ -74,16 +77,16 @@ pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::R
         }
 
         screen.resize(io.size());
-        for x in 0..screen.size().x() {
-            let pct = x as f32 / screen.size().x() as f32;
+        for y in 0..screen.size().y() {
+            let pct = y as f32 / screen.size().y() as f32;
             if pct > wave_lead {
                 // everything past the leading edge is blank
-                for y in 0..screen.size().y() {
+                for x in 0..screen.size().x() {
                     screen[y][x] = Cell::BLANK;
                 }
             } else if pct < wave_trail {
                 // almost everything past the trailing edge is blank
-                for y in 0..screen.size().y() {
+                for x in 0..screen.size().x() {
                     if leaveat(seeds[SHIFT_COUNT - 1], x, y) {
                         screen[y][x] = cellat(seeds[SHIFT_COUNT - 1], x, y);
                     } else {
@@ -96,7 +99,7 @@ pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::R
                 let to_shift = from_shift + 1;
                 let within = shift_pos.fract();
 
-                for y in 0..screen.size().y() {
+                for x in 0..screen.size().x() {
                     if within < fadeat(seeds[from_shift], x, y) {
                         if from_shift > 0 {
                             screen[y][x] = cellat(seeds[from_shift], x, y);
@@ -123,112 +126,281 @@ pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::R
     Ok(seeds[SHIFT_COUNT - 1])
 }
 
-pub async fn cleanup_wave(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64) -> io::Result<()> {
-    // render the sparkles, accounting for resizes, until the timer is done
-    let timer = sleep(1.0);
-    tokio::pin!(timer);
-    loop {
-        screen.resize(io.size());
-        for y in 0..screen.size().y() {
-            for x in 0..screen.size().x() {
-                if leaveat(seed, x, y) {
-                    screen[y][x] = cellat(seed, x, y);
-                }
-            }
-        }
-        io.draw(&screen).await?;
-
-        tokio::select! {
-            _ = &mut timer => break,
-            _ = io.input() => {}
-        }
-    }
-
-    // draw the wipe
-    const WAVE_SPEED: f32 = 1.0;
-    const WAVE_WIDTH: f32 = 0.025;
-    const SMEAR_WIDTH: f32 = 0.025;
-    // from darkest to lightest
-    const SMEAR_BGS: [Color; 6] = [
-        Color::Black,
-        Color::Blue,
-        Color::Red,
-        Color::Cyan,
-        Color::Yellow,
-        Color::White,
+fn gen_lines() -> Vec<Text> {
+    let mut rng = thread_rng();
+    let mut verbs = [
+        "LOADING",
+        "DECRYPTING",
+        "SPAWNING",
+        "ALLOCATING",
+        "CREATING",
+        "INITIALIZING",
+        "BUILDING",
+        "SETTING UP",
+        "RETICULATING",
     ];
-    let start = Instant::now();
-    loop {
-        let now = Instant::now();
-        let since_start = now.duration_since(start).as_secs_f32();
-        let smear_lead = since_start * WAVE_SPEED;
-        let wave_lead = smear_lead - SMEAR_WIDTH;
-        let wave_trail = wave_lead - WAVE_WIDTH;
-        let smear_trail = wave_trail - SMEAR_WIDTH;
-        if smear_trail > 1.0 {
-            break;
+    let mut nouns = [
+        "ENCRYPTOR",
+        "ANONYMIZER",
+        "PACKET FILTERS",
+        "KERNEL",
+        "SERVER",
+        "DAEMON",
+        "SUBPROCESS",
+        "SHELL",
+        "SPLINES",
+    ];
+    assert!(verbs.len() == nouns.len());
+    verbs.shuffle(&mut rng);
+    nouns.shuffle(&mut rng);
+    verbs
+        .into_iter()
+        .zip(nouns.into_iter())
+        .map(|(v, n)| text1!(bold green "\n{} {}..."(v, n)))
+        .collect()
+}
+
+pub async fn loading_text(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64) -> io::Result<()> {
+    const MIN_DELAY: f32 = 0.25;
+    const MAX_DELAY: f32 = 0.75;
+
+    let lines = gen_lines();
+    let mut scroll = 0;
+    let mut show_next_time = Instant::now() + Duration::from_secs_f32(1.0);
+    while scroll < io.size().y() + lines.len() + 1 {
+        screen.resize(io.size());
+
+        // render the loading lines first so we know where to put the rest
+        let mut text = lines.iter().cloned().collect::<Vec<_>>();
+        text.resize(scroll, text1!("\n"));
+        let textinfo = screen.textbox(text).scroll_bottom(true).render();
+        let y_off = textinfo.lines;
+        if y_off <= screen.size().y() {
+            screen
+                .horizontal(screen.size().y() - y_off)
+                .fill(cell!(green on_black '='));
         }
 
-        screen.resize(io.size());
-        for x in 0..screen.size().x() {
-            let pct = 1.0 - (x as f32 / screen.size().x() as f32);
-
-            for y in 0..screen.size().y() {
-                let mut cell;
-                if pct > smear_lead {
-                    // ahead of the leading edge: just render the cell normally
-                    cell = if leaveat(seed, x, y) {
-                        cellat(seed, x, y)
-                    } else {
-                        Cell::BLANK
-                    };
-                } else if pct > wave_lead {
-                    // start smearing: lighten background color accordingly
-                    let smear_amt = (pct - wave_lead) / SMEAR_WIDTH;
-                    let smear_idx =
-                        SMEAR_BGS.len() - 1 - (smear_amt * SMEAR_BGS.len() as f32) as usize;
-                    let smear_bg = SMEAR_BGS[smear_idx];
-                    cell = if leaveat(seed, x, y) {
-                        cellat(seed, x, y)
-                    } else {
-                        Cell::BLANK
-                    };
-                    cell = cell.bg(smear_bg);
-                } else if pct > wave_trail {
-                    // just a blank white line
-                    cell = Cell::BLANK;
-                    cell = cell.bg(Color::BrightWhite);
-                } else if pct > smear_trail {
-                    // smear backwards
-                    let smear_amt = (pct - smear_trail) / SMEAR_WIDTH;
-                    let smear_idx = (smear_amt * SMEAR_BGS.len() as f32) as usize;
-                    let smear_bg = SMEAR_BGS[smear_idx];
-                    cell = Cell::BLANK;
-                    cell = cell.bg(smear_bg);
-                } else {
-                    cell = Cell::BLANK;
+        if y_off < screen.size().y() {
+            for y_raw in 0..(screen.size().y() - y_off) {
+                let y = y_raw + y_off;
+                for x in 0..screen.size().x() {
+                    if leaveat(seed, x, y) {
+                        screen[y_raw][x] = cellat(seed, x, y);
+                    }
                 }
-                screen[y][x] = cell;
             }
         }
         io.draw(&screen).await?;
 
         tokio::select! {
+            _ = sleep_until(show_next_time) => {
+                scroll += 1;
+                let delay = if scroll < lines.len() {
+                    // while we're still doing lines, pause a bit between each
+                    thread_rng().gen_range(MIN_DELAY..MAX_DELAY)
+                } else {
+                    // once that's done, pause long enough to scroll the screen off pretty fast
+                    0.5 / screen.size().y() as f32
+                };
+                show_next_time = Instant::now() + Duration::from_secs_f32(delay);
+            }
             _ = io.input() => {}
-            _ = sleep(0.01) => {}
         }
     }
-    screen.resize(io.size());
-    io.draw(&screen).await?;
 
     Ok(())
 }
 
-pub async fn run(io: &mut dyn IoSystem) -> io::Result<()> {
+async fn render(io: &mut dyn IoSystem, screen: &mut Screen, text: &[Text]) -> io::Result<()> {
+    screen.resize(io.size());
+    let mut text_v: Vec<_> = text.iter().cloned().collect();
+    if let Some(last) = text_v.last_mut() {
+        // trim trailing newline
+        last.text = last.text.trim_end().into();
+    }
+    screen.textbox(text_v).scroll_bottom(true);
+    io.draw(screen).await
+}
+
+async fn render_sleep(
+    delay: f32,
+    io: &mut dyn IoSystem,
+    screen: &mut Screen,
+    text: &[Text],
+) -> io::Result<()> {
+    let timer = sleep(delay);
+    tokio::pin!(timer);
+    loop {
+        render(io, screen, &text).await?;
+
+        tokio::select! {
+            _ = &mut timer => break,
+            _ = io.input() => (),
+        }
+    }
+    Ok(())
+}
+
+async fn name_input(
+    io: &mut dyn IoSystem,
+    screen: &mut Screen,
+    text: &[Text],
+) -> io::Result<String> {
+    let prompt = text1!(white "(type now)");
+    let mut last_line = text!("         >  ");
+    last_line.push(prompt.clone());
+    let mut name = String::new();
+    let mut caps = false;
+    loop {
+        let cur_text: Vec<_> = text.iter().chain(last_line.iter()).cloned().collect();
+        render(io, screen, &cur_text).await?;
+
+        match io.input().await? {
+            Action::KeyPress { key: Key::Enter } if !name.is_empty() => return Ok(name),
+            Action::KeyPress { key: Key::Char(ch) } => {
+                if caps {
+                    name.extend(ch.to_uppercase())
+                } else {
+                    name.extend(ch.to_lowercase())
+                }
+            }
+            Action::KeyPress {
+                key: Key::Backspace,
+            } => {
+                name.pop();
+            }
+            Action::KeyPress {
+                key: Key::LeftShift | Key::RightShift,
+            } => caps = true,
+            Action::KeyRelease {
+                key: Key::LeftShift | Key::RightShift,
+            } => caps = false,
+            // other inputs can get ignored
+            _ => (),
+        }
+        if name.is_empty() {
+            last_line[1] = prompt.clone();
+        } else {
+            last_line[1] = text1!(blue "{}"(name));
+        }
+    }
+}
+
+async fn do_choice<'a>(
+    io: &mut dyn IoSystem,
+    screen: &mut Screen,
+    text: &[Text],
+    opts: &[&'a str],
+) -> io::Result<&'a str> {
+    let mut selected = 0;
+    loop {
+        let mut last_line = Vec::with_capacity(opts.len() * 2);
+        for (i, opt) in opts.iter().enumerate() {
+            if i == 0 {
+                last_line.push(text1!("         >  "));
+            } else {
+                last_line.push(text1!("  "));
+            }
+            let mut text = text1!(bold bright_white "{}"(opt));
+            if i == selected {
+                text = text.underline();
+            }
+            last_line.push(text);
+        }
+        let text: Vec<_> = text.iter().cloned().chain(last_line).collect();
+
+        render(io, screen, &text).await?;
+
+        match io.input().await? {
+            Action::KeyPress { key: Key::Enter } => return Ok(opts[selected]),
+            Action::KeyPress { key: Key::Left } => {
+                if selected > 0 {
+                    selected -= 1;
+                }
+            }
+            Action::KeyPress { key: Key::Right } => {
+                if selected < opts.len() - 1 {
+                    selected += 1;
+                }
+            }
+            _ => (),
+        }
+    }
+}
+
+async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<String> {
+    let mut text: Vec<Text> = vec![];
+    macro_rules! admin_say {
+        ( $( $delay:expr =>
+            $(
+                $( $_name:ident )* $_fmt:literal $( ( $($arg:expr),* $(,)? ) )?
+            ),* $(,)?
+        );* $(;)? ) => { $(
+            render_sleep($delay, io, screen, &text).await?;
+            text.extend(text!(
+                "     admin: ",
+                $( bold bright_white $($_name)* $_fmt $(($($arg),*))? ),*,
+                "\n"
+            ));
+            render(io, screen, &text).await?;
+        )* };
+    }
+
+    admin_say!(
+        1.0 => "welcome to the fight";
+        1.5 => "what can I call you?";
+        0.75 => "not your real name.";
+    );
+    render_sleep(0.5, io, screen, &text).await?;
+    let name = name_input(io, screen, &text).await?;
+    text.extend(text!("         >  ", blue "{}"(name), "\n"));
+
+    macro_rules! choose {
+        ( $( $option:literal => $then:expr $(,)? )* ) => {
+            render_sleep(0.25, io, screen, &text).await?;
+            match do_choice(io, screen, &text, &[$($option),*]).await? {
+                $( $option => {
+                    text.extend(text!(
+                        blue "{:>10}: "(name),
+                        bold bright_white $option,
+                        "\n",
+                    ));
+                    $then
+                }, )*
+                _ => unreachable!("selected unavailable choice"),
+            };
+        };
+    }
+
+    admin_say!(
+        1.0 => "you're ", blue "{}"(name), "?";
+        1.5 => "good name";
+        1.5 => "you ever used redshell?";
+    );
+    choose! {
+        "yes" => {
+            admin_say!(
+                0.5 => "cool";
+                1.0 => "good luck";
+            );
+            return Ok(name);
+        }
+        "no" => (), // continues below
+    }
+    admin_say!(2.0 => "ok goodbye");
+
+    Ok(name)
+}
+
+pub async fn run(io: &mut dyn IoSystem) -> io::Result<String> {
     let mut screen = Screen::new(io.size());
 
     let seed = sprinkler_wave(io, &mut screen).await?;
-    cleanup_wave(io, &mut screen, seed).await?;
+    loading_text(io, &mut screen, seed).await?;
 
-    Ok(())
+    // screen should now be blank so we can start on the actual intro
+    let name = tutorial(io, &mut screen).await?;
+
+    Ok(name)
 }
