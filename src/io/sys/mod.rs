@@ -24,7 +24,7 @@ pub trait IoSystem {
 /// - crossterm CLI (`cli_crossterm`)
 ///
 /// The Err type is a map from the name of the system (in code formatting above) to the error that it hit.
-#[cfg(feature="__sys")]
+#[cfg(feature = "__sys")]
 pub fn load() -> Result<Box<dyn IoSystem>, HashMap<&'static str, io::Error>> {
     let mut errors = HashMap::new();
     macro_rules! try_init {
