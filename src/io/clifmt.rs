@@ -244,7 +244,9 @@ macro_rules! text1 {
 #[macro_export]
 macro_rules! text {
     ( $(
-        $( $name:ident )* $text:literal $( ( $( $arg:expr ),* $(,)? ) )?
+        $( $name:ident )*
+        $text:literal
+        $( ( $( $arg:expr ),* $(,)? ) )?
     ),+ $(,)? ) => {
         {
             #[allow(unused_imports)]
@@ -266,6 +268,17 @@ fmt_type! {
     pub struct Cell { pub ch: char }
 }
 
+#[macro_export]
+macro_rules! cell {
+    ( $( $name:ident )* $( $char:literal )? ) => {
+        {
+            #[allow(unused_imports)]
+            use $crate::io::clifmt::{FormattedExt as _};
+            Cell::of($($char)?) $( .$name() )*
+        }
+    };
+}
+
 impl Cell {
-    pub const BLANK: Cell = Cell::of(' ');
+    pub const BLANK: Cell = cell!(' ');
 }

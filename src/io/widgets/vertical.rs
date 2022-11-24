@@ -1,4 +1,4 @@
-use crate::io::output::{Cell, Screen};
+use crate::{io::output::{Cell, Screen}, cell};
 
 pub struct Vertical<'a> {
     pub(in super::super) screen: &'a mut Screen,
@@ -15,7 +15,7 @@ impl<'a> Vertical<'a> {
             col,
             start: None,
             end: None,
-            fill: Cell::of('|'),
+            fill: cell!('|'),
         }
     }
 

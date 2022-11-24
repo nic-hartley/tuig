@@ -1,16 +1,17 @@
-use std::{
-    io,
-    time::Duration,
-};
+use std::{io, time::Duration};
 
 use rand::prelude::*;
 use tokio::time::{sleep_until, Instant};
 
-use crate::{io::{
-    clifmt::{FormattedExt, Text, Color},
-    output::{Cell, Screen},
-    sys::IoSystem,
-}, text1};
+use crate::{
+    cell,
+    io::{
+        clifmt::{FormattedExt, Text},
+        output::{Cell, Screen},
+        sys::IoSystem,
+    },
+    text1,
+};
 
 async fn sleep(s: f32) {
     tokio::time::sleep(Duration::from_secs_f32(s)).await
@@ -75,16 +76,16 @@ pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::R
         }
 
         screen.resize(io.size());
-        for x in 0..screen.size().x() {
-            let pct = x as f32 / screen.size().x() as f32;
+        for y in 0..screen.size().y() {
+            let pct = y as f32 / screen.size().y() as f32;
             if pct > wave_lead {
                 // everything past the leading edge is blank
-                for y in 0..screen.size().y() {
+                for x in 0..screen.size().x() {
                     screen[y][x] = Cell::BLANK;
                 }
             } else if pct < wave_trail {
                 // almost everything past the trailing edge is blank
-                for y in 0..screen.size().y() {
+                for x in 0..screen.size().x() {
                     if leaveat(seeds[SHIFT_COUNT - 1], x, y) {
                         screen[y][x] = cellat(seeds[SHIFT_COUNT - 1], x, y);
                     } else {
@@ -97,7 +98,7 @@ pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::R
                 let to_shift = from_shift + 1;
                 let within = shift_pos.fract();
 
-                for y in 0..screen.size().y() {
+                for x in 0..screen.size().x() {
                     if within < fadeat(seeds[from_shift], x, y) {
                         if from_shift > 0 {
                             screen[y][x] = cellat(seeds[from_shift], x, y);
@@ -151,7 +152,11 @@ fn gen_lines() -> Vec<Text> {
     assert!(verbs.len() == nouns.len());
     verbs.shuffle(&mut rng);
     nouns.shuffle(&mut rng);
-    verbs.into_iter().zip(nouns.into_iter()).map(|(v, n)| text1!(bold green "\n{} {}..."(v, n))).collect()
+    verbs
+        .into_iter()
+        .zip(nouns.into_iter())
+        .map(|(v, n)| text1!(bold green "\n{} {}..."(v, n)))
+        .collect()
 }
 
 pub async fn loading_text(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64) -> io::Result<()> {
@@ -160,23 +165,23 @@ pub async fn loading_text(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64)
 
     let lines = gen_lines();
     let mut scroll = 0;
-    let mut show_next_time = Instant::now();
+    let mut show_next_time = Instant::now() + Duration::from_secs_f32(1.0);
     while scroll < io.size().y() + lines.len() + 1 {
         screen.resize(io.size());
 
         // render the loading lines first so we know where to put the characters
         let mut text = lines.iter().cloned().collect::<Vec<_>>();
         text.resize(scroll, text1!("\n"));
-        let textinfo = screen.textbox(text)
-            .scroll_bottom(true)
-            .render();
+        let textinfo = screen.textbox(text).scroll_bottom(true).render();
         let y_off = textinfo.lines;
         if y_off <= screen.size().y() {
-            screen.horizontal(screen.size().y() - y_off).color(Color::Green);
+            screen
+                .horizontal(screen.size().y() - y_off)
+                .fill(cell!(green on_black '='));
         }
 
         if y_off < screen.size().y() {
-            for y_raw in 0..(screen.size().y()-y_off) {
+            for y_raw in 0..(screen.size().y() - y_off) {
                 let y = y_raw + y_off;
                 for x in 0..screen.size().x() {
                     if leaveat(seed, x, y) {

@@ -1,4 +1,7 @@
-use crate::io::{output::{Cell, Screen}, clifmt::{Color, FormattedExt}};
+use crate::{io::{
+    clifmt::{Color, FormattedExt},
+    output::{Cell, Screen},
+}, cell};
 
 pub struct Horizontal<'a> {
     pub(in super::super) screen: &'a mut Screen,
@@ -15,7 +18,7 @@ impl<'a> Horizontal<'a> {
             row,
             start: None,
             end: None,
-            fill: Cell::of('-'),
+            fill: cell!('-'),
         }
     }
 
