@@ -1,9 +1,19 @@
 name: Run tests
 run-name: Testing ${{github.ref_name}} (${{github.sha}})
+# no permission for the token, this runs on pull requests
+permissions: {}
 on:
   push:
     tags-ignore: '*'
     branches: '*'
+  pull_request:
+    types:
+    - opened
+    - review_requested
+    - reopened
+    - synchronize
+    branches:
+    - release
 jobs:
   fmt-and-check:
     runs-on: ubuntu-latest

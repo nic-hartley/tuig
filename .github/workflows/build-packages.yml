@@ -4,6 +4,8 @@ on:
   push:
     tags:
     - v*
+    branches:
+    - release
 jobs:
   raw-x86-binary:
     strategy:
@@ -23,5 +25,4 @@ jobs:
         name: raw-x86-binary-${{ matrix.platform }}
         path: |
           target/release/redshell${{matrix.ext}}
-          target/release/redshell-concept${{matrix.ext}}
         if-no-files-found: error
