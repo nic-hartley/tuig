@@ -7,22 +7,25 @@ on:
     branches:
     - release
 jobs:
-  raw-x86-binary:
+  x86-bin:
     strategy:
       matrix:
         platform: [ubuntu, windows, macos]
+        sys: [cli]
         include:
         - ext: ''
         - platform: windows
           ext: '.exe'
     runs-on: ${{ matrix.platform }}-latest
+    name: x86-bin-${{ matrix.sys }}-${{ matrix.platform }}
     steps:
     - uses: actions/checkout@v3
     - run: rustup update
-    - run: cargo build --release
+    # TODO: Replace with `plat_cli` and `plat_gui` eventually
+    - run: cargo build --release --features sys_${{ matrix.sys }
     - uses: actions/upload-artifact@v3
       with:
-        name: raw-x86-binary-${{ matrix.platform }}
+        name: x86-bin-${{ matrix.sys }}-${{ matrix.platform }}
         path: |
-          target/release/redshell${{matrix.ext}}
+          target/release/redshell${{ matrix.ext }}
         if-no-files-found: error
