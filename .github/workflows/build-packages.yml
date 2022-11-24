@@ -4,8 +4,8 @@ on:
   push:
     tags:
     - v*
-    branches:
-    - release
+    branches-ignore:
+    - '*'
 jobs:
   x86-bin:
     strategy:
