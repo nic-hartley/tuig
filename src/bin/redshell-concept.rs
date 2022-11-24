@@ -20,6 +20,24 @@ use redshell::{
 };
 use tokio::time::sleep;
 
+pub fn load_or_die() -> Box<dyn IoSystem> {
+    let errs = match sys::load() {
+        Ok(io) => return io,
+        Err(e) => e,
+    };
+
+    if errs.is_empty() {
+        println!("No renderers enabled! Someone compiled this wrong.")
+    } else {
+        println!("{} renderers tried to load:", errs.len());
+        for (name, err) in errs {
+            println!("- {}: {:?}", name, err);
+        }
+    }
+
+    std::process::exit(1);
+}
+
 async fn render_demo(io: &mut dyn IoSystem) {
     let mut s = Screen::new(io.size());
     s.horizontal(1);
@@ -193,7 +211,7 @@ async fn main() {
             print!("Playing {}... ", name);
             stdout().flush().unwrap();
             {
-                let mut iosys = sys::load_or_die();
+                let mut iosys = load_or_die();
                 func(iosys.as_mut()).await;
                 let XY(width, height) = iosys.size();
                 let msg = "fin.";

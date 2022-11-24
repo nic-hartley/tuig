@@ -23,9 +23,8 @@ pub trait IoSystem {
 /// - CPU-rendered GUI (`gui_cpu`)
 /// - crossterm CLI (`cli_crossterm`)
 ///
-/// If none are enabled, this will immediately return `Err(HashMap::new())`.
-///
 /// The Err type is a map from the name of the system (in code formatting above) to the error that it hit.
+#[cfg(feature="__sys")]
 pub fn load() -> Result<Box<dyn IoSystem>, HashMap<&'static str, io::Error>> {
     let mut errors = HashMap::new();
     macro_rules! try_init {
@@ -60,27 +59,5 @@ pub fn load() -> Result<Box<dyn IoSystem>, HashMap<&'static str, io::Error>> {
         // Try to initialize the CLI renderer
         try_init! { ansi_cli: ansi_cli::AnsiScreen::get() }
     }
-    // No sys_test initialization: as the name implies it's wholely meant for tests, so it makes basically no sense to
-    // try to guess what particular testing input or output will be wanted
     Err(errors)
-}
-
-/// Convenience wrapper for [`load`]. If that fails, prints out a little message explaining what went wrong and exits.
-/// Meant to be used in concept art, not the actual game.
-pub fn load_or_die() -> Box<dyn IoSystem> {
-    let errs = match load() {
-        Ok(io) => return io,
-        Err(e) => e,
-    };
-
-    if errs.is_empty() {
-        println!("No renderers enabled! Someone compiled this wrong.")
-    } else {
-        println!("{} renderers tried to load:", errs.len());
-        for (name, err) in errs {
-            println!("- {}: {:?}", name, err);
-        }
-    }
-
-    std::process::exit(1);
 }
