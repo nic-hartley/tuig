@@ -2,9 +2,9 @@
 //! a feature named similarly and exports a struct implementing `IoSystem`. The actual intended input and output APIs
 //! are in the `input` and `output` modules.
 
-use std::io;
 #[cfg(feature = "__sys")]
 use std::collections::HashMap;
+use std::io;
 
 use super::{input::Action, output::Screen, XY};
 

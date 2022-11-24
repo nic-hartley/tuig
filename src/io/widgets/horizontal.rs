@@ -1,7 +1,10 @@
-use crate::{io::{
-    clifmt::{Color, FormattedExt},
-    output::{Cell, Screen},
-}, cell};
+use crate::{
+    cell,
+    io::{
+        clifmt::{Color, FormattedExt},
+        output::{Cell, Screen},
+    },
+};
 
 pub struct Horizontal<'a> {
     pub(in super::super) screen: &'a mut Screen,

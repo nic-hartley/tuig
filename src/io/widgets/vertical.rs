@@ -1,4 +1,7 @@
-use crate::{io::output::{Cell, Screen}, cell};
+use crate::{
+    cell,
+    io::output::{Cell, Screen},
+};
 
 pub struct Vertical<'a> {
     pub(in super::super) screen: &'a mut Screen,

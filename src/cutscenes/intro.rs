@@ -7,10 +7,11 @@ use crate::{
     cell,
     io::{
         clifmt::{FormattedExt, Text},
+        input::{Action, Key},
         output::{Cell, Screen},
         sys::IoSystem,
     },
-    text1,
+    text, text1,
 };
 
 async fn sleep(s: f32) {
@@ -57,9 +58,9 @@ pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::R
     // the width of one shift
     const SHIFT_WIDTH: f32 = 0.1;
     // how many shifts there are in the wave
-    const SHIFT_COUNT: usize = 2;
+    const SHIFT_COUNT: usize = 3;
     // how fast the wave moves right
-    const WAVE_SPEED: f32 = 0.5;
+    const WAVE_SPEED: f32 = 0.75;
     // the width of the whole wave
     const WAVE_WIDTH: f32 = SHIFT_WIDTH * SHIFT_COUNT as f32;
 
@@ -169,7 +170,7 @@ pub async fn loading_text(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64)
     while scroll < io.size().y() + lines.len() + 1 {
         screen.resize(io.size());
 
-        // render the loading lines first so we know where to put the characters
+        // render the loading lines first so we know where to put the rest
         let mut text = lines.iter().cloned().collect::<Vec<_>>();
         text.resize(scroll, text1!("\n"));
         let textinfo = screen.textbox(text).scroll_bottom(true).render();
@@ -200,7 +201,7 @@ pub async fn loading_text(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64)
                     thread_rng().gen_range(MIN_DELAY..MAX_DELAY)
                 } else {
                     // once that's done, pause long enough to scroll the screen off pretty fast
-                    1.0 / screen.size().y() as f32
+                    0.5 / screen.size().y() as f32
                 };
                 show_next_time = Instant::now() + Duration::from_secs_f32(delay);
             }
@@ -211,11 +212,195 @@ pub async fn loading_text(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64)
     Ok(())
 }
 
-pub async fn run(io: &mut dyn IoSystem) -> io::Result<()> {
+async fn render(io: &mut dyn IoSystem, screen: &mut Screen, text: &[Text]) -> io::Result<()> {
+    screen.resize(io.size());
+    let mut text_v: Vec<_> = text.iter().cloned().collect();
+    if let Some(last) = text_v.last_mut() {
+        // trim trailing newline
+        last.text = last.text.trim_end().into();
+    }
+    screen.textbox(text_v).scroll_bottom(true);
+    io.draw(screen).await
+}
+
+async fn render_sleep(
+    delay: f32,
+    io: &mut dyn IoSystem,
+    screen: &mut Screen,
+    text: &[Text],
+) -> io::Result<()> {
+    let timer = sleep(delay);
+    tokio::pin!(timer);
+    loop {
+        render(io, screen, &text).await?;
+
+        tokio::select! {
+            _ = &mut timer => break,
+            _ = io.input() => (),
+        }
+    }
+    Ok(())
+}
+
+async fn name_input(
+    io: &mut dyn IoSystem,
+    screen: &mut Screen,
+    text: &[Text],
+) -> io::Result<String> {
+    let prompt = text1!(white "(type now)");
+    let mut last_line = text!("         >  ");
+    last_line.push(prompt.clone());
+    let mut name = String::new();
+    let mut caps = false;
+    loop {
+        let cur_text: Vec<_> = text.iter().chain(last_line.iter()).cloned().collect();
+        render(io, screen, &cur_text).await?;
+
+        match io.input().await? {
+            Action::KeyPress { key: Key::Enter } if !name.is_empty() => return Ok(name),
+            Action::KeyPress { key: Key::Char(ch) } => {
+                if caps {
+                    name.extend(ch.to_uppercase())
+                } else {
+                    name.extend(ch.to_lowercase())
+                }
+            }
+            Action::KeyPress {
+                key: Key::Backspace,
+            } => {
+                name.pop();
+            }
+            Action::KeyPress {
+                key: Key::LeftShift | Key::RightShift,
+            } => caps = true,
+            Action::KeyRelease {
+                key: Key::LeftShift | Key::RightShift,
+            } => caps = false,
+            // other inputs can get ignored
+            _ => (),
+        }
+        if name.is_empty() {
+            last_line[1] = prompt.clone();
+        } else {
+            last_line[1] = text1!(blue "{}"(name));
+        }
+    }
+}
+
+async fn do_choice<'a>(
+    io: &mut dyn IoSystem,
+    screen: &mut Screen,
+    text: &[Text],
+    opts: &[&'a str],
+) -> io::Result<&'a str> {
+    let mut selected = 0;
+    loop {
+        let mut last_line = Vec::with_capacity(opts.len() * 2);
+        for (i, opt) in opts.iter().enumerate() {
+            if i == 0 {
+                last_line.push(text1!("         >  "));
+            } else {
+                last_line.push(text1!("  "));
+            }
+            let mut text = text1!(bold bright_white "{}"(opt));
+            if i == selected {
+                text = text.underline();
+            }
+            last_line.push(text);
+        }
+        let text: Vec<_> = text.iter().cloned().chain(last_line).collect();
+
+        render(io, screen, &text).await?;
+
+        match io.input().await? {
+            Action::KeyPress { key: Key::Enter } => return Ok(opts[selected]),
+            Action::KeyPress { key: Key::Left } => {
+                if selected > 0 {
+                    selected -= 1;
+                }
+            }
+            Action::KeyPress { key: Key::Right } => {
+                if selected < opts.len() - 1 {
+                    selected += 1;
+                }
+            }
+            _ => (),
+        }
+    }
+}
+
+async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<String> {
+    let mut text: Vec<Text> = vec![];
+    macro_rules! admin_say {
+        ( $( $delay:expr =>
+            $(
+                $( $_name:ident )* $_fmt:literal $( ( $($arg:expr),* $(,)? ) )?
+            ),* $(,)?
+        );* $(;)? ) => { $(
+            render_sleep($delay, io, screen, &text).await?;
+            text.extend(text!(
+                "     admin: ",
+                $( bold bright_white $($_name)* $_fmt $(($($arg),*))? ),*,
+                "\n"
+            ));
+            render(io, screen, &text).await?;
+        )* };
+    }
+
+    admin_say!(
+        1.0 => "welcome to the fight";
+        1.5 => "what can I call you?";
+        0.75 => "not your real name.";
+    );
+    render_sleep(0.5, io, screen, &text).await?;
+    let name = name_input(io, screen, &text).await?;
+    text.extend(text!("         >  ", blue "{}"(name), "\n"));
+
+    macro_rules! choose {
+        ( $( $option:literal => $then:expr $(,)? )* ) => {
+            render_sleep(0.25, io, screen, &text).await?;
+            match do_choice(io, screen, &text, &[$($option),*]).await? {
+                $( $option => {
+                    text.extend(text!(
+                        blue "{:>10}: "(name),
+                        bold bright_white $option,
+                        "\n",
+                    ));
+                    $then
+                }, )*
+                _ => unreachable!("selected unavailable choice"),
+            };
+        };
+    }
+
+    admin_say!(
+        1.0 => "you're ", blue "{}"(name), "?";
+        1.5 => "good name";
+        1.5 => "you ever used redshell?";
+    );
+    choose! {
+        "yes" => {
+            admin_say!(
+                0.5 => "cool";
+                1.0 => "good luck";
+            );
+            return Ok(name);
+        }
+        "no" => (), // continues below
+    }
+    admin_say!(2.0 => "ok goodbye");
+
+    Ok(name)
+}
+
+pub async fn run(io: &mut dyn IoSystem) -> io::Result<String> {
     let mut screen = Screen::new(io.size());
 
     let seed = sprinkler_wave(io, &mut screen).await?;
     loading_text(io, &mut screen, seed).await?;
 
-    Ok(())
+    // screen should now be blank so we can start on the actual intro
+    let name = tutorial(io, &mut screen).await?;
+
+    Ok(name)
 }

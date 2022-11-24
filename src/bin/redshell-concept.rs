@@ -73,7 +73,7 @@ async fn render_demo(io: &mut dyn IoSystem) {
 async fn intro_demo(io: &mut dyn IoSystem) {
     redshell::cutscenes::intro(io)
         .await
-        .expect("Failed to run intro")
+        .expect("Failed to run intro");
 }
 
 async fn chat_demo(io: &mut dyn IoSystem) {
