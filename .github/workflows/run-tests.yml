@@ -14,6 +14,9 @@ on:
     - synchronize
     branches:
     - release
+  schedule:
+  # run twice a week to keep mostly up-to-date with nightly changes and new versions
+  - cron: '0 0 * * 0,3'
 jobs:
   fmt-and-check:
     runs-on: ubuntu-latest
