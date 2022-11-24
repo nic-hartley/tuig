@@ -1,15 +1,16 @@
 use std::{
     io,
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use rand::prelude::*;
+use tokio::time::{sleep_until, Instant};
 
-use crate::io::{
-    clifmt::{Color, FormattedExt},
+use crate::{io::{
+    clifmt::{FormattedExt, Text, Color},
     output::{Cell, Screen},
     sys::IoSystem,
-};
+}, text1};
 
 async fn sleep(s: f32) {
     tokio::time::sleep(Duration::from_secs_f32(s)).await
@@ -123,103 +124,84 @@ pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::R
     Ok(seeds[SHIFT_COUNT - 1])
 }
 
-pub async fn cleanup_wave(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64) -> io::Result<()> {
-    // render the sparkles, accounting for resizes, until the timer is done
-    let timer = sleep(1.0);
-    tokio::pin!(timer);
-    loop {
-        screen.resize(io.size());
-        for y in 0..screen.size().y() {
-            for x in 0..screen.size().x() {
-                if leaveat(seed, x, y) {
-                    screen[y][x] = cellat(seed, x, y);
-                }
-            }
-        }
-        io.draw(&screen).await?;
-
-        tokio::select! {
-            _ = &mut timer => break,
-            _ = io.input() => {}
-        }
-    }
-
-    // draw the wipe
-    const WAVE_SPEED: f32 = 1.0;
-    const WAVE_WIDTH: f32 = 0.025;
-    const SMEAR_WIDTH: f32 = 0.025;
-    // from darkest to lightest
-    const SMEAR_BGS: [Color; 6] = [
-        Color::Black,
-        Color::Blue,
-        Color::Red,
-        Color::Cyan,
-        Color::Yellow,
-        Color::White,
+fn gen_lines() -> Vec<Text> {
+    let mut rng = thread_rng();
+    let mut verbs = [
+        "LOADING",
+        "DECRYPTING",
+        "SPAWNING",
+        "ALLOCATING",
+        "CREATING",
+        "INITIALIZING",
+        "BUILDING",
+        "SETTING UP",
+        "RETICULATING",
     ];
-    let start = Instant::now();
-    loop {
-        let now = Instant::now();
-        let since_start = now.duration_since(start).as_secs_f32();
-        let smear_lead = since_start * WAVE_SPEED;
-        let wave_lead = smear_lead - SMEAR_WIDTH;
-        let wave_trail = wave_lead - WAVE_WIDTH;
-        let smear_trail = wave_trail - SMEAR_WIDTH;
-        if smear_trail > 1.0 {
-            break;
+    let mut nouns = [
+        "ENCRYPTOR",
+        "ANONYMIZER",
+        "PACKET FILTERS",
+        "KERNEL",
+        "SERVER",
+        "DAEMON",
+        "SUBPROCESS",
+        "SHELL",
+        "SPLINES",
+    ];
+    assert!(verbs.len() == nouns.len());
+    verbs.shuffle(&mut rng);
+    nouns.shuffle(&mut rng);
+    verbs.into_iter().zip(nouns.into_iter()).map(|(v, n)| text1!(bold green "\n{} {}..."(v, n))).collect()
+}
+
+pub async fn loading_text(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64) -> io::Result<()> {
+    const MIN_DELAY: f32 = 0.25;
+    const MAX_DELAY: f32 = 0.75;
+
+    let lines = gen_lines();
+    let mut scroll = 0;
+    let mut show_next_time = Instant::now();
+    while scroll < io.size().y() + lines.len() + 1 {
+        screen.resize(io.size());
+
+        // render the loading lines first so we know where to put the characters
+        let mut text = lines.iter().cloned().collect::<Vec<_>>();
+        text.resize(scroll, text1!("\n"));
+        let textinfo = screen.textbox(text)
+            .scroll_bottom(true)
+            .render();
+        let y_off = textinfo.lines;
+        if y_off <= screen.size().y() {
+            screen.horizontal(screen.size().y() - y_off).color(Color::Green);
         }
 
-        screen.resize(io.size());
-        for x in 0..screen.size().x() {
-            let pct = 1.0 - (x as f32 / screen.size().x() as f32);
-
-            for y in 0..screen.size().y() {
-                let mut cell;
-                if pct > smear_lead {
-                    // ahead of the leading edge: just render the cell normally
-                    cell = if leaveat(seed, x, y) {
-                        cellat(seed, x, y)
-                    } else {
-                        Cell::BLANK
-                    };
-                } else if pct > wave_lead {
-                    // start smearing: lighten background color accordingly
-                    let smear_amt = (pct - wave_lead) / SMEAR_WIDTH;
-                    let smear_idx =
-                        SMEAR_BGS.len() - 1 - (smear_amt * SMEAR_BGS.len() as f32) as usize;
-                    let smear_bg = SMEAR_BGS[smear_idx];
-                    cell = if leaveat(seed, x, y) {
-                        cellat(seed, x, y)
-                    } else {
-                        Cell::BLANK
-                    };
-                    cell = cell.bg(smear_bg);
-                } else if pct > wave_trail {
-                    // just a blank white line
-                    cell = Cell::BLANK;
-                    cell = cell.bg(Color::BrightWhite);
-                } else if pct > smear_trail {
-                    // smear backwards
-                    let smear_amt = (pct - smear_trail) / SMEAR_WIDTH;
-                    let smear_idx = (smear_amt * SMEAR_BGS.len() as f32) as usize;
-                    let smear_bg = SMEAR_BGS[smear_idx];
-                    cell = Cell::BLANK;
-                    cell = cell.bg(smear_bg);
-                } else {
-                    cell = Cell::BLANK;
+        if y_off < screen.size().y() {
+            for y_raw in 0..(screen.size().y()-y_off) {
+                let y = y_raw + y_off;
+                for x in 0..screen.size().x() {
+                    if leaveat(seed, x, y) {
+                        screen[y_raw][x] = cellat(seed, x, y);
+                    }
                 }
-                screen[y][x] = cell;
             }
         }
         io.draw(&screen).await?;
 
         tokio::select! {
+            _ = sleep_until(show_next_time) => {
+                scroll += 1;
+                let delay = if scroll < lines.len() {
+                    // while we're still doing lines, pause a bit between each
+                    thread_rng().gen_range(MIN_DELAY..MAX_DELAY)
+                } else {
+                    // once that's done, pause long enough to scroll the screen off pretty fast
+                    1.0 / screen.size().y() as f32
+                };
+                show_next_time = Instant::now() + Duration::from_secs_f32(delay);
+            }
             _ = io.input() => {}
-            _ = sleep(0.01) => {}
         }
     }
-    screen.resize(io.size());
-    io.draw(&screen).await?;
 
     Ok(())
 }
@@ -228,7 +210,7 @@ pub async fn run(io: &mut dyn IoSystem) -> io::Result<()> {
     let mut screen = Screen::new(io.size());
 
     let seed = sprinkler_wave(io, &mut screen).await?;
-    cleanup_wave(io, &mut screen, seed).await?;
+    loading_text(io, &mut screen, seed).await?;
 
     Ok(())
 }

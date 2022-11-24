@@ -2,11 +2,11 @@
 
 macro_rules! setters {
     ( $(
-        $name:ident $( ( $($pname:ident: $ptype:ty),* $(,)? ) )?  => $field:ident = $value:expr
+        $name:ident $( ( $($pname:ident: $ptype:ty),* $(,)? ) )?  => $field:ident $( .$subfield:ident )* = $value:expr
     ),* $(,)? ) => {
         $(
             pub fn $name(mut self $( , $( $pname: $ptype ),* )?) -> Self {
-                self.$field = $value;
+                self.$field $( .$subfield )* = $value;
                 self
             }
         )*
