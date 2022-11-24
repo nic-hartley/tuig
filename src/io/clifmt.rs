@@ -1,13 +1,13 @@
 //! This submodule implements the CLI formatting system used by all the IO systems. It does that as several pieces:
-//! 
+//!
 //! - [`Format`], which contains various common formatting options (i.e. the common ANSI ones)
 //! - [`Text`] and [`Cell`], which apply a `Format` to anything `impl AsRef<str>`, and `char` respectively
 //!     - They use a common subtype `Formatted` and `Deref` internally to ensure a common set of methods
 //! - [`text!`], which constructs a `Text` or `Cell` based on the parameter
-//! 
+//!
 //! `Text` and `Cell` are then used in the various UI widgets.
 
-use rand::{seq::SliceRandom, Rng, prelude::Distribution, distributions::Standard};
+use rand::{distributions::Standard, prelude::Distribution, seq::SliceRandom, Rng};
 
 /// The color of a piece of formatted text. Meant to be used through `Text` / `text!`. The numeric values are the ANSI
 /// color codes for each color; that's also where the actual colors are from.
@@ -211,7 +211,9 @@ fmt_type!(
     /// A single bit of formatted text. Note this isn't really meant to be used on its own, though it can be; the API
     /// is designed to be used through `text!`. To discourage direct use, the internals aren't documented.
     #[derive(Clone, Debug, PartialEq, Eq)]
-    pub struct Text { pub text: String }
+    pub struct Text {
+        pub text: String,
+    }
 );
 
 impl Text {

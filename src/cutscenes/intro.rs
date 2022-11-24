@@ -1,8 +1,15 @@
-use std::{time::{Duration, Instant}, io};
+use std::{
+    io,
+    time::{Duration, Instant},
+};
 
 use rand::prelude::*;
 
-use crate::io::{output::{Screen, Cell}, sys::IoSystem, clifmt::{Color, FormattedExt}};
+use crate::io::{
+    clifmt::{Color, FormattedExt},
+    output::{Cell, Screen},
+    sys::IoSystem,
+};
 
 async fn sleep(s: f32) {
     tokio::time::sleep(Duration::from_secs_f32(s)).await
@@ -23,13 +30,16 @@ fn fadeat(seed: u64, x: usize, y: usize) -> f32 {
 
 fn cellat(seed: u64, x: usize, y: usize) -> Cell {
     const CHARS: [char; 92] = [
-        'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
-        'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
-        '1','2','3','4','5','6','7','8','9','0',
-        '!','@','#','$','%','^','&','*','(',')',
-        ',','.','<','>','[',']','{','}','`','~','/','?','\\','|','\'','"',';',':','-','_',
+        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
+        's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+        'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '1', '2',
+        '3', '4', '5', '6', '7', '8', '9', '0', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')',
+        ',', '.', '<', '>', '[', ']', '{', '}', '`', '~', '/', '?', '\\', '|', '\'', '"', ';', ':',
+        '-', '_',
     ];
-    let ch = *CHARS.choose(&mut rngat(seed, x, y, 0xBE1A7EDDECEA5ED)).unwrap();
+    let ch = *CHARS
+        .choose(&mut rngat(seed, x, y, 0xBE1A7EDDECEA5ED))
+        .unwrap();
     let fg = rngat(seed, x, y, 0xCA11AB1ECA55E77E).gen();
     Cell::of(ch).fg(fg)
 }
@@ -74,8 +84,8 @@ pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::R
             } else if pct < wave_trail {
                 // almost everything past the trailing edge is blank
                 for y in 0..screen.size().y() {
-                    if leaveat(seeds[SHIFT_COUNT-1], x, y) {
-                        screen[y][x] = cellat(seeds[SHIFT_COUNT-1], x, y);
+                    if leaveat(seeds[SHIFT_COUNT - 1], x, y) {
+                        screen[y][x] = cellat(seeds[SHIFT_COUNT - 1], x, y);
                     } else {
                         // leave it blank
                     }
@@ -85,7 +95,7 @@ pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::R
                 let from_shift = shift_pos as usize;
                 let to_shift = from_shift + 1;
                 let within = shift_pos.fract();
-    
+
                 for y in 0..screen.size().y() {
                     if within < fadeat(seeds[from_shift], x, y) {
                         if from_shift > 0 {
@@ -110,7 +120,7 @@ pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::R
         }
     }
 
-    Ok(seeds[SHIFT_COUNT-1])
+    Ok(seeds[SHIFT_COUNT - 1])
 }
 
 pub async fn cleanup_wave(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64) -> io::Result<()> {
@@ -140,7 +150,12 @@ pub async fn cleanup_wave(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64)
     const SMEAR_WIDTH: f32 = 0.025;
     // from darkest to lightest
     const SMEAR_BGS: [Color; 6] = [
-        Color::Black, Color::Blue, Color::Red, Color::Cyan, Color::Yellow, Color::White,
+        Color::Black,
+        Color::Blue,
+        Color::Red,
+        Color::Cyan,
+        Color::Yellow,
+        Color::White,
     ];
     let start = Instant::now();
     loop {
@@ -162,13 +177,22 @@ pub async fn cleanup_wave(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64)
                 let mut cell;
                 if pct > smear_lead {
                     // ahead of the leading edge: just render the cell normally
-                    cell = if leaveat(seed, x, y) { cellat(seed, x, y) } else { Cell::BLANK };
+                    cell = if leaveat(seed, x, y) {
+                        cellat(seed, x, y)
+                    } else {
+                        Cell::BLANK
+                    };
                 } else if pct > wave_lead {
                     // start smearing: lighten background color accordingly
                     let smear_amt = (pct - wave_lead) / SMEAR_WIDTH;
-                    let smear_idx = SMEAR_BGS.len() - 1 - (smear_amt * SMEAR_BGS.len() as f32) as usize;
+                    let smear_idx =
+                        SMEAR_BGS.len() - 1 - (smear_amt * SMEAR_BGS.len() as f32) as usize;
                     let smear_bg = SMEAR_BGS[smear_idx];
-                    cell = if leaveat(seed, x, y) { cellat(seed, x, y) } else { Cell::BLANK };
+                    cell = if leaveat(seed, x, y) {
+                        cellat(seed, x, y)
+                    } else {
+                        Cell::BLANK
+                    };
                     cell = cell.bg(smear_bg);
                 } else if pct > wave_trail {
                     // just a blank white line
@@ -205,8 +229,6 @@ pub async fn run(io: &mut dyn IoSystem) -> io::Result<()> {
 
     let seed = sprinkler_wave(io, &mut screen).await?;
     cleanup_wave(io, &mut screen, seed).await?;
-
-    
 
     Ok(())
 }

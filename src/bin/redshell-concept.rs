@@ -12,7 +12,7 @@ use redshell::{
     event::Event,
     io::{
         input::{Action, Key},
-        output::{Color, Screen, Text, FormattedExt},
+        output::{Color, FormattedExt, Screen, Text},
         sys::{self, IoSystem},
         XY,
     },
@@ -53,7 +53,9 @@ async fn render_demo(io: &mut dyn IoSystem) {
 }
 
 async fn intro_demo(io: &mut dyn IoSystem) {
-    redshell::cutscenes::intro(io).await.expect("Failed to run intro")
+    redshell::cutscenes::intro(io)
+        .await
+        .expect("Failed to run intro")
 }
 
 async fn chat_demo(io: &mut dyn IoSystem) {

@@ -1,0 +1,28 @@
+name: Build packages
+run-name: Building ${{github.ref_name}} deployables
+on:
+  push:
+    tags:
+    - v*
+    branches:
+    - release
+jobs:
+  raw-x86-binary:
+    strategy:
+      matrix:
+        platform: [ubuntu, windows, macos]
+        include:
+        - ext: ''
+        - platform: windows
+          ext: '.exe'
+    runs-on: ${{ matrix.platform }}-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: rustup update
+    - run: cargo build --release
+    - uses: actions/upload-artifact@v3
+      with:
+        name: raw-x86-binary-${{ matrix.platform }}
+        path: |
+          target/release/redshell${{matrix.ext}}
+        if-no-files-found: error

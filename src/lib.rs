@@ -1,8 +1,8 @@
 pub mod app;
 pub mod constants;
+pub mod cutscenes;
 pub mod event;
 pub mod io;
-pub mod cutscenes;
 mod util;
 
 /// The current state of the game, including the state of the UI.
