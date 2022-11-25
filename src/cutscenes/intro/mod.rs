@@ -1,9 +1,6 @@
 use std::{io, time::Duration};
 
-use crate::io::{
-        output::Screen,
-        sys::IoSystem,
-    };
+use crate::io::{output::Screen, sys::IoSystem};
 
 mod splatty;
 pub use splatty::*;

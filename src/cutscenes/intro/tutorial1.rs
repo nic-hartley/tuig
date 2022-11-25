@@ -1,13 +1,14 @@
 use std::io;
 
 use crate::{
+    cutscenes::intro::sleep,
     io::{
         clifmt::{FormattedExt, Text},
         input::{Action, Key},
         output::Screen,
         sys::IoSystem,
     },
-    text, text1, cutscenes::intro::sleep,
+    text, text1,
 };
 
 async fn render(io: &mut dyn IoSystem, screen: &mut Screen, text: &[Text]) -> io::Result<()> {
@@ -149,7 +150,12 @@ fn autocomplete<'a>(text: &str, options: &[&'a str]) -> Option<&'a str> {
         if let Some(prev) = complete {
             // can unwrap mostly safely:
             // - can't inseminate cuties
-            let (shared_end, _) = cand.chars().zip(prev.chars()).enumerate().find(|(_, (c, p))| c != p).unwrap();
+            let (shared_end, _) = cand
+                .chars()
+                .zip(prev.chars())
+                .enumerate()
+                .find(|(_, (c, p))| c != p)
+                .unwrap();
             complete = Some(&prev[..shared_end]);
         } else {
             complete = Some(cand);
@@ -157,7 +163,7 @@ fn autocomplete<'a>(text: &str, options: &[&'a str]) -> Option<&'a str> {
     }
     if let Some(c) = complete {
         if c.len() <= text.len() {
-            return None
+            return None;
         } else {
             return Some(&c[text.len()..]);
         }

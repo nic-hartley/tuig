@@ -5,11 +5,13 @@ use tokio::time::{sleep_until, Instant};
 
 use crate::{
     cell,
+    cutscenes::intro::sleep,
     io::{
         clifmt::{FormattedExt, Text},
         output::{Cell, Screen},
         sys::IoSystem,
-    }, text1, cutscenes::intro::sleep,
+    },
+    text1,
 };
 
 fn rngat(seed: u64, x: usize, y: usize, xor: u64) -> SmallRng {
