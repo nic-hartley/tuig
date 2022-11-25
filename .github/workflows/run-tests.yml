@@ -29,13 +29,11 @@ jobs:
       with:
         path: ./target
         key: target-dir-ubuntu-${{ matrix.rust }}
-
     - uses: actions/checkout@v3
     - run: rustup default ${{ matrix.rust }}
     - run: rustup component add rustfmt
     - run: cargo fmt --check
     - run: cargo check --all-features
-
   test:
     strategy:
       matrix:
@@ -50,7 +48,6 @@ jobs:
     needs: fmt-and-check
     runs-on: ${{ matrix.platform }}-latest
     steps:
-    # load caches if they're available
     - uses: actions/cache@v3
       with:
         path: ~/.rustup/
@@ -63,7 +60,6 @@ jobs:
       with:
         path: ./target
         key: target-dir-${{ matrix.platform }}-${{ matrix.rust }}
-
     - uses: actions/checkout@v3
     - run: rustup default ${{ matrix.rust }}
     - run: cargo test --all-features
