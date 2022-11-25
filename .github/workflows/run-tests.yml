@@ -15,7 +15,20 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - run: cargo fmt --check
+    - run: cargo check --all-features
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.rustup/
+          ~/.cargo/registry/
+        key: rust-stuff
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ./target
+        key: target-dir
   test:
+    needs: fmt-and-check
     strategy:
       matrix:
         rust: [stable, nightly, 1.59]
