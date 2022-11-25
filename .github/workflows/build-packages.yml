@@ -16,8 +16,8 @@ jobs:
         - ext: ''
         - platform: windows
           ext: '.exe'
+    name: Build x86-bin-${{ matrix.sys }}-${{ matrix.platform }}
     runs-on: ${{ matrix.platform }}-latest
-    name: x86-bin-${{ matrix.sys }}-${{ matrix.platform }}
     steps:
     # load caches if they're available
     - uses: actions/cache@v3
