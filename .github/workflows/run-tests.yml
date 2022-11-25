@@ -4,8 +4,8 @@ run-name: Testing ${{github.ref_name}} (${{github.sha}})
 permissions: {}
 on:
   push:
-    tags-ignore: '*'
-    branches: '*'
+    tags-ignore: '**'
+    branches: '**'
   pull_request:
     types:
     - opened
