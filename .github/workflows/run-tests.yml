@@ -4,8 +4,8 @@ run-name: Testing ${{github.ref_name}} (${{github.sha}})
 permissions: {}
 on:
   push:
-    tags-ignore: '*'
-    branches: '*'
+    tags-ignore: '**'
+    branches: '**'
   schedule:
   # run twice a week to keep mostly up-to-date with nightly changes and new versions
   - cron: '0 0 * * 0,3'
