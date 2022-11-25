@@ -247,9 +247,7 @@ async fn name_input(
     screen: &mut Screen,
     text: &[Text],
 ) -> io::Result<String> {
-    let prompt = text1!(white "(type now)");
-    let mut last_line = text!("         >  ");
-    last_line.push(prompt.clone());
+    let mut last_line = text!("         >  ", white "(type now)");
     let mut name = String::new();
     let mut caps = false;
     loop {
@@ -259,10 +257,12 @@ async fn name_input(
         match io.input().await? {
             Action::KeyPress { key: Key::Enter } if !name.is_empty() => return Ok(name),
             Action::KeyPress { key: Key::Char(ch) } => {
-                if caps {
-                    name.extend(ch.to_uppercase())
-                } else {
-                    name.extend(ch.to_lowercase())
+                if name.len() < 10 {
+                    if caps {
+                        name.extend(ch.to_uppercase())
+                    } else {
+                        name.extend(ch.to_lowercase())
+                    }
                 }
             }
             Action::KeyPress {
@@ -279,10 +279,18 @@ async fn name_input(
             // other inputs can get ignored
             _ => (),
         }
-        if name.is_empty() {
-            last_line[1] = prompt.clone();
+        if last_line.len() == 2 {
+            // then we're still in the first format, with the placeholder
+            if name.is_empty() {
+                // don't get rid of the prompt, they haven't typed anything yet
+                // maybe they hit backspace, maybe they resized the window, maybe they moved their mouse
+            } else {
+                // they typed something into the name, switch into the new format
+                last_line[1] = text1!(blue "{}"(name));
+                last_line.push(text1!(white on_white "."));
+            }
         } else {
-            last_line[1] = text1!(blue "{}"(name));
+            last_line[1].text = name.clone();
         }
     }
 }
@@ -329,6 +337,10 @@ async fn do_choice<'a>(
     }
 }
 
+async fn cli_tut(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<()> {
+    Ok(())
+}
+
 async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<String> {
     let mut text: Vec<Text> = vec![];
     macro_rules! admin_say {
@@ -343,7 +355,6 @@ async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<Stri
                 $( bold bright_white $($_name)* $_fmt $(($($arg),*))? ),*,
                 "\n"
             ));
-            render(io, screen, &text).await?;
         )* };
     }
 
@@ -352,13 +363,11 @@ async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<Stri
         1.5 => "what can I call you?";
         0.75 => "not your real name.";
     );
-    render_sleep(0.5, io, screen, &text).await?;
     let name = name_input(io, screen, &text).await?;
     text.extend(text!("         >  ", blue "{}"(name), "\n"));
 
     macro_rules! choose {
-        ( $( $option:literal => $then:expr $(,)? )* ) => {
-            render_sleep(0.25, io, screen, &text).await?;
+        ( $( $option:literal => $then:expr $(,)? )* ) => { {
             match do_choice(io, screen, &text, &[$($option),*]).await? {
                 $( $option => {
                     text.extend(text!(
@@ -369,26 +378,58 @@ async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<Stri
                     $then
                 }, )*
                 _ => unreachable!("selected unavailable choice"),
-            };
-        };
+            }
+        } };
     }
 
     admin_say!(
         1.0 => "you're ", blue "{}"(name), "?";
         1.5 => "good name";
-        1.5 => "you ever used redshell?";
+        1.5 => "do you need an intro?";
     );
     choose! {
-        "yes" => {
+        "yes" => (), // continues below
+        "no" => {
             admin_say!(
-                0.5 => "cool";
+                0.5 => "cool!";
                 1.0 => "good luck";
             );
             return Ok(name);
         }
-        "no" => (), // continues below
     }
-    admin_say!(2.0 => "ok goodbye");
+
+    let do_cli_tut;
+    admin_say!(
+        1.0 => "ok.";
+        0.5 => "so.";
+        1.0 => "do you know what a command line is?";
+    );
+    choose! {
+        "yes" => {
+            admin_say!(1.0 => "do you know how to use one?");
+            do_cli_tut = choose! {
+                "yes" => false,
+                "no" => true,
+            }
+        }
+        "no" => {
+            do_cli_tut = true;
+        }
+    }
+    if do_cli_tut {
+        admin_say!(
+            0.5 => "quick intro then";
+            1.0 => "actually wait, give me a second...",
+        );
+        render_sleep(0.5, io, screen, &text).await?;
+        text.push(text1!(green "RUNNING CLI TUTORIAL..."));
+        render_sleep(0.5, io, screen, &text).await?;
+        cli_tut(io, screen).await?;
+    }
+
+    admin_say!(
+        1.0 => "alright. let me boot up the full interface...";
+    );
 
     Ok(name)
 }
