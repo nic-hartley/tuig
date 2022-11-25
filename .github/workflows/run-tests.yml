@@ -6,14 +6,6 @@ on:
   push:
     tags-ignore: '*'
     branches: '*'
-  pull_request:
-    types:
-    - opened
-    - review_requested
-    - reopened
-    - synchronize
-    branches:
-    - release
   schedule:
   # run twice a week to keep mostly up-to-date with nightly changes and new versions
   - cron: '0 0 * * 0,3'
