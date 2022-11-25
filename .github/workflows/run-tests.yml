@@ -18,15 +18,17 @@ jobs:
     - run: cargo check --all-features
     - uses: actions/cache@v3
       with:
-        path: |
-          ~/.rustup/
-          ~/.cargo/
-        key: rust-stuff
+        path: ~/.rustup/
+        key: rustup-ubuntu
+    - uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: cargo-cache
     - uses: actions/cache@v3
       with:
         path: |
           ./target
-        key: target-dir
+        key: target-dir-ubuntu
   test:
     needs: fmt-and-check
     strategy:
@@ -41,19 +43,21 @@ jobs:
     name: ${{ matrix.platform }} rustc-${{ matrix.rust }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
-    - if: matrix.platform == "ubuntu"
-      uses: actions/cache@v3
+    # load caches if they're available
+    - uses: actions/cache@v3
       with:
-        path: |
-          ~/.rustup/
-          ~/.cargo/
-        key: rust-stuff
-    - if: matrix.platform == "ubuntu"
-      uses: actions/cache@v3
+        path: ~/.rustup/
+        key: rustup-${{ matrix.platform }}
+    - uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: cargo-cache
+    - uses: actions/cache@v3
       with:
         path: |
           ./target
-        key: target-dir
+        key: target-dir-${{ matrix.platform }}
+
     - uses: actions/checkout@v3
     - run: rustup update
     - run: rustup default ${{ matrix.rust }}
