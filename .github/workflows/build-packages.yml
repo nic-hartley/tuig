@@ -23,19 +23,18 @@ jobs:
     - uses: actions/cache@v3
       with:
         path: ~/.rustup/
-        key: rustup-${{matrix.platform}}
+        key: rustup-${{matrix.platform}}-stable
     - uses: actions/cache@v3
       with:
         path: ~/.cargo/registry
         key: cargo-cache
     - uses: actions/cache@v3
       with:
-        path: |
-          ./target
-        key: target-dir-${{matrix.platform}}
+        path: ./target
+        key: target-dir-${{matrix.platform}}-stable
 
     - uses: actions/checkout@v3
-    - run: rustup update
+    - run: rustup default stable
     # TODO: Replace with `plat_cli` and `plat_gui` eventually
     - run: cargo build --release --features sys_${{ matrix.sys }}
     - uses: actions/upload-artifact@v3

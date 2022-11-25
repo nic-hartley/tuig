@@ -11,24 +11,29 @@ on:
   - cron: '0 0 * * 0,3'
 jobs:
   fmt-and-check:
+    strategy:
+      matrix:
+        rust: [stable, nightly, 1.59]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - run: cargo fmt --check
-    - run: cargo check --all-features
     - uses: actions/cache@v3
       with:
         path: ~/.rustup/
-        key: rustup-ubuntu
+        key: rustup-ubuntu-${{ matrix.rust }}
     - uses: actions/cache@v3
       with:
         path: ~/.cargo/registry
         key: cargo-cache
     - uses: actions/cache@v3
       with:
-        path: |
-          ./target
-        key: target-dir-ubuntu
+        path: ./target
+        key: target-dir-ubuntu-${{ matrix.rust }}
+
+    - uses: actions/checkout@v3
+    - run: rustup default ${{ matrix.rust }}
+    - run: cargo fmt --check
+    - run: cargo check --all-features
+
   test:
     needs: fmt-and-check
     strategy:
@@ -40,26 +45,24 @@ jobs:
         - failable: true
         - rust: stable
           failable: false
-    name: ${{ matrix.platform }} rustc-${{ matrix.rust }}
+    name: On ${{ matrix.platform }} w/ Rust ${{ matrix.rust }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
     # load caches if they're available
     - uses: actions/cache@v3
       with:
         path: ~/.rustup/
-        key: rustup-${{ matrix.platform }}
+        key: rustup-${{ matrix.platform }}-${{ matrix.rust }}
     - uses: actions/cache@v3
       with:
         path: ~/.cargo/registry
         key: cargo-cache
     - uses: actions/cache@v3
       with:
-        path: |
-          ./target
-        key: target-dir-${{ matrix.platform }}
+        path: ./target
+        key: target-dir-${{ matrix.platform }}-${{ matrix.rust }}
 
     - uses: actions/checkout@v3
-    - run: rustup update
     - run: rustup default ${{ matrix.rust }}
     - run: cargo test --all-features
       continue-on-error: ${{ matrix.failable }}
