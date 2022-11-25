@@ -20,7 +20,7 @@ jobs:
       with:
         path: |
           ~/.rustup/
-          ~/.cargo/registry/
+          ~/.cargo/
         key: rust-stuff
     - uses: actions/cache@v3
       with:
@@ -41,10 +41,21 @@ jobs:
     name: ${{ matrix.platform }} rustc-${{ matrix.rust }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
+    - if: matrix.platform == "ubuntu"
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.rustup/
+          ~/.cargo/
+        key: rust-stuff
+    - if: matrix.platform == "ubuntu"
+      uses: actions/cache@v3
+      with:
+        path: |
+          ./target
+        key: target-dir
     - uses: actions/checkout@v3
     - run: rustup update
     - run: rustup default ${{ matrix.rust }}
-    - run: cargo check --all-features
-      continue-on-error: ${{ matrix.failable }}
     - run: cargo test --all-features
       continue-on-error: ${{ matrix.failable }}
