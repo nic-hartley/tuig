@@ -19,18 +19,22 @@ jobs:
     runs-on: ${{ matrix.platform }}-latest
     name: x86-bin-${{ matrix.sys }}-${{ matrix.platform }}
     steps:
-    - uses: actions/checkout@v3
+    # load caches if they're available
     - uses: actions/cache@v3
       with:
-        path: |
-          ~/.rustup/
-          ~/.cargo/registry/
-        key: rust-stuff-${{matrix.platform}}
+        path: ~/.rustup/
+        key: rustup-${{matrix.platform}}
+    - uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: cargo-cache
     - uses: actions/cache@v3
       with:
         path: |
           ./target
         key: target-dir-${{matrix.platform}}
+
+    - uses: actions/checkout@v3
     - run: rustup update
     # TODO: Replace with `plat_cli` and `plat_gui` eventually
     - run: cargo build --release --features sys_${{ matrix.sys }}
