@@ -24,6 +24,12 @@ plat_steam = ["sys_gui_vulkan", "sys_gui_opengl", "sys_gui_cpu"]
 # for distributing on bootable media
 #plat_floppy = []
 
+__lang = []
+lang_en = ["__lang"]
+lang_es = ["__lang"]
+
+default = ["lang_en"]
+
 [[bin]]
 name = "redshell-concept"
 required-features = ["__sys"]
@@ -44,3 +50,6 @@ async-trait = "0.1.52"
 rand = { version = "0.8.5", features = ["small_rng"] }
 serde = { version = "1.0.147", features = ["derive"] }
 bincode = "1.3.3"
+
+[build-dependencies]
+serde_yaml = "0.9.14"

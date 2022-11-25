@@ -4,6 +4,7 @@ pub mod cutscenes;
 pub mod event;
 pub mod io;
 mod util;
+mod langs;
 
 /// The current state of the game, including the state of the UI.
 #[derive(PartialEq, Eq, Clone, Debug, Default)]
