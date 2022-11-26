@@ -41,3 +41,9 @@ jobs:
         path: |
           target/release/redshell${{ matrix.ext }}
         if-no-files-found: error
+    - uses: actions/upload-artifact@v3
+      with:
+        name: concept-x86-plain-${{ matrix.sys }}-${{ matrix.platform }}
+        path: |
+          target/release/redshell-concept${{ matrix.ext }}
+        if-no-files-found: error
