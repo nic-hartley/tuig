@@ -55,6 +55,10 @@ impl Color {
         ]
     }
 
+    pub fn count() -> usize {
+        Self::all().len()
+    }
+
     /// The name of the color as a string
     pub fn name(&self) -> &'static str {
         match self {

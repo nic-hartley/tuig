@@ -9,12 +9,10 @@ use std::io;
 use super::{input::Action, output::Screen, XY};
 
 #[cfg(feature = "sys_cli")]
-mod ansi_cli;
-#[cfg(feature = "sys_cli")]
-pub use ansi_cli::AnsiIo;
+pub mod ansi_cli;
 
-#[cfg(feature = "sys_gui")]
-mod gui;
+#[cfg(feature = "__sys_gui")]
+pub mod gui;
 
 #[async_trait::async_trait]
 pub trait IoSystem {
@@ -39,7 +37,7 @@ pub async fn load() -> Result<Box<dyn IoSystem>, HashMap<&'static str, io::Error
             let res = || {
                 $($init)*
             };
-            match res().await {
+            match res() {
                 Ok(res) => return Ok(Box::new(res)),
                 Err(e) => errors.insert(stringify!($name), e),
             };
@@ -63,13 +61,7 @@ pub async fn load() -> Result<Box<dyn IoSystem>, HashMap<&'static str, io::Error
     #[cfg(feature = "sys_cli")]
     {
         // Try to initialize the CLI renderer
-        try_init! { ansi_cli: load_cli() }
+        try_init! { ansi_cli: ansi_cli::AnsiIo::get() }
     }
     Err(errors)
-}
-
-/// Load a CLI-based IO system, if the relevant feature is enabled
-#[cfg(feature="sys_cli")]
-pub async fn load_cli() -> io::Result<AnsiIo> {
-    AnsiIo::get()
 }

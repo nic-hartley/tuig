@@ -9,24 +9,31 @@ license = "BSD-3-Clause"
 rust-version = "1.59"
 
 [features]
-# marker indicating that any system was selected -- do not enable manually!
+# `__` indicates you should NOT manually set that feature!
+# (though ideally you'd only ever set `plat_` features!)
+
 __sys = []
 sys_cli = ["__sys", "crossterm"]
-sys_gui = ["__sys", "winit"]
-sys_gui_cpu = ["sys_gui"]
-sys_gui_opengl = ["sys_gui"]
-sys_gui_vulkan = ["sys_gui"]
+
+__sys_gui = ["__sys", "winit"]
+sys_gui_softbuffer = ["__sys_gui"]
 
 # for running as an SSH 'shell' (or any other TTY)
 plat_ssh = ["sys_cli"]
 # for distribution on Steam
-plat_steam = ["sys_gui_vulkan", "sys_gui_opengl", "sys_gui_cpu"]
+plat_steam = []
 # for distributing on bootable media
-#plat_floppy = []
+plat_floppy = []
+# for itch.io and other web instances
+plat_wasm = []
 
 [[bin]]
 name = "redshell-concept"
 required-features = ["__sys"]
+
+[[bin]]
+name = "gui-test"
+required-features = ["__sys_gui"]
 
 [profile.release]
 opt-level = 'z'
