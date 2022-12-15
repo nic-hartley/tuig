@@ -20,8 +20,8 @@ use redshell::{
 };
 use tokio::time::sleep;
 
-pub fn load_or_die() -> Box<dyn IoSystem> {
-    let errs = match sys::load() {
+pub async fn load_or_die() -> Box<dyn IoSystem> {
+    let errs = match sys::load().await {
         Ok(io) => return io,
         Err(e) => e,
     };
@@ -148,41 +148,35 @@ async fn mouse_demo(io: &mut dyn IoSystem) {
     let mut s = Screen::new(io.size());
     s.textbox(text!(invert "Press any keyboard button to exit"));
     io.draw(&s).await.unwrap();
+    let mut at = XY(0, 0);
     loop {
         let text;
-        let at;
         match io.input().await.unwrap() {
-            Action::KeyPress { .. } | Action::KeyRelease { .. } => break,
-            Action::MousePress { button, pos } => {
-                text = format!("{:?} button pressed at {:?}", button, pos);
-                at = pos;
+            Action::KeyPress { .. } | Action::KeyRelease { .. } | Action::Closed => break,
+            Action::MousePress { button } => {
+                text = format!("{:?} button pressed", button);
             }
-            Action::MouseRelease { button, pos } => {
-                text = format!("{:?} button released at {:?}", button, pos);
-                at = pos;
+            Action::MouseRelease { button } => {
+                text = format!("{:?} button released", button);
             }
-            Action::MouseMove {
-                button: Some(b),
-                pos,
-            } => {
-                text = format!("Moved to {:?} holding {:?}", pos, b);
-                at = pos;
-            }
-            Action::MouseMove { button: None, pos } => {
-                text = format!("Moved to {:?} holding nothing", pos);
+            Action::MouseMove { pos } => {
+                text = format!("Moved to {:?}", pos);
                 at = pos;
             }
             Action::Resized => {
                 text = format!("Window resized");
-                at = XY(0, 0);
+            }
+            Action::Paused => {
+                text = format!("Application refuses to pause");
+            }
+            Action::Unpaused => {
+                text = format!("Application was unpaused anyway");
             }
             Action::Unknown(desc) => {
                 text = format!("Unknown input: {}", desc);
-                at = XY(0, 0);
             }
             Action::Error(msg) => {
                 text = format!("Error: {}", msg);
-                at = XY(0, 0);
             }
         };
         s.resize(io.size());
@@ -211,7 +205,7 @@ async fn main() {
             print!("Playing {}... ", name);
             stdout().flush().unwrap();
             {
-                let mut iosys = load_or_die();
+                let mut iosys = load_or_die().await;
                 func(iosys.as_mut()).await;
                 let XY(width, height) = iosys.size();
                 let msg = "fin.";

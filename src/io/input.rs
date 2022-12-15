@@ -46,16 +46,21 @@ pub enum Action {
     /// depending on the input mechanism it may only be able to send them when a non-modifier key is pressed.
     KeyRelease { key: Key },
     /// A mouse button was pressed at the given location.
-    MousePress { button: MouseButton, pos: XY },
+    MousePress { button: MouseButton },
     /// A mouse button was released at the given location.
-    MouseRelease { button: MouseButton, pos: XY },
+    MouseRelease { button: MouseButton },
     /// The mouse has moved to a new location, possibly while holding a button
-    MouseMove {
-        button: Option<MouseButton>,
-        pos: XY,
-    },
+    MouseMove { pos: XY },
     /// Allows pushing redraw notifications, rather than having to update constantly and risk missing it
     Resized,
+    /// User requested the program end externally, e.g. clicking the X button in the window
+    Closed,
+    /// User requested that the program pause temporarily
+    Paused,
+    /// User, having requested that the program pause temporarily, has since requested that it unpause
+    /// 
+    /// This may be fired spuriously, i.e. without an associated [`Paused`][Self::Paused]. These must be ignored.
+    Unpaused,
     /// Some unknown input was received, with a description of what it was
     Unknown(String),
     /// Trying to read input let to some kind of error, with a description

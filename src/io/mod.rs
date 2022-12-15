@@ -2,7 +2,7 @@
 
 use std::{
     fmt,
-    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign, Rem, RemAssign},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -43,6 +43,13 @@ macro_rules! xy_op {
                 }
             }
 
+            impl $trait<usize> for XY {
+                type Output = XY;
+                fn $fn(self, rhs: usize) -> XY {
+                    XY(self.0 $op rhs, self.1 $op rhs)
+                }
+            }
+
             paste::paste! {
                 impl [< $trait Assign >] for XY {
                     fn [< $fn _assign >] (&mut self, rhs: XY) {
@@ -66,6 +73,7 @@ xy_op! {
     Sub(sub) => - -=,
     Mul(mul) => * *=,
     Div(div) => / /=,
+    Rem(rem) => % %=,
 }
 
 impl fmt::Display for XY {

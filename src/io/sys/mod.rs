@@ -10,6 +10,11 @@ use super::{input::Action, output::Screen, XY};
 
 #[cfg(feature = "sys_cli")]
 mod ansi_cli;
+#[cfg(feature = "sys_cli")]
+pub use ansi_cli::AnsiIo;
+
+#[cfg(feature = "sys_gui")]
+mod gui;
 
 #[async_trait::async_trait]
 pub trait IoSystem {
@@ -27,14 +32,14 @@ pub trait IoSystem {
 ///
 /// The Err type is a map from the name of the system (in code formatting above) to the error that it hit.
 #[cfg(feature = "__sys")]
-pub fn load() -> Result<Box<dyn IoSystem>, HashMap<&'static str, io::Error>> {
+pub async fn load() -> Result<Box<dyn IoSystem>, HashMap<&'static str, io::Error>> {
     let mut errors = HashMap::new();
     macro_rules! try_init {
         ( $name:ident: $( $init:tt )* ) => {
             let res = || {
                 $($init)*
             };
-            match res() {
+            match res().await {
                 Ok(res) => return Ok(Box::new(res)),
                 Err(e) => errors.insert(stringify!($name), e),
             };
@@ -42,7 +47,6 @@ pub fn load() -> Result<Box<dyn IoSystem>, HashMap<&'static str, io::Error>> {
     }
     #[cfg(feature = "sys_gui")]
     {
-        // TODO: Try to initialize common GUI components
         #[cfg(feature = "sys_gui_vulkan")]
         {
             // TODO: Try to initialize Vulkan rendering
@@ -59,7 +63,13 @@ pub fn load() -> Result<Box<dyn IoSystem>, HashMap<&'static str, io::Error>> {
     #[cfg(feature = "sys_cli")]
     {
         // Try to initialize the CLI renderer
-        try_init! { ansi_cli: ansi_cli::AnsiScreen::get() }
+        try_init! { ansi_cli: load_cli() }
     }
     Err(errors)
+}
+
+/// Load a CLI-based IO system, if the relevant feature is enabled
+#[cfg(feature="sys_cli")]
+pub async fn load_cli() -> io::Result<AnsiIo> {
+    AnsiIo::get()
 }

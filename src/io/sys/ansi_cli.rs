@@ -130,38 +130,17 @@ fn process_input(actions: mpsc::UnboundedSender<Action>, mut stop: oneshot::Rece
                 mods!(modifiers, KeyPress);
                 let pos = XY(col as usize, row as usize);
                 match kind {
-                    ct::MouseEventKind::Up(btn) => try_send!(MouseRelease {
-                        button: io4ct_btn(btn),
-                        pos
-                    }),
-                    ct::MouseEventKind::Down(btn) => try_send!(MousePress {
-                        button: io4ct_btn(btn),
-                        pos
-                    }),
-                    ct::MouseEventKind::Drag(btn) => try_send!(MouseMove {
-                        button: Some(io4ct_btn(btn)),
-                        pos
-                    }),
-                    ct::MouseEventKind::Moved => try_send!(MouseMove { button: None, pos }),
+                    ct::MouseEventKind::Up(btn) => try_send!(MouseRelease { button: io4ct_btn(btn) }),
+                    ct::MouseEventKind::Down(btn) => try_send!(MousePress { button: io4ct_btn(btn) }),
+                    ct::MouseEventKind::Drag(_) => try_send!(MouseMove { pos }),
+                    ct::MouseEventKind::Moved => try_send!(MouseMove { pos }),
                     ct::MouseEventKind::ScrollUp => {
-                        try_send!(MousePress {
-                            button: MouseButton::ScrollUp,
-                            pos
-                        });
-                        try_send!(MousePress {
-                            button: MouseButton::ScrollUp,
-                            pos
-                        });
+                        try_send!(MousePress { button: MouseButton::ScrollUp });
+                        try_send!(MousePress { button: MouseButton::ScrollUp });
                     }
                     ct::MouseEventKind::ScrollDown => {
-                        try_send!(MousePress {
-                            button: MouseButton::ScrollDown,
-                            pos
-                        });
-                        try_send!(MousePress {
-                            button: MouseButton::ScrollDown,
-                            pos
-                        });
+                        try_send!(MousePress { button: MouseButton::ScrollDown });
+                        try_send!(MousePress { button: MouseButton::ScrollDown });
                     }
                 }
                 mods!(modifiers, KeyRelease);
@@ -269,12 +248,12 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
     Ok(out)
 }
 
-pub struct AnsiScreen {
+pub struct AnsiIo {
     queue: mpsc::UnboundedReceiver<Action>,
     stop: Option<oneshot::Sender<()>>,
 }
 
-impl AnsiScreen {
+impl AnsiIo {
     fn init_term() -> crossterm::Result<()> {
         terminal::enable_raw_mode()?;
         execute!(
@@ -318,7 +297,7 @@ impl AnsiScreen {
     }
 }
 
-impl Drop for AnsiScreen {
+impl Drop for AnsiIo {
     fn drop(&mut self) {
         let stop = mem::replace(&mut self.stop, None).expect("already dropped");
         // if the receiver is dead, that's fine; that means the queue won't have anything
@@ -332,7 +311,7 @@ impl Drop for AnsiScreen {
 }
 
 #[async_trait::async_trait]
-impl IoSystem for AnsiScreen {
+impl IoSystem for AnsiIo {
     fn size(&self) -> XY {
         let (x, y) = terminal::size().unwrap();
         XY(x as usize, y as usize)
