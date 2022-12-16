@@ -1,4 +1,4 @@
-use std::{io, mem::swap};
+use std::io;
 
 use fontdue::{Font, FontSettings};
 use winit::window::Window;
@@ -97,7 +97,7 @@ impl GuiBackend for SoftbufferBackend {
             let sz = screen.size();
             XY(sz.x().min(max.x()), sz.y().min(max.y()))
         };
-        let buffer_sz = (window_sz - bounded_sz * self.ch_sz) / 2;
+        let buffer_sz = (window_sz % self.ch_sz) / 2;
 
         let mut screen_buf = vec![color_u32(Color::Black); window_sz.x() * window_sz.y()];
         for y in 0..bounded_sz.y() {
@@ -118,12 +118,12 @@ impl GuiBackend for SoftbufferBackend {
                 // so we can align the raster's baseline to the line's baseline
                 let y_offset;
                 let y_cutoff;
-                if ch_baseline > self.line_baseline {
-                    y_offset = 0;
-                    y_cutoff = ch_baseline - self.line_baseline;
-                } else {
+                if ch_baseline <= self.line_baseline {
                     y_offset = self.line_baseline - ch_baseline;
                     y_cutoff = 0;
+                } else {
+                    y_offset = 0;
+                    y_cutoff = ch_baseline - self.line_baseline;
                 }
 
                 // ditto for the x offset but that's easier because the "line baseline" is at 0
@@ -137,17 +137,34 @@ impl GuiBackend for SoftbufferBackend {
                     x_cutoff = -metrics.xmin as usize;
                 }
 
-                let fg = cell.get_fmt().fg;
-                let bg = cell.get_fmt().bg;
+                let fg = color_u32(cell.get_fmt().fg);
+                let bg = color_u32(cell.get_fmt().bg);
 
                 // now we can actually move the rasterized character onto the screen!
-                for ch_row in y_cutoff..metrics.height {
-                    let dest_row = row + y_offset - y_cutoff + ch_row;
-                    let dest_start = (dest_row) * window_sz.x() + col + x_offset - x_cutoff;
-                    for ch_col in x_cutoff..metrics.width {
-                        let pct = char_buf[ch_row * metrics.width + ch_col] as f32 / 255.0;
-                        let color = lerp(color_u32(bg), color_u32(fg), pct);
-                        screen_buf[dest_start + ch_col] = color;
+                for line_row in 0..self.ch_sz.y() {
+                    let dest_row = row + line_row - y_cutoff;
+                    let dest_start = (dest_row * window_sz.x()) + col - x_cutoff;
+                    let dest_end = dest_start + self.ch_sz.x();
+                    let dest = &mut screen_buf[dest_start..dest_end];
+
+                    if line_row < y_offset || line_row >= metrics.height + y_offset - y_cutoff {
+                        dest.fill(bg);
+                        continue;
+                    }
+
+                    for line_col in 0..self.ch_sz.x() {
+                        if line_col < x_offset || line_col >= metrics.width + x_offset - x_cutoff {
+                            dest[line_col] = bg;
+                            continue;
+                        }
+
+                        let char_row = line_row - y_offset + y_cutoff;
+                        let char_col = line_col - x_offset + x_cutoff;
+                        let val = char_buf[char_row * metrics.width + char_col];
+                        // TODO: switch to [f32; 3] color and u8 from rasterized?
+                        let pct = val as f32 / 255.0;
+                        let color = lerp(bg, fg, pct);
+                        dest[line_col] = color;
                     }
                 }
             }
