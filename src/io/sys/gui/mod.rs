@@ -3,7 +3,7 @@ use std::{io, thread, time::{Instant, Duration}};
 use tokio::sync::{mpsc, oneshot};
 use winit::{window::{Window, WindowBuilder}, event_loop::EventLoopBuilder, dpi::LogicalSize, event::{Event, WindowEvent, ElementState, VirtualKeyCode}, platform::{run_return::EventLoopExtRunReturn, unix::EventLoopBuilderExtUnix}};
 
-use crate::io::{output::Screen, XY, input::{Action, Key}};
+use crate::io::{output::Screen, XY, input::{Action, Key, MouseButton}};
 
 use super::IoSystem;
 
@@ -140,6 +140,15 @@ fn key4vkc(vkc: Option<VirtualKeyCode>) -> Option<Key> {
     }
 }
 
+fn mb4button(button: winit::event::MouseButton) -> Option<MouseButton> {
+    match button {
+        winit::event::MouseButton::Left => Some(MouseButton::Left),
+        winit::event::MouseButton::Middle => Some(MouseButton::Middle),
+        winit::event::MouseButton::Right => Some(MouseButton::Right),
+        winit::event::MouseButton::Other(_) => None,
+    }
+}
+
 fn char4pixel_pos(pos: XY, char_size: XY, win_size: XY) -> XY {
     // buffer around the edges
     let buf = (win_size % char_size) / 2;
@@ -195,6 +204,8 @@ async fn spawn_window(char_size: XY, win_size: XY) -> io::Result<(Window, mpsc::
                 Event::WindowEvent { event: WindowEvent::CloseRequested | WindowEvent::Destroyed, .. } => {
                     set!(Action::Closed);
                 }
+                // TODO: Enable and handle IME -- useful for folks with compose keys
+                // for now this is good enough
                 Event::WindowEvent { event: WindowEvent::KeyboardInput { input, .. }, .. } => {
                     match key4vkc(input.virtual_keycode) {
                         Some(key) => match input.state {
@@ -205,14 +216,18 @@ async fn spawn_window(char_size: XY, win_size: XY) -> io::Result<(Window, mpsc::
                         None => return,
                     }
                 }
-                // TODO: Enable and handle IME -- useful for folks with compose keys
-                // for now this is good enough
-                Event::WindowEvent { event: WindowEvent::ReceivedCharacter(ch), .. } => {
-                    set!(Action::KeyPress { key: Key::Char(ch) }, Action::KeyRelease { key: Key::Char(ch) });
-                }
                 Event::WindowEvent { event: WindowEvent::CursorMoved { position, .. }, .. } => {
                     let position = XY(position.x as usize, position.y as usize);
                     set!(Action::MouseMove { pos: char4pixel_pos(position, char_size, win_size) });
+                }
+                Event::WindowEvent { event: WindowEvent::MouseInput { state, button, .. }, .. } => {
+                    match mb4button(button) {
+                        Some(button) => match state {
+                            ElementState::Pressed => set!(Action::MousePress { button }),
+                            ElementState::Released => set!(Action::MouseRelease { button }),
+                        }
+                        None => return,
+                    }
                 }
                 // TODO: Handle other mouse events
 

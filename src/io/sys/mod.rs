@@ -43,7 +43,7 @@ pub async fn load() -> Result<Box<dyn IoSystem>, HashMap<&'static str, io::Error
             };
         }
     }
-    #[cfg(feature = "sys_gui")]
+    #[cfg(feature = "__sys_gui")]
     {
         #[cfg(feature = "sys_gui_vulkan")]
         {
@@ -53,9 +53,9 @@ pub async fn load() -> Result<Box<dyn IoSystem>, HashMap<&'static str, io::Error
         {
             // TODO: Try to initialize OpenGL rendering
         }
-        #[cfg(feature = "sys_gui_cpu")]
+        #[cfg(feature = "sys_gui_softbuffer")]
         {
-            // TODO: Try to initialize CPU rendering
+            // TODO: Try to initialize softbuffer rendering
         }
     }
     #[cfg(feature = "sys_cli")]
