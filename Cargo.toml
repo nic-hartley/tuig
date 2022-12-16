@@ -16,7 +16,7 @@ __sys = []
 sys_cli = ["__sys", "crossterm"]
 
 __sys_gui = ["__sys", "winit"]
-sys_gui_softbuffer = ["__sys_gui"]
+sys_gui_softbuffer = ["__sys_gui", "fontdue", "softbuffer"]
 
 # for running as an SSH 'shell' (or any other TTY)
 plat_ssh = ["sys_cli"]
@@ -52,3 +52,5 @@ rand = { version = "0.8.5", features = ["small_rng"] }
 serde = { version = "1.0.147", features = ["derive"] }
 bincode = "1.3.3"
 winit = { version = "0.27.5", optional = true }
+softbuffer = { version = "0.1.1", optional = true }
+fontdue = { version = "0.7.2", optional = true }

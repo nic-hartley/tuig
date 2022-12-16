@@ -1,6 +1,6 @@
 use std::io;
 
-use redshell::io::{sys::{gui::{GuiBackend, Gui}, IoSystem}, XY, output::{Screen, Cell, FormattedExt, Color}};
+use redshell::io::{sys::{gui::{GuiBackend, Gui, softbuffer::SoftbufferBackend}, IoSystem}, XY, output::{Screen, Cell, FormattedExt, Color}};
 use winit::window::Window;
 
 struct NopBackend;
@@ -26,7 +26,7 @@ async fn real_main(mut iosys: impl IoSystem) {
         sc.resize(iosys.size());
         for x in 0..sc.size().x() {
             for y in 0..sc.size().y() {
-                sc[y][x] = Cell::of(' ')
+                sc[y][x] = Cell::of('#')
                     .bg(Color::all()[(x + y) % Color::count()]);
             }
         }
@@ -36,6 +36,6 @@ async fn real_main(mut iosys: impl IoSystem) {
 
 #[tokio::main]
 async fn main() {
-    let win = Gui::<NopBackend>::new(10.0).await.unwrap();
+    let win = Gui::<SoftbufferBackend>::new(20.0).await.unwrap();
     real_main(win).await
 }

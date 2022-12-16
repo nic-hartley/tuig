@@ -167,6 +167,7 @@ async fn spawn_window(char_size: XY, win_size: XY) -> io::Result<(Window, mpsc::
         let window = WindowBuilder::new()
             .with_inner_size(LogicalSize::new(win_size.x() as u32, win_size.y() as u32))
             .with_resizable(false)
+            .with_title("redshell")
             .build(&el);
         win_send.send(window).expect("failed to send initialized window to main thread");
 
@@ -329,3 +330,6 @@ impl<B: GuiBackend> Drop for Gui<B> {
         }
     }
 }
+
+#[cfg(feature = "sys_gui_softbuffer")]
+pub mod softbuffer;
