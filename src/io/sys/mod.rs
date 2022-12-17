@@ -4,7 +4,7 @@
 
 #[cfg(feature = "__sys")]
 use std::collections::HashMap;
-use std::io;
+use std::{io, sync::{Arc, Barrier}};
 
 use super::{input::Action, output::Screen, XY};
 
@@ -14,11 +14,60 @@ pub mod ansi_cli;
 #[cfg(feature = "__sys_gui")]
 pub mod gui;
 
+/// An input/output system.
+/// 
+/// The output is called a "display" to distinguish it from the [`Screen`].
+/// 
+/// This object is meant to be associated with a [`IoRunner`], which will run infinitely on the main thread while this
+/// is called from within the async context.
 #[async_trait::async_trait]
-pub trait IoSystem {
+pub trait IoSystem: Send {
+    /// Actually render a [`Screen`] to the display.
     async fn draw(&mut self, screen: &Screen) -> io::Result<()>;
+    /// Get the size of the display, in characters.
     fn size(&self) -> XY;
+    /// Asyncly wait for the next user input.
     async fn input(&mut self) -> io::Result<Action>;
+    /// Tells the associated [`IoRunner`] to stop and return control of the main thread, and tell the [`IoSystem`] to
+    /// dispose of any resources it's handling.
+    /// 
+    /// This will always be the last method called on this object (unless you count `Drop::drop`) so feel free to
+    /// panic in the others if they're called after this one, especially `draw`.
+    fn stop(&mut self);
+}
+
+/// The other half of an [`IoSystem`].
+/// 
+/// This type exists so that things which need to run on the main thread specifically, can.
+pub trait IoRunner {
+    /// Run until the paired [`IoSystem`] tells you to stop.
+    fn run(&mut self);
+}
+
+/// An implementation of [`IoRunner`] for backends which don't actually require anything in particular be done on the
+/// main thread.
+/// 
+/// The intended use of this is creating one, returning its clone, and telling your copy to stop when the [`IoSystem`]
+/// method is called.
+#[derive(Clone)]
+pub struct NopIoRunner(Arc<Barrier>);
+
+impl NopIoRunner {
+    /// Create a [`NopIoRunner`].
+    pub fn new() -> Self {
+        Self(Arc::new(Barrier::new(2)))
+    }
+
+    /// Tell the [`NopIoRunner`] to stop.
+    pub fn stop(&mut self) {
+        self.0.wait();
+    }
+}
+
+impl IoRunner for NopIoRunner {
+    fn run(&mut self) {
+        self.0.wait();
+    }
 }
 
 /// Based on IO system features enabled, attempt to initialize an IO system; in order:
@@ -30,15 +79,15 @@ pub trait IoSystem {
 ///
 /// The Err type is a map from the name of the system (in code formatting above) to the error that it hit.
 #[cfg(feature = "__sys")]
-pub async fn load() -> Result<Box<dyn IoSystem>, HashMap<&'static str, io::Error>> {
+pub async fn load() -> Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), HashMap<&'static str, io::Error>> {
     let mut errors = HashMap::new();
     macro_rules! try_init {
         ( $name:ident: $( $init:tt )* ) => {
-            let res = || {
+            let res = {
                 $($init)*
             };
-            match res() {
-                Ok(res) => return Ok(Box::new(res)),
+            match res {
+                Ok((iosys, run)) => return Ok((Box::new(iosys), Box::new(run))),
                 Err(e) => errors.insert(stringify!($name), e),
             };
         }

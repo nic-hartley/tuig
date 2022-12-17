@@ -26,7 +26,7 @@ use crate::io::{
     XY,
 };
 
-use super::IoSystem;
+use super::{IoSystem, NopIoRunner};
 
 macro_rules! mods {
     ( $mods:ident, $action:ident ) => {
@@ -251,6 +251,7 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
 pub struct AnsiIo {
     queue: mpsc::UnboundedReceiver<Action>,
     stop: Option<oneshot::Sender<()>>,
+    runner: NopIoRunner,
 }
 
 impl AnsiIo {
@@ -280,7 +281,7 @@ impl AnsiIo {
         Ok(())
     }
 
-    pub fn get() -> crossterm::Result<Self> {
+    pub fn get() -> crossterm::Result<(Self, NopIoRunner)> {
         Self::init_term()?;
         std::panic::set_hook(Box::new(|i| {
             let _ = Self::clean_term();
@@ -290,10 +291,12 @@ impl AnsiIo {
         let (queue_s, queue_r) = mpsc::unbounded_channel();
         let (stop_s, stop_r) = oneshot::channel();
         tokio::task::spawn_blocking(|| process_input(queue_s, stop_r));
-        Ok(Self {
+        let runner = NopIoRunner::new();
+        Ok((Self {
             queue: queue_r,
             stop: Some(stop_s),
-        })
+            runner: runner.clone(),
+        }, runner.clone()))
     }
 }
 
@@ -333,5 +336,9 @@ impl IoSystem for AnsiIo {
 
     async fn input(&mut self) -> io::Result<crate::io::input::Action> {
         Ok(self.queue.recv().await.expect("unexpected queue closure"))
+    }
+
+    fn stop(&mut self) {
+        self.runner.stop()
     }
 }

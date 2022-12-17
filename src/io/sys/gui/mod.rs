@@ -1,11 +1,11 @@
-use std::{io, thread, time::{Instant, Duration}};
+use std::{io, time::{Instant, Duration}};
 
 use tokio::sync::{mpsc, oneshot};
-use winit::{window::{Window, WindowBuilder}, event_loop::EventLoopBuilder, dpi::LogicalSize, event::{Event, WindowEvent, ElementState, VirtualKeyCode}, platform::{run_return::EventLoopExtRunReturn, unix::EventLoopBuilderExtUnix}};
+use winit::{window::{Window, WindowBuilder}, event_loop::{EventLoopBuilder, EventLoop}, dpi::LogicalSize, event::{Event, WindowEvent, ElementState, VirtualKeyCode}, platform::{run_return::EventLoopExtRunReturn, unix::EventLoopBuilderExtUnix}};
 
 use crate::io::{output::Screen, XY, input::{Action, Key, MouseButton}};
 
-use super::IoSystem;
+use super::{IoSystem, IoRunner};
 
 const FONT_TTF: &[u8] = include_bytes!("inconsolata.ttf");
 
@@ -155,31 +155,114 @@ fn char4pixel_pos(pos: XY, char_size: XY, win_size: XY) -> XY {
     (pos - buf) / char_size
 }
 
-async fn spawn_window(char_size: XY, win_size: XY) -> io::Result<(Window, mpsc::UnboundedReceiver<Action>, oneshot::Sender<()>)> {
-    let (win_send, win_recv) = oneshot::channel();
-    let (act_send, act_recv) = mpsc::unbounded_channel();
-    let (kill_send, mut kill_recv) = oneshot::channel();
-    thread::spawn(move || {
-        let mut el = EventLoopBuilder::<Action>::with_user_event()
-            .with_x11()
-            .with_any_thread(true)
-            .build();
-        let window = WindowBuilder::new()
-            .with_inner_size(LogicalSize::new(win_size.x() as u32, win_size.y() as u32))
-            .with_resizable(false)
-            .with_title("redshell")
-            .build(&el);
-        win_send.send(window).expect("failed to send initialized window to main thread");
+struct WindowSpawnOutput {
+    window: Window,
+    action_recv: mpsc::UnboundedReceiver<Action>,
+    kill_send: (),
+    runner: WindowRunner,
+}
 
+fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
+    let mut el = EventLoopBuilder::<Action>::with_user_event()
+        .with_x11()
+        .build();
+    let window = WindowBuilder::new()
+        .with_inner_size(LogicalSize::new(win_size.x() as u32, win_size.y() as u32))
+        .with_resizable(false)
+        .with_title("redshell")
+        .build(&el)
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    let (act_send, action_recv) = mpsc::unbounded_channel();
+
+    let runner = WindowRunner { el, act_send, kill_recv: (), char_size, win_size };
+
+    Ok(WindowSpawnOutput { window, action_recv, kill_send: (), runner })
+}
+
+#[async_trait::async_trait]
+pub trait GuiBackend: Send + Sync + Sized {
+    /// Create a new rendering backend with the given font size. The font size is `fontdue`'s understanding of it: The
+    /// (approximate) width of the `m` character. In Inconsolata, or really any monospace font, that should also be
+    /// the width of every other character.
+    fn new(font_size: f32) -> io::Result<Self>;
+
+    /// Reset the renderer to use a new font size.
+    /// 
+    /// The default implementation simply destroys the old renderer and replaces it in-place with a new one, but there
+    /// may be more efficient implementations for any given backend.
+    /// 
+    /// This doesn't need to re-render anything, but it cannot break the current window.
+    fn renew(&mut self, font_size: f32) -> io::Result<()> {
+        let new = Self::new(font_size)?;
+        *self = new;
+        Ok(())
+    }
+
+    /// Render a screen onto the window.
+    /// 
+    /// This must only return when the rendering is as definitively complete as the backend can easily determine.
+    async fn render(&self, window: &Window, screen: &Screen) -> io::Result<()>;
+
+    /// Return the bounding box dimensions of the characters being used in the font being used.
+    fn char_size(&self) -> XY;
+}
+
+pub struct Gui<B: GuiBackend> {
+    window: Window,
+    inputs: mpsc::UnboundedReceiver<Action>,
+    kill_el: (),
+    backend: B,
+}
+
+impl<B: GuiBackend> Gui<B> {
+    pub async fn new(font_size: f32) -> io::Result<Self> {
+        let backend = B::new(font_size)?;
+        let char_size = backend.char_size();
+        let win_size = char_size * XY(80, 25);
+        let WindowSpawnOutput { window, action_recv: inputs, kill_send, runner } = spawn_window(char_size, win_size)?;
+        Ok(Self { window, inputs, kill_el: (), backend })
+    }
+}
+
+#[async_trait::async_trait]
+impl<B: GuiBackend> IoSystem for Gui<B> {
+    async fn draw(&mut self, screen: &Screen) -> io::Result<()> {
+        self.backend.render(&self.window, screen).await?;
+        self.window.request_redraw();
+        Ok(())
+    }
+
+    fn size(&self) -> XY {
+        let raw_sz = self.window.inner_size();
+        let char_sz = self.backend.char_size();
+        let width = raw_sz.width as usize / char_sz.x();
+        let height = raw_sz.height as usize / char_sz.y();
+        XY(width, height)
+    }
+
+    async fn input(&mut self) -> io::Result<Action> {
+        self.inputs.recv().await
+            .ok_or(io::Error::new(io::ErrorKind::BrokenPipe, "input loop has terminated unexpectedly"))
+    }
+
+    fn stop(&mut self) {
+        // TODO: Send the kill signal on self.kill_el
+    }
+}
+
+struct WindowRunner {
+    el: EventLoop<Action>,
+    act_send: mpsc::UnboundedSender<Action>,
+    kill_recv: (),
+    char_size: XY,
+    win_size: XY,
+}
+
+impl IoRunner for WindowRunner {
+    fn run(&mut self) {
         // the bugs don't bother us anyway -- we just don't want the entire process to exit when this is done.
-        el.run_return(move |ev, _, cf| {
-            match kill_recv.try_recv() {
-                Err(oneshot::error::TryRecvError::Empty) => (),
-                _ => {
-                    cf.set_exit();
-                    return;
-                }
-            }
+        self.el.run_return(|ev, _, cf| {
+            // TODO: Check self.kill_recv to see if the kill signal is there
 
             // ensure that we check around once a second to see if we should quit
             cf.set_wait_until(Instant::now() + Duration::from_secs(1));
@@ -219,7 +302,7 @@ async fn spawn_window(char_size: XY, win_size: XY) -> io::Result<(Window, mpsc::
                 }
                 Event::WindowEvent { event: WindowEvent::CursorMoved { position, .. }, .. } => {
                     let position = XY(position.x as usize, position.y as usize);
-                    set!(Action::MouseMove { pos: char4pixel_pos(position, char_size, win_size) });
+                    set!(Action::MouseMove { pos: char4pixel_pos(position, self.char_size, self.win_size) });
                 }
                 Event::WindowEvent { event: WindowEvent::MouseInput { state, button, .. }, .. } => {
                     match mb4button(button) {
@@ -238,7 +321,7 @@ async fn spawn_window(char_size: XY, win_size: XY) -> io::Result<(Window, mpsc::
 
             for action in actions {
                 if let Some(action) = action {
-                    if let Err(_) = act_send.send(action) {
+                    if let Err(_) = self.act_send.send(action) {
                         // other end already hung up, wtaf
                         cf.set_exit();
                         break;
@@ -246,88 +329,6 @@ async fn spawn_window(char_size: XY, win_size: XY) -> io::Result<(Window, mpsc::
                 }
             }
         });
-    });
-
-    let win = win_recv.await
-        .map_err(|_| io::Error::new(io::ErrorKind::BrokenPipe, "event loop thread crashed while starting"))?
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-
-    Ok((win, act_recv, kill_send))
-}
-
-#[async_trait::async_trait]
-pub trait GuiBackend: Send + Sync + Sized {
-    /// Create a new rendering backend with the given font size. The font size is `fontdue`'s understanding of it: The
-    /// (approximate) width of the `m` character. In Inconsolata, or really any monospace font, that should also be
-    /// the width of every other character.
-    fn new(font_size: f32) -> io::Result<Self>;
-
-    /// Reset the renderer to use a new font size.
-    /// 
-    /// The default implementation simply destroys the old renderer and replaces it in-place with a new one, but there
-    /// may be more efficient implementations for any given backend.
-    /// 
-    /// This doesn't need to re-render anything, but it cannot break the current window.
-    fn renew(&mut self, font_size: f32) -> io::Result<()> {
-        let new = Self::new(font_size)?;
-        *self = new;
-        Ok(())
-    }
-
-    /// Render a screen onto the window.
-    /// 
-    /// This must only return when the rendering is as definitively complete as the backend can easily determine.
-    async fn render(&self, window: &Window, screen: &Screen) -> io::Result<()>;
-
-    /// Return the bounding box dimensions of the characters being used in the font being used.
-    fn char_size(&self) -> XY;
-}
-
-pub struct Gui<B: GuiBackend> {
-    window: Window,
-    inputs: mpsc::UnboundedReceiver<Action>,
-    kill_el: Option<oneshot::Sender<()>>,
-    backend: B,
-}
-
-impl<B: GuiBackend> Gui<B> {
-    pub async fn new(font_size: f32) -> io::Result<Self> {
-        let backend = B::new(font_size)?;
-        let char_size = backend.char_size();
-        let win_size = char_size * XY(80, 25);
-        let (window, inputs, kill_el) = spawn_window(char_size, win_size).await?;
-        Ok(Self { window, inputs, kill_el: Some(kill_el), backend })
-    }
-}
-
-#[async_trait::async_trait]
-impl<B: GuiBackend> IoSystem for Gui<B> {
-    async fn draw(&mut self, screen: &Screen) -> io::Result<()> {
-        self.backend.render(&self.window, screen).await?;
-        self.window.request_redraw();
-        Ok(())
-    }
-
-    fn size(&self) -> XY {
-        let raw_sz = self.window.inner_size();
-        let char_sz = self.backend.char_size();
-        let width = raw_sz.width as usize / char_sz.x();
-        let height = raw_sz.height as usize / char_sz.y();
-        XY(width, height)
-    }
-
-    async fn input(&mut self) -> io::Result<Action> {
-        self.inputs.recv().await
-            .ok_or(io::Error::new(io::ErrorKind::BrokenPipe, "input loop has terminated unexpectedly"))
-    }
-}
-
-impl<B: GuiBackend> Drop for Gui<B> {
-    fn drop(&mut self) {
-        if let Some(send) = self.kill_el.take() {
-            // ignore errors -- nothing we could do about it anyway
-            let _ = send.send(());
-        }
     }
 }
 

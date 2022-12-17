@@ -13,16 +13,16 @@ use redshell::{
     io::{
         input::{Action, Key},
         output::{Color, FormattedExt, Screen, Text},
-        sys::{self, IoSystem},
+        sys::{self, IoSystem, IoRunner},
         XY,
     },
     text, GameState,
 };
 use tokio::time::sleep;
 
-pub async fn load_or_die() -> Box<dyn IoSystem> {
+pub async fn load_or_die() -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
     let errs = match sys::load().await {
-        Ok(io) => return io,
+        Ok(pair) => return pair,
         Err(e) => e,
     };
 
@@ -205,20 +205,12 @@ async fn main() {
             print!("Playing {}... ", name);
             stdout().flush().unwrap();
             {
-                let mut iosys = load_or_die().await;
-                func(iosys.as_mut()).await;
-                let XY(width, height) = iosys.size();
-                let msg = "fin.";
-                write!(
-                    stdout(),
-                    "\x1b[{};{}H\x1b[107;30m{}\x1b[0m",
-                    height,
-                    width - msg.len(),
-                    msg
-                )
-                .unwrap();
-                stdout().flush().unwrap();
-                sleep(Duration::from_secs(2)).await;
+                let (mut iosys, mut runner) = load_or_die().await;
+                tokio::spawn(async move {
+                    func(iosys.as_mut()).await;
+                    iosys.stop();
+                });
+                runner.run()
             }
             println!(" Done.");
             return;
