@@ -1,10 +1,6 @@
 use std::{
-    collections::HashMap,
-    env::args,
-    future::Future,
-    io::{stdout, Write},
-    pin::Pin,
-    time::Duration,
+    env,
+    time::Duration, process, thread,
 };
 
 use redshell::{
@@ -20,8 +16,8 @@ use redshell::{
 };
 use tokio::time::sleep;
 
-pub async fn load_or_die() -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
-    let errs = match sys::load().await {
+pub fn load_or_die() -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
+    let errs = match sys::load() {
         Ok(pair) => return pair,
         Err(e) => e,
     };
@@ -186,42 +182,83 @@ async fn mouse_demo(io: &mut dyn IoSystem) {
     }
 }
 
+// #[tokio::main]
+// async fn main() {
+//     let concepts = {
+//         type ConceptFn = for<'a> fn(&'a mut dyn IoSystem) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
+//         let mut map: HashMap<&'static str, ConceptFn> = HashMap::new();
+//         map.insert("render", |s| Box::pin(render_demo(s)));
+//         map.insert("intro", |s| Box::pin(intro_demo(s)));
+//         map.insert("chat", |s| Box::pin(chat_demo(s)));
+//         map.insert("mouse", |s| Box::pin(mouse_demo(s)));
+//         map
+//     };
+
+//     let mut args = args();
+//     let arg0 = args.next().expect("how did you have no argv[0]");
+//     if let Some(name) = args.next() {
+//         if let Some(func) = concepts.get(name.as_str()) {
+//             print!("Playing {}... ", name);
+//             stdout().flush().unwrap();
+//             {
+//                 let (mut iosys, mut runner) = load_or_die().await;
+//                 tokio::spawn(async move {
+//                     func(iosys.as_mut()).await;
+//                     iosys.stop();
+//                 });
+//                 runner.run()
+//             }
+//             println!(" Done.");
+//             return;
+//         }
+//     }
+//     println!("Show off some concept art, built on the actual UI toolkit of the game.");
+//     println!("Pass the name as the first parameter, i.e.:");
+//     println!("  {} <name>", arg0);
+//     println!();
+//     println!("Available concept art is:");
+//     for (k, _) in concepts {
+//         println!("- {}", k);
+//     }
+// }
+
 #[tokio::main]
-async fn main() {
-    let concepts = {
-        type ConceptFn = for<'a> fn(&'a mut dyn IoSystem) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
-        let mut map: HashMap<&'static str, ConceptFn> = HashMap::new();
-        map.insert("render", |s| Box::pin(render_demo(s)));
-        map.insert("intro", |s| Box::pin(intro_demo(s)));
-        map.insert("chat", |s| Box::pin(chat_demo(s)));
-        map.insert("mouse", |s| Box::pin(mouse_demo(s)));
-        map
+async fn run_concept(name: &str, iosys: &mut dyn IoSystem) {
+    match name {
+        "render" => render_demo(iosys).await,
+        "intro" => intro_demo(iosys).await,
+        "chat" => chat_demo(iosys).await,
+        "mouse" => mouse_demo(iosys).await,
+        _ => println!("Not a valid option"),
+    };
+    iosys.stop();
+}
+
+fn help() -> ! {
+    println!(r##"
+Show off some concept art, built on the actual UI toolkit of the game.
+Pass the name as the first parameter, i.e.:
+    redshell-concept <name>
+
+Available concept art is:
+- render:   Basic tests of the UI widgets implemented
+- intro:    The game's actual intro, separated into its own thing
+- chat:     A self-playing demo of the chatroom
+- mouse:    Showing off mouse interaction
+"##);
+    process::exit(0)
+}
+
+fn main() {
+    let mut args = env::args().skip(1);
+    let concept = match args.next() {
+        Some(c) => c,
+        None => help(),
     };
 
-    let mut args = args();
-    let arg0 = args.next().expect("how did you have no argv[0]");
-    if let Some(name) = args.next() {
-        if let Some(func) = concepts.get(name.as_str()) {
-            print!("Playing {}... ", name);
-            stdout().flush().unwrap();
-            {
-                let (mut iosys, mut runner) = load_or_die().await;
-                tokio::spawn(async move {
-                    func(iosys.as_mut()).await;
-                    iosys.stop();
-                });
-                runner.run()
-            }
-            println!(" Done.");
-            return;
-        }
-    }
-    println!("Show off some concept art, built on the actual UI toolkit of the game.");
-    println!("Pass the name as the first parameter, i.e.:");
-    println!("  {} <name>", arg0);
-    println!();
-    println!("Available concept art is:");
-    for (k, _) in concepts {
-        println!("- {}", k);
-    }
+    let (mut iosys, mut runner) = load_or_die();
+
+    thread::spawn(move || run_concept(&concept, iosys.as_mut()));
+
+    runner.run();
 }

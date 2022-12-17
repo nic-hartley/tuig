@@ -31,10 +31,6 @@ plat_wasm = []
 name = "redshell-concept"
 required-features = ["__sys"]
 
-[[bin]]
-name = "gui-test"
-required-features = ["__sys_gui"]
-
 [profile.release]
 opt-level = 'z'
 lto = true

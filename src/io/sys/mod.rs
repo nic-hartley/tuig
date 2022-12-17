@@ -79,7 +79,7 @@ impl IoRunner for NopIoRunner {
 ///
 /// The Err type is a map from the name of the system (in code formatting above) to the error that it hit.
 #[cfg(feature = "__sys")]
-pub async fn load() -> Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), HashMap<&'static str, io::Error>> {
+pub fn load() -> Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), HashMap<&'static str, io::Error>> {
     let mut errors = HashMap::new();
     macro_rules! try_init {
         ( $name:ident: $( $init:tt )* ) => {
@@ -94,6 +94,7 @@ pub async fn load() -> Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), HashMap<&'
     }
     #[cfg(feature = "__sys_gui")]
     {
+        use crate::io::sys::gui::Gui;
         #[cfg(feature = "sys_gui_vulkan")]
         {
             // TODO: Try to initialize Vulkan rendering
@@ -104,7 +105,9 @@ pub async fn load() -> Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), HashMap<&'
         }
         #[cfg(feature = "sys_gui_softbuffer")]
         {
-            // TODO: Try to initialize softbuffer rendering
+            use crate::io::sys::gui::softbuffer::SoftbufferBackend;
+            // Try to initialize softbuffer rendering
+            try_init! { softbuffer_gui: Gui::<SoftbufferBackend>::new(20.0) }
         }
     }
     #[cfg(feature = "sys_cli")]

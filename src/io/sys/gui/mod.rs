@@ -1,6 +1,6 @@
 use std::{io, time::{Instant, Duration}};
 
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 use winit::{window::{Window, WindowBuilder}, event_loop::{EventLoopBuilder, EventLoop}, dpi::LogicalSize, event::{Event, WindowEvent, ElementState, VirtualKeyCode}, platform::{run_return::EventLoopExtRunReturn, unix::EventLoopBuilderExtUnix}};
 
 use crate::io::{output::Screen, XY, input::{Action, Key, MouseButton}};
@@ -163,7 +163,7 @@ struct WindowSpawnOutput {
 }
 
 fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
-    let mut el = EventLoopBuilder::<Action>::with_user_event()
+    let el = EventLoopBuilder::<Action>::with_user_event()
         .with_x11()
         .build();
     let window = WindowBuilder::new()
@@ -215,12 +215,12 @@ pub struct Gui<B: GuiBackend> {
 }
 
 impl<B: GuiBackend> Gui<B> {
-    pub async fn new(font_size: f32) -> io::Result<Self> {
+    pub fn new(font_size: f32) -> io::Result<(Self, WindowRunner)> {
         let backend = B::new(font_size)?;
         let char_size = backend.char_size();
         let win_size = char_size * XY(80, 25);
         let WindowSpawnOutput { window, action_recv: inputs, kill_send, runner } = spawn_window(char_size, win_size)?;
-        Ok(Self { window, inputs, kill_el: (), backend })
+        Ok((Self { window, inputs, kill_el: kill_send, backend }, runner))
     }
 }
 
@@ -250,7 +250,7 @@ impl<B: GuiBackend> IoSystem for Gui<B> {
     }
 }
 
-struct WindowRunner {
+pub struct WindowRunner {
     el: EventLoop<Action>,
     act_send: mpsc::UnboundedSender<Action>,
     kill_recv: (),
