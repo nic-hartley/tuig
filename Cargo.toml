@@ -9,20 +9,23 @@ license = "BSD-3-Clause"
 rust-version = "1.59"
 
 [features]
-# marker indicating that any system was selected -- do not enable manually!
+# `__` indicates you should NOT manually set that feature!
+# (though ideally you'd only ever set `plat_` features!)
+
 __sys = []
 sys_cli = ["__sys", "crossterm"]
-sys_gui = ["__sys", ]
-sys_gui_cpu = ["__sys", "sys_gui"]
-sys_gui_opengl = ["__sys", "sys_gui"]
-sys_gui_vulkan = ["__sys", "sys_gui"]
+
+__sys_gui = ["__sys", "winit"]
+sys_gui_softbuffer = ["__sys_gui", "fontdue", "softbuffer", "rayon"]
 
 # for running as an SSH 'shell' (or any other TTY)
 plat_ssh = ["sys_cli"]
 # for distribution on Steam
-plat_steam = ["sys_gui_vulkan", "sys_gui_opengl", "sys_gui_cpu"]
+plat_steam = []
 # for distributing on bootable media
-#plat_floppy = []
+plat_floppy = []
+# for itch.io and other web instances
+plat_wasm = []
 
 [[bin]]
 name = "redshell-concept"
@@ -44,3 +47,8 @@ async-trait = "0.1.52"
 rand = { version = "0.8.5", features = ["small_rng"] }
 serde = { version = "1.0.147", features = ["derive"] }
 bincode = "1.3.3"
+winit = { version = "0.27.5", optional = true }
+softbuffer = { version = "0.1.1", optional = true }
+fontdue = { version = "0.7.2", optional = true }
+futures = "0.3.25"
+rayon = { version = "1.6.1", optional = true }

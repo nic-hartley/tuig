@@ -1,11 +1,4 @@
-use std::{
-    collections::HashMap,
-    env::args,
-    future::Future,
-    io::{stdout, Write},
-    pin::Pin,
-    time::Duration,
-};
+use std::{env, process, thread, time::Duration};
 
 use redshell::{
     app::{App, ChatApp},
@@ -13,16 +6,16 @@ use redshell::{
     io::{
         input::{Action, Key},
         output::{Color, FormattedExt, Screen, Text},
-        sys::{self, IoSystem},
+        sys::{self, IoRunner, IoSystem},
         XY,
     },
     text, GameState,
 };
-use tokio::time::sleep;
+use tokio::time::{interval, sleep};
 
-pub fn load_or_die() -> Box<dyn IoSystem> {
+pub fn load_or_die() -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
     let errs = match sys::load() {
-        Ok(io) => return io,
+        Ok(pair) => return pair,
         Err(e) => e,
     };
 
@@ -43,6 +36,7 @@ async fn render_demo(io: &mut dyn IoSystem) {
     s.horizontal(1);
     s.vertical(0);
     let mut texts = Vec::new();
+    texts.extend(text!(underline "underline", " ", bold "bold", "\n"));
     for fg in Color::all() {
         texts.push(Text::of(format!("{} on:\n", fg.name())));
         let amt = Color::all().len();
@@ -58,8 +52,6 @@ async fn render_demo(io: &mut dyn IoSystem) {
         }
     }
 
-    texts.extend(text!("\n", underline "underline", " ", bold "bold", " ", invert "invert", " "));
-
     s.textbox(texts).pos(1, 2);
     s.header()
         .tab("tab", 1)
@@ -68,6 +60,8 @@ async fn render_demo(io: &mut dyn IoSystem) {
         .profile("watching the render concept")
         .time("the time is now");
     io.draw(&s).await.unwrap();
+
+    sleep(Duration::from_secs(5)).await;
 }
 
 async fn intro_demo(io: &mut dyn IoSystem) {
@@ -146,96 +140,97 @@ async fn chat_demo(io: &mut dyn IoSystem) {
 
 async fn mouse_demo(io: &mut dyn IoSystem) {
     let mut s = Screen::new(io.size());
-    s.textbox(text!(invert "Press any keyboard button to exit"));
+    s.textbox(text!(black on_white "Press any keyboard button to exit"));
     io.draw(&s).await.unwrap();
+    let mut at = XY(0, 0);
+    let mut render_tick = interval(Duration::from_secs_f32(0.01));
+    let mut last_text = String::new();
+    let mut text = String::new();
     loop {
-        let text;
-        let at;
-        match io.input().await.unwrap() {
-            Action::KeyPress { .. } | Action::KeyRelease { .. } => break,
-            Action::MousePress { button, pos } => {
-                text = format!("{:?} button pressed at {:?}", button, pos);
-                at = pos;
+        tokio::select! {
+            _ = render_tick.tick() => {
+                if text == last_text {
+                    continue;
+                }
+                s.resize(io.size());
+                s.textbox(text!(black on_white "Press any keyboard button to exit"));
+                s.textbox(text!("{}"(text))).xy(at);
+                io.draw(&s).await.unwrap();
+                last_text = text.clone();
             }
-            Action::MouseRelease { button, pos } => {
-                text = format!("{:?} button released at {:?}", button, pos);
-                at = pos;
+            Ok(Some(act)) = io.flush() => {
+                match act {
+                    Action::KeyPress { .. } | Action::KeyRelease { .. } | Action::Closed => break,
+                    Action::MousePress { button } => {
+                        text = format!("{:?} button pressed", button);
+                    }
+                    Action::MouseRelease { button } => {
+                        text = format!("{:?} button released", button);
+                    }
+                    Action::MouseMove { pos } => {
+                        text = format!("Moved to {:?}", pos);
+                        at = pos;
+                    }
+                    Action::Resized => {
+                        text = format!("Window resized");
+                    }
+                    Action::Paused => {
+                        text = format!("Application refuses to pause");
+                    }
+                    Action::Unpaused => {
+                        text = format!("Application was unpaused anyway");
+                    }
+                    Action::Unknown(desc) => {
+                        text = format!("Unknown input: {}", desc);
+                    }
+                    Action::Error(msg) => {
+                        text = format!("Error: {}", msg);
+                    }
+                };
             }
-            Action::MouseMove {
-                button: Some(b),
-                pos,
-            } => {
-                text = format!("Moved to {:?} holding {:?}", pos, b);
-                at = pos;
-            }
-            Action::MouseMove { button: None, pos } => {
-                text = format!("Moved to {:?} holding nothing", pos);
-                at = pos;
-            }
-            Action::Resized => {
-                text = format!("Window resized");
-                at = XY(0, 0);
-            }
-            Action::Unknown(desc) => {
-                text = format!("Unknown input: {}", desc);
-                at = XY(0, 0);
-            }
-            Action::Error(msg) => {
-                text = format!("Error: {}", msg);
-                at = XY(0, 0);
-            }
-        };
-        s.resize(io.size());
-        s.textbox(text!(invert "Press any keyboard button to exit"));
-        s.textbox(text!("{}"(text))).xy(at);
-        io.draw(&s).await.unwrap();
+        }
     }
 }
 
 #[tokio::main]
-async fn main() {
-    let concepts = {
-        type ConceptFn = for<'a> fn(&'a mut dyn IoSystem) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
-        let mut map: HashMap<&'static str, ConceptFn> = HashMap::new();
-        map.insert("render", |s| Box::pin(render_demo(s)));
-        map.insert("intro", |s| Box::pin(intro_demo(s)));
-        map.insert("chat", |s| Box::pin(chat_demo(s)));
-        map.insert("mouse", |s| Box::pin(mouse_demo(s)));
-        map
+async fn run_concept(name: &str, iosys: &mut dyn IoSystem) {
+    match name {
+        "render" => render_demo(iosys).await,
+        "intro" => intro_demo(iosys).await,
+        "chat" => chat_demo(iosys).await,
+        "mouse" => mouse_demo(iosys).await,
+        _ => println!("Not a valid option"),
+    };
+    iosys.stop();
+}
+
+fn help() -> ! {
+    println!(
+        r##"
+Show off some concept art, built on the actual UI toolkit of the game.
+Pass the name as the first parameter, i.e.:
+    redshell-concept <name>
+
+Available concept art is:
+- render:   Basic tests of the UI widgets implemented
+- intro:    The game's actual intro, separated into its own thing
+- chat:     A self-playing demo of the chatroom
+- mouse:    Showing off mouse interaction
+"##
+    );
+    process::exit(0)
+}
+
+fn main() {
+    let mut args = env::args().skip(1);
+    let concept = match args.next() {
+        Some(c) => c,
+        None => help(),
     };
 
-    let mut args = args();
-    let arg0 = args.next().expect("how did you have no argv[0]");
-    if let Some(name) = args.next() {
-        if let Some(func) = concepts.get(name.as_str()) {
-            print!("Playing {}... ", name);
-            stdout().flush().unwrap();
-            {
-                let mut iosys = load_or_die();
-                func(iosys.as_mut()).await;
-                let XY(width, height) = iosys.size();
-                let msg = "fin.";
-                write!(
-                    stdout(),
-                    "\x1b[{};{}H\x1b[107;30m{}\x1b[0m",
-                    height,
-                    width - msg.len(),
-                    msg
-                )
-                .unwrap();
-                stdout().flush().unwrap();
-                sleep(Duration::from_secs(2)).await;
-            }
-            println!(" Done.");
-            return;
-        }
-    }
-    println!("Show off some concept art, built on the actual UI toolkit of the game.");
-    println!("Pass the name as the first parameter, i.e.:");
-    println!("  {} <name>", arg0);
-    println!();
-    println!("Available concept art is:");
-    for (k, _) in concepts {
-        println!("- {}", k);
-    }
+    let (mut iosys, mut runner) = load_or_die();
+
+    thread::spawn(move || run_concept(&concept, iosys.as_mut()));
+
+    runner.run();
 }
