@@ -13,23 +13,52 @@ fn ioe4fe(e: &'static str) -> io::Error {
 }
 
 fn color_u32(c: Color) -> u32 {
+    fn hsv(h: f32, s: f32, v: f32) -> u32 {
+        // taken from https://en.wikipedia.org/wiki/HSL_and_HSV#HSV_to_RGB
+        assert!(0.0 <= h && h <= 360.0);
+        assert!(0.0 <= s && s <= 1.0);
+        assert!(0.0 <= v && v <= 1.0);
+        let c = s * v;
+        let h_ = h / 60.0;
+        let x = c * (1.0 - (h_ % 2.0 - 1.0).abs());
+        let (r1, g1, b1) = match h_ as usize {
+            0 => (c, x, 0.0),
+            1 => (x, c, 0.0),
+            2 => (0.0, c, x),
+            3 => (0.0, x, c),
+            4 => (x, 0.0, c),
+            5 => (c, 0.0, x),
+            _ => unreachable!(),
+        };
+        let m = v - c;
+        let r = r1 + m;
+        let g = g1 + m;
+        let b = b1 + m;
+        let rb = (r * 255.0).round() as u32;
+        let gb = (g * 255.0).round() as u32;
+        let bb = (b * 255.0).round() as u32;
+        rb << 16 | gb << 8 | bb
+    }
+
     match c {
-        Color::Black         => 0x00_00_00_00,
-        Color::Red           => 0x00_80_00_00,
-        Color::Green         => 0x00_00_80_00,
-        Color::Yellow        => 0x00_80_80_00,
-        Color::Blue          => 0x00_00_00_80,
-        Color::Magenta       => 0x00_80_00_80,
-        Color::Cyan          => 0x00_00_80_80,
-        Color::White         => 0x00_80_80_80,
-        Color::BrightBlack   => 0x00_0F_0F_0F,
-        Color::BrightRed     => 0x00_FF_0F_0F,
-        Color::BrightGreen   => 0x00_0F_FF_0F,
-        Color::BrightYellow  => 0x00_FF_FF_0F,
-        Color::BrightBlue    => 0x00_0F_0F_FF,
-        Color::BrightMagenta => 0x00_FF_0F_FF,
-        Color::BrightCyan    => 0x00_0F_FF_FF,
-        Color::BrightWhite   => 0x00_FF_FF_FF,
+        // TODO: Tweak these colors to look as nice as possible
+        Color::Black         => hsv(000.0, 0.0, 0.05),
+        Color::Red           => hsv(000.0, 1.0, 0.75),
+        Color::Green         => hsv(120.0, 1.0, 0.75),
+        Color::Yellow        => hsv(060.0, 1.0, 0.75),
+        Color::Blue          => hsv(240.0, 0.7, 0.75),
+        Color::Magenta       => hsv(300.0, 1.0, 0.75),
+        Color::Cyan          => hsv(180.0, 1.0, 0.75),
+        Color::White         => hsv(000.0, 0.0, 0.75),
+
+        Color::BrightBlack   => hsv(000.0, 0.0, 1.0),
+        Color::BrightRed     => hsv(000.0, 1.0, 1.0),
+        Color::BrightGreen   => hsv(120.0, 1.0, 1.0),
+        Color::BrightYellow  => hsv(060.0, 1.0, 1.0),
+        Color::BrightBlue    => hsv(240.0, 1.0, 1.0),
+        Color::BrightMagenta => hsv(300.0, 1.0, 1.0),
+        Color::BrightCyan    => hsv(180.0, 1.0, 1.0),
+        Color::BrightWhite   => hsv(000.0, 0.0, 1.0),
     }
 }
 
@@ -38,7 +67,7 @@ fn lerp(from: u32, to: u32, amt: f32) -> u32 {
         let big = from.max(to);
         let lil = from.min(to);
         let amt = if lil == from { amt } else { 1.0 - amt };
-        lil + ((big - lil) as f32 * amt) as u8
+        lil + ((big - lil) as f32 * amt).round() as u8
     }
 
     let fr = (from   >> 16   & 0xFF) as u8;
