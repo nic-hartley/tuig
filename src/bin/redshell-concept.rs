@@ -64,6 +64,8 @@ async fn render_demo(io: &mut dyn IoSystem) {
         .profile("watching the render concept")
         .time("the time is now");
     io.draw(&s).await.unwrap();
+
+    sleep(Duration::from_secs(5)).await;
 }
 
 async fn intro_demo(io: &mut dyn IoSystem) {
