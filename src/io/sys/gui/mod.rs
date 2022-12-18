@@ -1,7 +1,7 @@
-use std::{io, time::{Instant, Duration}};
+use std::{io, time::{Instant, Duration}, sync::{Arc, Once}};
 
 use tokio::sync::mpsc;
-use winit::{window::{Window, WindowBuilder}, event_loop::{EventLoopBuilder, EventLoop}, dpi::LogicalSize, event::{Event, WindowEvent, ElementState, VirtualKeyCode}, platform::{run_return::EventLoopExtRunReturn, unix::EventLoopBuilderExtUnix}};
+use winit::{window::{Window, WindowBuilder}, event_loop::{EventLoopBuilder, EventLoop}, dpi::LogicalSize, event::{Event, WindowEvent, ElementState, VirtualKeyCode}, platform::run_return::EventLoopExtRunReturn};
 
 use crate::io::{output::Screen, XY, input::{Action, Key, MouseButton}};
 
@@ -158,7 +158,7 @@ fn char4pixel_pos(pos: XY, char_size: XY, win_size: XY) -> XY {
 struct WindowSpawnOutput {
     window: Window,
     action_recv: mpsc::UnboundedReceiver<Action>,
-    kill_send: (),
+    kill_send: Arc<Once>,
     runner: WindowRunner,
 }
 
@@ -166,6 +166,7 @@ fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
     let mut el = EventLoopBuilder::<Action>::with_user_event();
     #[cfg(all(unix))] {
         // winit allegedly doesn't work great with wayland
+        use winit::platform::unix::EventLoopBuilderExtUnix;
         el.with_x11();
     }
     let el = el.build();
@@ -177,9 +178,11 @@ fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
     let (act_send, action_recv) = mpsc::unbounded_channel();
 
-    let runner = WindowRunner { el, act_send, kill_recv: (), char_size, win_size, prev_cursor_pos: XY(0, 0) };
-
-    Ok(WindowSpawnOutput { window, action_recv, kill_send: (), runner })
+    let killer = Arc::new(Once::new());
+    let kill_recv = killer.clone();
+    let kill_send = killer.clone();
+    let runner = WindowRunner { el, act_send, kill_recv, char_size, win_size, prev_cursor_pos: XY(0, 0) };
+    Ok(WindowSpawnOutput { window, action_recv, kill_send, runner })
 }
 
 #[async_trait::async_trait]
@@ -213,7 +216,7 @@ pub trait GuiBackend: Send + Sync + Sized {
 pub struct Gui<B: GuiBackend> {
     window: Window,
     inputs: mpsc::UnboundedReceiver<Action>,
-    kill_el: (),
+    kill_el: Arc<Once>,
     backend: B,
 }
 
@@ -249,14 +252,14 @@ impl<B: GuiBackend> IoSystem for Gui<B> {
     }
 
     fn stop(&mut self) {
-        // TODO: Send the kill signal on self.kill_el
+        self.kill_el.call_once(|| {})
     }
 }
 
 pub struct WindowRunner {
     el: EventLoop<Action>,
     act_send: mpsc::UnboundedSender<Action>,
-    kill_recv: (),
+    kill_recv: Arc<Once>,
     char_size: XY,
     win_size: XY,
     prev_cursor_pos: XY,
@@ -266,7 +269,10 @@ impl IoRunner for WindowRunner {
     fn run(&mut self) {
         // the bugs don't bother us anyway -- we just don't want the entire process to exit when this is done.
         self.el.run_return(|ev, _, cf| {
-            // TODO: Check self.kill_recv to see if the kill signal is there
+            if self.kill_recv.is_completed() {
+                cf.set_exit();
+                return;
+            }
 
             // ensure that we check at least once a second to see if we should quit
             cf.set_wait_until(Instant::now() + Duration::from_secs(1));
