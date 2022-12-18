@@ -178,7 +178,7 @@ struct WindowSpawnOutput {
 }
 
 fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
-    let mut el = EventLoopBuilder::<Action>::with_user_event().build();
+    let el = EventLoopBuilder::<Action>::with_user_event().build();
     let window = WindowBuilder::new()
         .with_inner_size(LogicalSize::new(win_size.x() as u32, win_size.y() as u32))
         .with_resizable(false)
