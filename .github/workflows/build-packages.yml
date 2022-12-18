@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         platform: [ubuntu, windows, macos]
-        sys: [cli]
+        sys: [cli, gui_softbuffer]
         include:
         - ext: ''
         - platform: windows
