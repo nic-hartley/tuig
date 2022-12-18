@@ -14,7 +14,7 @@ use redshell::{
     },
     text, GameState,
 };
-use tokio::time::sleep;
+use tokio::time::{sleep, interval};
 
 pub fn load_or_die() -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
     let errs = match sys::load() {
@@ -145,82 +145,54 @@ async fn mouse_demo(io: &mut dyn IoSystem) {
     s.textbox(text!(black on_white "Press any keyboard button to exit"));
     io.draw(&s).await.unwrap();
     let mut at = XY(0, 0);
+    let mut render_tick = interval(Duration::from_secs_f32(0.01));
+    let mut last_text = String::new();
+    let mut text = String::new();
     loop {
-        let text;
-        match io.input().await.unwrap() {
-            Action::KeyPress { .. } | Action::KeyRelease { .. } | Action::Closed => break,
-            Action::MousePress { button } => {
-                text = format!("{:?} button pressed", button);
+        tokio::select! {
+            _ = render_tick.tick() => {
+                if text == last_text {
+                    continue;
+                }
+                s.resize(io.size());
+                s.textbox(text!(black on_white "Press any keyboard button to exit"));
+                s.textbox(text!("{}"(text))).xy(at);
+                io.draw(&s).await.unwrap();
+                last_text = text.clone();
             }
-            Action::MouseRelease { button } => {
-                text = format!("{:?} button released", button);
+            Ok(Some(act)) = io.flush() => {
+                match act {
+                    Action::KeyPress { .. } | Action::KeyRelease { .. } | Action::Closed => break,
+                    Action::MousePress { button } => {
+                        text = format!("{:?} button pressed", button);
+                    }
+                    Action::MouseRelease { button } => {
+                        text = format!("{:?} button released", button);
+                    }
+                    Action::MouseMove { pos } => {
+                        text = format!("Moved to {:?}", pos);
+                        at = pos;
+                    }
+                    Action::Resized => {
+                        text = format!("Window resized");
+                    }
+                    Action::Paused => {
+                        text = format!("Application refuses to pause");
+                    }
+                    Action::Unpaused => {
+                        text = format!("Application was unpaused anyway");
+                    }
+                    Action::Unknown(desc) => {
+                        text = format!("Unknown input: {}", desc);
+                    }
+                    Action::Error(msg) => {
+                        text = format!("Error: {}", msg);
+                    }
+                };
             }
-            Action::MouseMove { pos } => {
-                text = format!("Moved to {:?}", pos);
-                at = pos;
-            }
-            Action::Resized => {
-                text = format!("Window resized");
-            }
-            Action::Paused => {
-                text = format!("Application refuses to pause");
-            }
-            Action::Unpaused => {
-                text = format!("Application was unpaused anyway");
-            }
-            Action::Unknown(desc) => {
-                text = format!("Unknown input: {}", desc);
-            }
-            Action::Error(msg) => {
-                text = format!("Error: {}", msg);
-            }
-        };
-        s.resize(io.size());
-        s.textbox(text!(black on_white "Press any keyboard button to exit"));
-        s.textbox(text!("{}"(text))).xy(at);
-        io.draw(&s).await.unwrap();
+        }
     }
 }
-
-// #[tokio::main]
-// async fn main() {
-//     let concepts = {
-//         type ConceptFn = for<'a> fn(&'a mut dyn IoSystem) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
-//         let mut map: HashMap<&'static str, ConceptFn> = HashMap::new();
-//         map.insert("render", |s| Box::pin(render_demo(s)));
-//         map.insert("intro", |s| Box::pin(intro_demo(s)));
-//         map.insert("chat", |s| Box::pin(chat_demo(s)));
-//         map.insert("mouse", |s| Box::pin(mouse_demo(s)));
-//         map
-//     };
-
-//     let mut args = args();
-//     let arg0 = args.next().expect("how did you have no argv[0]");
-//     if let Some(name) = args.next() {
-//         if let Some(func) = concepts.get(name.as_str()) {
-//             print!("Playing {}... ", name);
-//             stdout().flush().unwrap();
-//             {
-//                 let (mut iosys, mut runner) = load_or_die().await;
-//                 tokio::spawn(async move {
-//                     func(iosys.as_mut()).await;
-//                     iosys.stop();
-//                 });
-//                 runner.run()
-//             }
-//             println!(" Done.");
-//             return;
-//         }
-//     }
-//     println!("Show off some concept art, built on the actual UI toolkit of the game.");
-//     println!("Pass the name as the first parameter, i.e.:");
-//     println!("  {} <name>", arg0);
-//     println!();
-//     println!("Available concept art is:");
-//     for (k, _) in concepts {
-//         println!("- {}", k);
-//     }
-// }
 
 #[tokio::main]
 async fn run_concept(name: &str, iosys: &mut dyn IoSystem) {

@@ -1,6 +1,7 @@
 use std::io;
 
 use fontdue::{Font, FontSettings};
+use rayon::prelude::*;
 use winit::window::Window;
 
 use crate::io::{XY, output::Screen, clifmt::{Color, Formatted}};
@@ -98,10 +99,10 @@ impl GuiBackend for SoftbufferBackend {
         };
         let buffer_sz = (window_sz % self.ch_sz) / 2;
 
-        let mut screen_buf = vec![color_u32(Color::Black); window_sz.x() * window_sz.y()];
-        for y in 0..bounded_sz.y() {
+        // let mut screen_buf = vec![color_u32(Color::Black); window_sz.x() * window_sz.y()];
+        let char_rows = (0..bounded_sz.y()).into_par_iter().flat_map(|y| {
             // how many pixels down from the top this starts
-            let row = y * self.ch_sz.y() + buffer_sz.y();
+            let mut row_buf = vec![color_u32(Color::Black); window_sz.x() * self.ch_sz.y()];
             for x in 0..bounded_sz.x() {
                 // how many pixels right from the left this starts
                 let col = x * self.ch_sz.x() + buffer_sz.x();
@@ -141,10 +142,10 @@ impl GuiBackend for SoftbufferBackend {
 
                 // now we can actually move the rasterized character onto the screen!
                 for line_row in 0..self.ch_sz.y() {
-                    let dest_row = row + line_row - y_cutoff;
+                    let dest_row = line_row - y_cutoff;
                     let dest_start = (dest_row * window_sz.x()) + col - x_cutoff;
                     let dest_end = dest_start + self.ch_sz.x();
-                    let dest = &mut screen_buf[dest_start..dest_end];
+                    let dest = &mut row_buf[dest_start..dest_end];
 
                     if line_row < y_offset || line_row >= metrics.height + y_offset - y_cutoff {
                         dest.fill(bg);
@@ -167,7 +168,12 @@ impl GuiBackend for SoftbufferBackend {
                     }
                 }
             }
-        }
+            row_buf
+        });
+        let mut screen_buf = Vec::with_capacity(window_sz.x() * window_sz.y());
+        screen_buf.resize(window_sz.x() * buffer_sz.y(), color_u32(Color::Black));
+        screen_buf.par_extend(char_rows);
+        screen_buf.resize(window_sz.x() * window_sz.y(), color_u32(Color::Black));
 
         // SAFETY: if winit betrays us we have no recourse
         let mut wh = unsafe { softbuffer::GraphicsContext::new(window) }

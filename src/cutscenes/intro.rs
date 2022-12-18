@@ -233,7 +233,7 @@ async fn render_sleep(
 
         tokio::select! {
             _ = &mut timer => break,
-            _ = io.input() => io.flush().await?,
+            _ = io.input() => { io.flush().await?; }
         }
     }
     Ok(())

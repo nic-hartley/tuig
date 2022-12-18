@@ -37,14 +37,16 @@ pub trait IoSystem: Send {
     /// panic in the others if they're called after this one, especially `draw`.
     fn stop(&mut self);
 
-    /// Clear out queued events without processing them at all
-    async fn flush(&mut self) -> io::Result<()> {
-        while let Poll::Ready(res) = poll!(self.input()) {
+    /// Clear out queued events without processing them at all. Returns the last action found, or the first error.
+    /// Returns `None` if there was nothing queued.
+    async fn flush(&mut self) -> io::Result<Option<Action>> {
+        let mut last = None;
+        while let Poll::Ready(act) = poll!(self.input()) {
             // raise up errors if they occur
-            res?;
+            last = Some(act?);
             // otherwise nothing else needs to be done
         }
-        Ok(())
+        Ok(last)
     }
 }
 

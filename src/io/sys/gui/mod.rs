@@ -307,8 +307,9 @@ impl IoRunner for WindowRunner {
                 }
                 Event::WindowEvent { event: WindowEvent::CursorMoved { position, .. }, .. } => {
                     let position = XY(position.x as usize, position.y as usize);
+                    let position = char4pixel_pos(position, self.char_size, self.win_size);
                     if self.prev_cursor_pos != position {
-                        send!(Action::MouseMove { pos: char4pixel_pos(position, self.char_size, self.win_size) });
+                        send!(Action::MouseMove { pos: position });
                         self.prev_cursor_pos = position;
                     }
                 }
@@ -320,7 +321,8 @@ impl IoRunner for WindowRunner {
                         }
                     }
                 }
-                // TODO: Handle other mouse events
+                Event::Suspended => send!(Action::Paused),
+                Event::Resumed => send!(Action::Unpaused),
 
                 // other things can be ignored (for now)
                 _ => (),
