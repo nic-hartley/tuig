@@ -58,8 +58,10 @@ fn lerp(from: u32, to: u32, amt: f32) -> u32 {
 pub struct SoftbufferBackend {
     /// the font size, in whatever units fontdue likes
     scale: f32,
-    /// the font itself, parsed and optimized for the font size
-    font: Font,
+    /// the unbolded font
+    regular: Font,
+    /// the bolded font (all the metrics are based on unbolded)
+    bold: Font,
     /// the total size of one character in the font
     ch_sz: XY,
     /// how many pixels down from the top the character baseline is
@@ -71,20 +73,21 @@ pub struct SoftbufferBackend {
 #[async_trait::async_trait]
 impl GuiBackend for SoftbufferBackend {
     fn new(scale: f32) -> io::Result<Self> {
-        let font = Font::from_bytes(super::FONT_TTF, FontSettings { scale, ..Default::default() }).map_err(ioe4fe)?;
+        let regular = Font::from_bytes(super::REGULAR_TTF, FontSettings { scale, ..Default::default() }).map_err(ioe4fe)?;
+        let bold = Font::from_bytes(super::BOLD_TTF, FontSettings { scale, ..Default::default() }).map_err(ioe4fe)?;
 
-        let line_met = font.horizontal_line_metrics(scale).ok_or(ioe4fe("No horizontal line metrics"))?;
+        let line_met = regular.horizontal_line_metrics(scale).ok_or(ioe4fe("No horizontal line metrics"))?;
         // +1 to account for maybe having rounded ascent down
         // +1 to account for maybeh aving rounded descent up
         let height = line_met.new_line_size as usize + 2;
-        let width = font.metrics('m', scale).width;
+        let width = regular.metrics('m', scale).width;
         let ch_sz = XY(width, height);
 
         let line_baseline = line_met.ascent as usize + 1;
 
-        let underline_top = height - font.metrics('_', scale).height;
+        let underline_top = height - regular.metrics('_', scale).height;
 
-        Ok(Self { scale, font, ch_sz, line_baseline, underline_top })
+        Ok(Self { scale, regular, bold, ch_sz, line_baseline, underline_top })
     }
 
     fn char_size(&self) -> XY {
@@ -115,7 +118,8 @@ impl GuiBackend for SoftbufferBackend {
                 let fmt = cell.get_fmt();
 
                 // TODO: Select bold or normal font
-                let (metrics, char_buf) = self.font.rasterize(cell.ch, self.scale);
+                let font = if fmt.bold { &self.bold } else { &self.regular };
+                let (metrics, char_buf) = font.rasterize(cell.ch, self.scale);
 
                 let ch_bottom = metrics.height as i32;
                 // + because the axes are inverted (so really it's - (-metrics.ymin))

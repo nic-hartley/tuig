@@ -7,7 +7,8 @@ use crate::io::{output::Screen, XY, input::{Action, Key, MouseButton}};
 
 use super::{IoSystem, IoRunner};
 
-const FONT_TTF: &[u8] = include_bytes!("inconsolata.ttf");
+const REGULAR_TTF: &[u8] = include_bytes!("inconsolata-reg.ttf");
+const BOLD_TTF: &[u8] = include_bytes!("inconsolata-bold.ttf");
 
 fn key4vkc(vkc: Option<VirtualKeyCode>) -> Option<Key> {
     match vkc? {

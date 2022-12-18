@@ -39,6 +39,7 @@ async fn render_demo(io: &mut dyn IoSystem) {
     s.horizontal(1);
     s.vertical(0);
     let mut texts = Vec::new();
+    texts.extend(text!(underline "underline", " ", bold "bold", "\n"));
     for fg in Color::all() {
         texts.push(Text::of(format!("{} on:\n", fg.name())));
         let amt = Color::all().len();
@@ -53,8 +54,6 @@ async fn render_demo(io: &mut dyn IoSystem) {
             }
         }
     }
-
-    texts.extend(text!("\n", underline "underline", " ", bold "bold"));
 
     s.textbox(texts).pos(1, 2);
     s.header()
