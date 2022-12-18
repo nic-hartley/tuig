@@ -117,10 +117,7 @@ pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::R
         io.draw(&screen).await?;
 
         // wait until either the screen is resized, or a brief (randomized) period passes
-        tokio::select! {
-            _ = io.input() => {}
-            _ = sleep(0.01) => {}
-        }
+        sleep(0.01).await;
     }
 
     Ok(seeds[SHIFT_COUNT - 1])
@@ -194,6 +191,7 @@ pub async fn loading_text(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64)
         io.draw(&screen).await?;
 
         tokio::select! {
+            _ = sleep(0.01) => (),
             _ = sleep_until(show_next_time) => {
                 scroll += 1;
                 let delay = if scroll < lines.len() {
@@ -205,7 +203,6 @@ pub async fn loading_text(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64)
                 };
                 show_next_time = Instant::now() + Duration::from_secs_f32(delay);
             }
-            _ = io.input() => {}
         }
     }
 
@@ -236,7 +233,7 @@ async fn render_sleep(
 
         tokio::select! {
             _ = &mut timer => break,
-            _ = io.input() => (),
+            _ = io.input() => io.flush().await?,
         }
     }
     Ok(())
@@ -256,28 +253,36 @@ async fn name_input(
         let cur_text: Vec<_> = text.iter().chain(last_line.iter()).cloned().collect();
         render(io, screen, &cur_text).await?;
 
-        match io.input().await? {
-            Action::KeyPress { key: Key::Enter } if !name.is_empty() => return Ok(name),
-            Action::KeyPress { key: Key::Char(ch) } => {
-                if caps {
-                    name.extend(ch.to_uppercase())
-                } else {
-                    name.extend(ch.to_lowercase())
+        loop {
+            let mut redraw = true;
+            match io.input().await? {
+                Action::KeyPress { key: Key::Enter } if !name.is_empty() => return Ok(name),
+                Action::KeyPress { key: Key::Char(ch) } => {
+                    if caps {
+                        name.extend(ch.to_uppercase())
+                    } else {
+                        name.extend(ch.to_lowercase())
+                    }
                 }
+                Action::KeyPress {
+                    key: Key::Backspace,
+                } => {
+                    name.pop();
+                }
+                Action::KeyPress {
+                    key: Key::LeftShift | Key::RightShift,
+                } => caps = true,
+                Action::KeyRelease {
+                    key: Key::LeftShift | Key::RightShift,
+                } => caps = false,
+                // we want to redraw on resize but nothing else
+                Action::Resized => (),
+                // other inputs can get ignored
+                _ => redraw = false,
             }
-            Action::KeyPress {
-                key: Key::Backspace,
-            } => {
-                name.pop();
+            if redraw {
+                break;
             }
-            Action::KeyPress {
-                key: Key::LeftShift | Key::RightShift,
-            } => caps = true,
-            Action::KeyRelease {
-                key: Key::LeftShift | Key::RightShift,
-            } => caps = false,
-            // other inputs can get ignored
-            _ => (),
         }
         if name.is_empty() {
             last_line[1] = prompt.clone();
@@ -312,19 +317,27 @@ async fn do_choice<'a>(
 
         render(io, screen, &text).await?;
 
-        match io.input().await? {
-            Action::KeyPress { key: Key::Enter } => return Ok(opts[selected]),
-            Action::KeyPress { key: Key::Left } => {
-                if selected > 0 {
-                    selected -= 1;
+        loop {
+            let mut redraw = true;
+            match io.input().await? {
+                Action::KeyPress { key: Key::Enter } => return Ok(opts[selected]),
+                Action::KeyPress { key: Key::Left } => {
+                    if selected > 0 {
+                        selected -= 1;
+                    }
                 }
-            }
-            Action::KeyPress { key: Key::Right } => {
-                if selected < opts.len() - 1 {
-                    selected += 1;
+                Action::KeyPress { key: Key::Right } => {
+                    if selected < opts.len() - 1 {
+                        selected += 1;
+                    }
                 }
+                // we want to redraw on resize but nothing else
+                Action::Resized => (),
+                _ => redraw = false,
             }
-            _ => (),
+            if redraw {
+                break;
+            }
         }
     }
 }

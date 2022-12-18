@@ -163,9 +163,12 @@ struct WindowSpawnOutput {
 }
 
 fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
-    let el = EventLoopBuilder::<Action>::with_user_event()
-        .with_x11()
-        .build();
+    let mut el = EventLoopBuilder::<Action>::with_user_event();
+    #[cfg(all(unix))] {
+        // winit allegedly doesn't work great with wayland
+        el.with_x11();
+    }
+    let el = el.build();
     let window = WindowBuilder::new()
         .with_inner_size(LogicalSize::new(win_size.x() as u32, win_size.y() as u32))
         .with_resizable(false)
@@ -174,7 +177,7 @@ fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
     let (act_send, action_recv) = mpsc::unbounded_channel();
 
-    let runner = WindowRunner { el, act_send, kill_recv: (), char_size, win_size };
+    let runner = WindowRunner { el, act_send, kill_recv: (), char_size, win_size, prev_cursor_pos: XY(0, 0) };
 
     Ok(WindowSpawnOutput { window, action_recv, kill_send: (), runner })
 }
@@ -256,6 +259,7 @@ pub struct WindowRunner {
     kill_recv: (),
     char_size: XY,
     win_size: XY,
+    prev_cursor_pos: XY,
 }
 
 impl IoRunner for WindowRunner {
@@ -264,70 +268,57 @@ impl IoRunner for WindowRunner {
         self.el.run_return(|ev, _, cf| {
             // TODO: Check self.kill_recv to see if the kill signal is there
 
-            // ensure that we check around once a second to see if we should quit
+            // ensure that we check at least once a second to see if we should quit
             cf.set_wait_until(Instant::now() + Duration::from_secs(1));
 
-            let actions: [Option<Action>; 4];
-            macro_rules! set {
-                ( @@impl
-                    $( $a1:expr, $( $a2:expr, $( $a3:expr, $( $a4:expr, $( None, )* )? )? )? )?
-                ) => {
-                    actions = [
-                        $( $a1, $( $a2, $( $a3, $( $a4, )? )? )? )?
-                    ]
-                };
-                ( $( $act:expr ),* $(,)? ) => {
-                    set!(@@impl $( Some($act), )* None, None, None, None, )
-                };
+            macro_rules! send {
+                ( $( $act:expr ),* $(,)? ) => { {
+                    $(
+                        if let Err(_) = self.act_send.send( $act ) {
+                            // they hung up on us! how rude!
+                            cf.set_exit();
+                        }
+                    )*
+                } };
             }
             match ev {
-                Event::UserEvent(a) => set!(a),
-                Event::WindowEvent { event: WindowEvent::Resized(_) | WindowEvent::Moved(_), .. } => {
-                    set!(Action::Resized);
+                Event::UserEvent(a) => send!(a),
+                Event::WindowEvent { event: WindowEvent::Resized(_), .. } => {
+                    send!(Action::Resized);
                 }
                 Event::WindowEvent { event: WindowEvent::CloseRequested | WindowEvent::Destroyed, .. } => {
-                    set!(Action::Closed);
+                    send!(Action::Closed);
                 }
                 // TODO: Enable and handle IME -- useful for folks with compose keys
                 // for now this is good enough
                 Event::WindowEvent { event: WindowEvent::KeyboardInput { input, .. }, .. } => {
-                    match key4vkc(input.virtual_keycode) {
-                        Some(key) => match input.state {
-                            ElementState::Pressed => set!(Action::KeyPress { key }),
-                            ElementState::Released => set!(Action::KeyRelease { key }),
+                    if let Some(key) = key4vkc(input.virtual_keycode) {
+                        match input.state {
+                            ElementState::Pressed => send!(Action::KeyPress { key }),
+                            ElementState::Released => send!(Action::KeyRelease { key }),
                         }
-                        // not a key we care about
-                        None => return,
                     }
                 }
                 Event::WindowEvent { event: WindowEvent::CursorMoved { position, .. }, .. } => {
                     let position = XY(position.x as usize, position.y as usize);
-                    set!(Action::MouseMove { pos: char4pixel_pos(position, self.char_size, self.win_size) });
+                    if self.prev_cursor_pos != position {
+                        send!(Action::MouseMove { pos: char4pixel_pos(position, self.char_size, self.win_size) });
+                        self.prev_cursor_pos = position;
+                    }
                 }
                 Event::WindowEvent { event: WindowEvent::MouseInput { state, button, .. }, .. } => {
-                    match mb4button(button) {
-                        Some(button) => match state {
-                            ElementState::Pressed => set!(Action::MousePress { button }),
-                            ElementState::Released => set!(Action::MouseRelease { button }),
+                    if let Some(button) = mb4button(button) {
+                        match state {
+                            ElementState::Pressed => send!(Action::MousePress { button }),
+                            ElementState::Released => send!(Action::MouseRelease { button }),
                         }
-                        None => return,
                     }
                 }
                 // TODO: Handle other mouse events
 
                 // other things can be ignored (for now)
-                _ => return,
+                _ => (),
             };
-
-            for action in actions {
-                if let Some(action) = action {
-                    if let Err(_) = self.act_send.send(action) {
-                        // other end already hung up, wtaf
-                        cf.set_exit();
-                        break;
-                    }
-                }
-            }
         });
     }
 }

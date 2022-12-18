@@ -4,7 +4,9 @@
 
 #[cfg(feature = "__sys")]
 use std::collections::HashMap;
-use std::{io, sync::{Arc, Barrier}};
+use std::{io, sync::{Arc, Barrier}, task::Poll};
+
+use futures::poll;
 
 use super::{input::Action, output::Screen, XY};
 
@@ -34,6 +36,16 @@ pub trait IoSystem: Send {
     /// This will always be the last method called on this object (unless you count `Drop::drop`) so feel free to
     /// panic in the others if they're called after this one, especially `draw`.
     fn stop(&mut self);
+
+    /// Clear out queued events without processing them at all
+    async fn flush(&mut self) -> io::Result<()> {
+        while let Poll::Ready(res) = poll!(self.input()) {
+            // raise up errors if they occur
+            res?;
+            // otherwise nothing else needs to be done
+        }
+        Ok(())
+    }
 }
 
 /// The other half of an [`IoSystem`].

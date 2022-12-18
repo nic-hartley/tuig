@@ -29,7 +29,6 @@ fn color_u32(c: Color) -> u32 {
         Color::BrightMagenta => 0x00_FF_0F_FF,
         Color::BrightCyan    => 0x00_0F_FF_FF,
         Color::BrightWhite   => 0x00_FF_FF_FF,
-        Color::Default       => color_u32(Color::Black),
     }
 }
 

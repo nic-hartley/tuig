@@ -174,7 +174,6 @@ fn ct4rs_color(rs: RedshellColor) -> CrosstermColor {
         RedshellColor::Cyan => CrosstermColor::DarkCyan,
         RedshellColor::BrightWhite => CrosstermColor::White,
         RedshellColor::White => CrosstermColor::Grey,
-        RedshellColor::Default => CrosstermColor::Reset,
     }
 }
 

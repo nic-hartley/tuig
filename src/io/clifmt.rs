@@ -21,7 +21,6 @@ pub enum Color {
     Magenta = 5,
     Cyan = 6,
     White = 7,
-    Default = 9,
     BrightBlack = 60,
     BrightRed = 61,
     BrightGreen = 62,
@@ -78,7 +77,6 @@ impl Color {
             Color::BrightCyan => "bright cyan",
             Color::White => "white",
             Color::BrightWhite => "bright white",
-            Color::Default => "default",
         }
     }
 }
@@ -90,13 +88,7 @@ impl Distribution<Color> for Standard {
     }
 }
 
-impl Default for Color {
-    fn default() -> Self {
-        Self::Default
-    }
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Format {
     pub fg: Color,
     pub bg: Color,
@@ -107,12 +99,18 @@ pub struct Format {
 
 impl Format {
     pub const NONE: Self = Format {
-        fg: Color::Default,
-        bg: Color::Default,
+        fg: Color::White,
+        bg: Color::Black,
         bold: false,
         underline: false,
         invert: false,
     };
+}
+
+impl Default for Format {
+    fn default() -> Self {
+        Self::NONE
+    }
 }
 
 macro_rules! fmt_fn {
@@ -165,7 +163,6 @@ pub trait FormattedExt: Formatted + Sized {
         bright_cyan => fg = Color::BrightCyan,          on_bright_cyan => bg = Color::BrightCyan,
         white => fg = Color::White,                     on_white => bg = Color::White,
         bright_white => fg = Color::BrightWhite,        on_bright_white => bg = Color::BrightWhite,
-        default => fg = Color::Default,                 on_default => bg = Color::Default,
         underline => underline = true,
         bold => bold = true,
         invert => invert = true,
