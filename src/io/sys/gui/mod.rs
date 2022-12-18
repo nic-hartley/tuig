@@ -178,14 +178,7 @@ struct WindowSpawnOutput {
 }
 
 fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
-    let mut el = EventLoopBuilder::<Action>::with_user_event();
-    #[cfg(all(unix))]
-    {
-        // winit allegedly doesn't work great with wayland
-        use winit::platform::unix::EventLoopBuilderExtUnix;
-        el.with_x11();
-    }
-    let el = el.build();
+    let mut el = EventLoopBuilder::<Action>::with_user_event().build();
     let window = WindowBuilder::new()
         .with_inner_size(LogicalSize::new(win_size.x() as u32, win_size.y() as u32))
         .with_resizable(false)
