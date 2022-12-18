@@ -7,7 +7,8 @@ on:
     branches-ignore:
     - '**'
 jobs:
-  x86-plain:
+
+  plain-bin:
     strategy:
       matrix:
         platform: [ubuntu, windows, macos]
@@ -16,7 +17,7 @@ jobs:
         - ext: ''
         - platform: windows
           ext: '.exe'
-    name: Build x86-plain-${{ matrix.sys }}-${{ matrix.platform }}
+    name: Build plain-bin-${{ matrix.sys }}-${{ matrix.platform }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
     - uses: actions/cache@v3
@@ -31,19 +32,20 @@ jobs:
       with:
         path: ./target
         key: target-dir-${{matrix.platform}}-stable
+
     - uses: actions/checkout@v3
     - run: rustup default stable
-    # TODO: Replace with `plat_cli` and `plat_gui` eventually
-    - run: cargo build --release --features sys_${{ matrix.sys }}
+    # TODO: Replace with `plat_` eventually
+    - run: cargo build --release --features sys_${{ matrix.sys }} --bins
+
     - uses: actions/upload-artifact@v3
       with:
-        name: x86-plain-${{ matrix.sys }}-${{ matrix.platform }}
+        name: plain-bin-${{ matrix.sys }}-${{ matrix.platform }}
         path: |
           target/release/redshell${{ matrix.ext }}
         if-no-files-found: error
     - uses: actions/upload-artifact@v3
       with:
-        name: concept-x86-plain-${{ matrix.sys }}-${{ matrix.platform }}
+        name: plain-bin-concept-${{ matrix.sys }}-${{ matrix.platform }}
         path: |
-          target/release/redshell-concept${{ matrix.ext }}
         if-no-files-found: error

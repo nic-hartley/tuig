@@ -7,45 +7,21 @@ on:
     tags-ignore: '**'
     branches: '**'
   schedule:
-  # run twice a week to keep mostly up-to-date with nightly changes and new versions
+  # run twice a week to keep mostly up-to-date with crate updates, nightly
   - cron: '0 0 * * 0,3'
 jobs:
-  fmt-and-check:
-    strategy:
-      matrix:
-        rust: [stable, nightly, 1.59]
-    name: rustfmt and cargo check w/ Rust ${{ matrix.rust }}
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/cache@v3
-      with:
-        path: ~/.rustup/
-        key: rustup-ubuntu-${{ matrix.rust }}
-    - uses: actions/cache@v3
-      with:
-        path: ~/.cargo/registry
-        key: cargo-cache
-    - uses: actions/cache@v3
-      with:
-        path: ./target
-        key: target-dir-ubuntu-${{ matrix.rust }}
-    - uses: actions/checkout@v3
-    - run: rustup default ${{ matrix.rust }}
-    - run: rustup component add rustfmt
-    - run: cargo fmt --check
-    - run: cargo check --all-features
+
   test:
     strategy:
       matrix:
         rust: [stable, nightly, 1.59]
         platform: [windows, macos, ubuntu]
-        # TODO: features: [plat_x86, plat_steam, etc]
         include:
-        - failable: true
-        - rust: stable
-          failable: false
+        - fail_ok: false
+        - rust: nightly
+          fail_ok: true
     name: On ${{ matrix.platform }} w/ Rust ${{ matrix.rust }}
-    needs: fmt-and-check
+    needs: check
     runs-on: ${{ matrix.platform }}-latest
     steps:
     - uses: actions/cache@v3
@@ -60,7 +36,13 @@ jobs:
       with:
         path: ./target
         key: target-dir-${{ matrix.platform }}-${{ matrix.rust }}
+
     - uses: actions/checkout@v3
     - run: rustup default ${{ matrix.rust }}
+    - run: rustup component add rustfmt
+    - run: cargo fmt --check
+      continue-on-error: ${{ matrix.fail_ok }}
+    - run: cargo check --all-features
+      continue-on-error: ${{ matrix.fail_ok }}
     - run: cargo test --all-features
-      continue-on-error: ${{ matrix.failable }}
+      continue-on-error: ${{ matrix.fail_ok }}
