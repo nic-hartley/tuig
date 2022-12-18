@@ -64,6 +64,8 @@ pub struct SoftbufferBackend {
     ch_sz: XY,
     /// how many pixels down from the top the character baseline is
     line_baseline: usize,
+    /// how thick the underline should be, in fractions of a pixel
+    underline_top: usize,
 }
 
 #[async_trait::async_trait]
@@ -80,7 +82,9 @@ impl GuiBackend for SoftbufferBackend {
 
         let line_baseline = line_met.ascent as usize + 1;
 
-        Ok(Self { scale, font, ch_sz, line_baseline })
+        let underline_top = height - font.metrics('_', scale).height;
+
+        Ok(Self { scale, font, ch_sz, line_baseline, underline_top })
     }
 
     fn char_size(&self) -> XY {
@@ -108,7 +112,9 @@ impl GuiBackend for SoftbufferBackend {
                 let col = x * self.ch_sz.x() + buffer_sz.x();
 
                 let cell = &screen[y][x];
+                let fmt = cell.get_fmt();
 
+                // TODO: Select bold or normal font
                 let (metrics, char_buf) = self.font.rasterize(cell.ch, self.scale);
 
                 let ch_bottom = metrics.height as i32;
@@ -137,8 +143,8 @@ impl GuiBackend for SoftbufferBackend {
                     x_cutoff = -metrics.xmin as usize;
                 }
 
-                let fg = color_u32(cell.get_fmt().fg);
-                let bg = color_u32(cell.get_fmt().bg);
+                let fg = color_u32(fmt.fg);
+                let bg = color_u32(fmt.bg);
 
                 // now we can actually move the rasterized character onto the screen!
                 for line_row in 0..self.ch_sz.y() {
@@ -146,6 +152,11 @@ impl GuiBackend for SoftbufferBackend {
                     let dest_start = (dest_row * window_sz.x()) + col - x_cutoff;
                     let dest_end = dest_start + self.ch_sz.x();
                     let dest = &mut row_buf[dest_start..dest_end];
+
+                    if fmt.underline && line_row > self.underline_top {
+                        dest.fill(fg);
+                        continue;
+                    }
 
                     if line_row < y_offset || line_row >= metrics.height + y_offset - y_cutoff {
                         dest.fill(bg);
