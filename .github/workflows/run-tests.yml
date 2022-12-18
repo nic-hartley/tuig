@@ -1,5 +1,5 @@
 name: Run tests
-run-name: Testing ${{github.ref_name}} (${{github.sha}})
+run-name: Testing ${{github.ref_name}}
 # no permission for the token, this runs on pull requests
 permissions: {}
 on:
@@ -21,7 +21,6 @@ jobs:
         - rust: nightly
           fail_ok: true
     name: On ${{ matrix.platform }} w/ Rust ${{ matrix.rust }}
-    needs: check
     runs-on: ${{ matrix.platform }}-latest
     steps:
     - uses: actions/cache@v3
