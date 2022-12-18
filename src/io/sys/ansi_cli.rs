@@ -26,7 +26,7 @@ use crate::io::{
     XY,
 };
 
-use super::{IoSystem, IoRunner};
+use super::{IoRunner, IoSystem};
 
 macro_rules! mods {
     ( $mods:ident, $action:ident ) => {
@@ -119,7 +119,10 @@ impl IoRunner for CliRunner {
                             ct::KeyCode::Delete => Key::Delete,
                             ct::KeyCode::Insert => Key::Insert,
                             ct::KeyCode::Esc => Key::Escape,
-                            kc => unreachable!("unhandled keycode {:?}; should be handled earlier", kc),
+                            kc => unreachable!(
+                                "unhandled keycode {:?}; should be handled earlier",
+                                kc
+                            ),
                         };
                         try_send!(KeyPress { key: action_code });
                         try_send!(KeyRelease { key: action_code });
@@ -136,17 +139,29 @@ impl IoRunner for CliRunner {
                     mods!(modifiers, KeyPress);
                     let pos = XY(col as usize, row as usize);
                     match kind {
-                        ct::MouseEventKind::Up(btn) => try_send!(MouseRelease { button: io4ct_btn(btn) }),
-                        ct::MouseEventKind::Down(btn) => try_send!(MousePress { button: io4ct_btn(btn) }),
+                        ct::MouseEventKind::Up(btn) => try_send!(MouseRelease {
+                            button: io4ct_btn(btn)
+                        }),
+                        ct::MouseEventKind::Down(btn) => try_send!(MousePress {
+                            button: io4ct_btn(btn)
+                        }),
                         ct::MouseEventKind::Drag(_) => try_send!(MouseMove { pos }),
                         ct::MouseEventKind::Moved => try_send!(MouseMove { pos }),
                         ct::MouseEventKind::ScrollUp => {
-                            try_send!(MousePress { button: MouseButton::ScrollUp });
-                            try_send!(MousePress { button: MouseButton::ScrollUp });
+                            try_send!(MousePress {
+                                button: MouseButton::ScrollUp
+                            });
+                            try_send!(MousePress {
+                                button: MouseButton::ScrollUp
+                            });
                         }
                         ct::MouseEventKind::ScrollDown => {
-                            try_send!(MousePress { button: MouseButton::ScrollDown });
-                            try_send!(MousePress { button: MouseButton::ScrollDown });
+                            try_send!(MousePress {
+                                button: MouseButton::ScrollDown
+                            });
+                            try_send!(MousePress {
+                                button: MouseButton::ScrollDown
+                            });
                         }
                     }
                     mods!(modifiers, KeyRelease);
@@ -186,10 +201,7 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
     let mut bg = row[0].get_fmt().bg;
     let mut bold = row[0].get_fmt().bold;
     let mut underline = row[0].get_fmt().underline;
-    let mut attrs = [
-        Attribute::NormalIntensity,
-        Attribute::NoUnderline,
-    ];
+    let mut attrs = [Attribute::NormalIntensity, Attribute::NoUnderline];
     if bold {
         attrs[0] = Attribute::Bold;
     }
@@ -281,11 +293,17 @@ impl AnsiIo {
         }));
         let (queue_s, queue_r) = mpsc::unbounded_channel();
         let (stop_s, stop_r) = oneshot::channel();
-        let runner = CliRunner { actions: queue_s, stop: stop_r };
-        Ok((Self {
-            queue: queue_r,
-            stop: Some(stop_s),
-        }, runner))
+        let runner = CliRunner {
+            actions: queue_s,
+            stop: stop_r,
+        };
+        Ok((
+            Self {
+                queue: queue_r,
+                stop: Some(stop_s),
+            },
+            runner,
+        ))
     }
 }
 

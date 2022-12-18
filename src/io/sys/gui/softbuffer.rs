@@ -4,7 +4,11 @@ use fontdue::{Font, FontSettings};
 use rayon::prelude::*;
 use winit::window::Window;
 
-use crate::io::{XY, output::Screen, clifmt::{Color, Formatted}};
+use crate::io::{
+    clifmt::{Color, Formatted},
+    output::Screen,
+    XY,
+};
 
 use super::GuiBackend;
 
@@ -42,23 +46,23 @@ fn color_u32(c: Color) -> u32 {
 
     match c {
         // TODO: Tweak these colors to look as nice as possible
-        Color::Black         => hsv(000.0, 0.0, 0.05),
-        Color::Red           => hsv(000.0, 1.0, 0.75),
-        Color::Green         => hsv(120.0, 1.0, 0.75),
-        Color::Yellow        => hsv(060.0, 1.0, 0.75),
-        Color::Blue          => hsv(240.0, 0.7, 0.75),
-        Color::Magenta       => hsv(300.0, 1.0, 0.75),
-        Color::Cyan          => hsv(180.0, 1.0, 0.75),
-        Color::White         => hsv(000.0, 0.0, 0.75),
+        Color::Black => hsv(000.0, 0.0, 0.05),
+        Color::Red => hsv(000.0, 1.0, 0.75),
+        Color::Green => hsv(120.0, 1.0, 0.75),
+        Color::Yellow => hsv(060.0, 1.0, 0.75),
+        Color::Blue => hsv(240.0, 0.7, 0.75),
+        Color::Magenta => hsv(300.0, 1.0, 0.75),
+        Color::Cyan => hsv(180.0, 1.0, 0.75),
+        Color::White => hsv(000.0, 0.0, 0.75),
 
-        Color::BrightBlack   => hsv(000.0, 0.0, 1.0),
-        Color::BrightRed     => hsv(000.0, 1.0, 1.0),
-        Color::BrightGreen   => hsv(120.0, 1.0, 1.0),
-        Color::BrightYellow  => hsv(060.0, 1.0, 1.0),
-        Color::BrightBlue    => hsv(240.0, 1.0, 1.0),
+        Color::BrightBlack => hsv(000.0, 0.0, 1.0),
+        Color::BrightRed => hsv(000.0, 1.0, 1.0),
+        Color::BrightGreen => hsv(120.0, 1.0, 1.0),
+        Color::BrightYellow => hsv(060.0, 1.0, 1.0),
+        Color::BrightBlue => hsv(240.0, 1.0, 1.0),
         Color::BrightMagenta => hsv(300.0, 1.0, 1.0),
-        Color::BrightCyan    => hsv(180.0, 1.0, 1.0),
-        Color::BrightWhite   => hsv(000.0, 0.0, 1.0),
+        Color::BrightCyan => hsv(180.0, 1.0, 1.0),
+        Color::BrightWhite => hsv(000.0, 0.0, 1.0),
     }
 }
 
@@ -70,12 +74,12 @@ fn lerp(from: u32, to: u32, amt: f32) -> u32 {
         lil + ((big - lil) as f32 * amt).round() as u8
     }
 
-    let fr = (from   >> 16   & 0xFF) as u8;
-    let fg = (from   >> 8    & 0xFF) as u8;
-    let fb = (from   >> 0    & 0xFF) as u8;
-    let tr = (to     >> 16   & 0xFF) as u8;
-    let tg = (to     >> 8    & 0xFF) as u8;
-    let tb = (to     >> 0    & 0xFF) as u8;
+    let fr = (from >> 16 & 0xFF) as u8;
+    let fg = (from >> 8 & 0xFF) as u8;
+    let fb = (from >> 0 & 0xFF) as u8;
+    let tr = (to >> 16 & 0xFF) as u8;
+    let tg = (to >> 8 & 0xFF) as u8;
+    let tb = (to >> 0 & 0xFF) as u8;
 
     let r = lerp_u8(fr, tr, amt);
     let g = lerp_u8(fg, tg, amt);
@@ -102,10 +106,26 @@ pub struct SoftbufferBackend {
 #[async_trait::async_trait]
 impl GuiBackend for SoftbufferBackend {
     fn new(scale: f32) -> io::Result<Self> {
-        let regular = Font::from_bytes(super::REGULAR_TTF, FontSettings { scale, ..Default::default() }).map_err(ioe4fe)?;
-        let bold = Font::from_bytes(super::BOLD_TTF, FontSettings { scale, ..Default::default() }).map_err(ioe4fe)?;
+        let regular = Font::from_bytes(
+            super::REGULAR_TTF,
+            FontSettings {
+                scale,
+                ..Default::default()
+            },
+        )
+        .map_err(ioe4fe)?;
+        let bold = Font::from_bytes(
+            super::BOLD_TTF,
+            FontSettings {
+                scale,
+                ..Default::default()
+            },
+        )
+        .map_err(ioe4fe)?;
 
-        let line_met = regular.horizontal_line_metrics(scale).ok_or(ioe4fe("No horizontal line metrics"))?;
+        let line_met = regular
+            .horizontal_line_metrics(scale)
+            .ok_or(ioe4fe("No horizontal line metrics"))?;
         // +1 to account for maybe having rounded ascent down
         // +1 to account for maybeh aving rounded descent up
         let height = line_met.new_line_size as usize + 2;
@@ -116,7 +136,14 @@ impl GuiBackend for SoftbufferBackend {
 
         let underline_top = height - regular.metrics('_', scale).height;
 
-        Ok(Self { scale, regular, bold, ch_sz, line_baseline, underline_top })
+        Ok(Self {
+            scale,
+            regular,
+            bold,
+            ch_sz,
+            line_baseline,
+            underline_top,
+        })
     }
 
     fn char_size(&self) -> XY {

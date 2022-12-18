@@ -58,7 +58,7 @@ pub enum Action {
     /// User requested that the program pause temporarily
     Paused,
     /// User, having requested that the program pause temporarily, has since requested that it unpause
-    /// 
+    ///
     /// This may be fired spuriously, i.e. without an associated [`Paused`][Self::Paused]. These must be ignored.
     Unpaused,
     /// Some unknown input was received, with a description of what it was

@@ -1,11 +1,25 @@
-use std::{io, time::{Instant, Duration}, sync::{Arc, Once}};
+use std::{
+    io,
+    sync::{Arc, Once},
+    time::{Duration, Instant},
+};
 
 use tokio::sync::mpsc;
-use winit::{window::{Window, WindowBuilder}, event_loop::{EventLoopBuilder, EventLoop}, dpi::LogicalSize, event::{Event, WindowEvent, ElementState, VirtualKeyCode}, platform::run_return::EventLoopExtRunReturn};
+use winit::{
+    dpi::LogicalSize,
+    event::{ElementState, Event, VirtualKeyCode, WindowEvent},
+    event_loop::{EventLoop, EventLoopBuilder},
+    platform::run_return::EventLoopExtRunReturn,
+    window::{Window, WindowBuilder},
+};
 
-use crate::io::{output::Screen, XY, input::{Action, Key, MouseButton}};
+use crate::io::{
+    input::{Action, Key, MouseButton},
+    output::Screen,
+    XY,
+};
 
-use super::{IoSystem, IoRunner};
+use super::{IoRunner, IoSystem};
 
 const REGULAR_TTF: &[u8] = include_bytes!("inconsolata-reg.ttf");
 const BOLD_TTF: &[u8] = include_bytes!("inconsolata-bold.ttf");
@@ -165,7 +179,8 @@ struct WindowSpawnOutput {
 
 fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
     let mut el = EventLoopBuilder::<Action>::with_user_event();
-    #[cfg(all(unix))] {
+    #[cfg(all(unix))]
+    {
         // winit allegedly doesn't work great with wayland
         use winit::platform::unix::EventLoopBuilderExtUnix;
         el.with_x11();
@@ -182,8 +197,20 @@ fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
     let killer = Arc::new(Once::new());
     let kill_recv = killer.clone();
     let kill_send = killer.clone();
-    let runner = WindowRunner { el, act_send, kill_recv, char_size, win_size, prev_cursor_pos: XY(0, 0) };
-    Ok(WindowSpawnOutput { window, action_recv, kill_send, runner })
+    let runner = WindowRunner {
+        el,
+        act_send,
+        kill_recv,
+        char_size,
+        win_size,
+        prev_cursor_pos: XY(0, 0),
+    };
+    Ok(WindowSpawnOutput {
+        window,
+        action_recv,
+        kill_send,
+        runner,
+    })
 }
 
 #[async_trait::async_trait]
@@ -194,10 +221,10 @@ pub trait GuiBackend: Send + Sync + Sized {
     fn new(font_size: f32) -> io::Result<Self>;
 
     /// Reset the renderer to use a new font size.
-    /// 
+    ///
     /// The default implementation simply destroys the old renderer and replaces it in-place with a new one, but there
     /// may be more efficient implementations for any given backend.
-    /// 
+    ///
     /// This doesn't need to re-render anything, but it cannot break the current window.
     fn renew(&mut self, font_size: f32) -> io::Result<()> {
         let new = Self::new(font_size)?;
@@ -206,7 +233,7 @@ pub trait GuiBackend: Send + Sync + Sized {
     }
 
     /// Render a screen onto the window.
-    /// 
+    ///
     /// This must only return when the rendering is as definitively complete as the backend can easily determine.
     async fn render(&self, window: &Window, screen: &Screen) -> io::Result<()>;
 
@@ -226,8 +253,21 @@ impl<B: GuiBackend> Gui<B> {
         let backend = B::new(font_size)?;
         let char_size = backend.char_size();
         let win_size = char_size * XY(80, 25);
-        let WindowSpawnOutput { window, action_recv: inputs, kill_send, runner } = spawn_window(char_size, win_size)?;
-        Ok((Self { window, inputs, kill_el: kill_send, backend }, runner))
+        let WindowSpawnOutput {
+            window,
+            action_recv: inputs,
+            kill_send,
+            runner,
+        } = spawn_window(char_size, win_size)?;
+        Ok((
+            Self {
+                window,
+                inputs,
+                kill_el: kill_send,
+                backend,
+            },
+            runner,
+        ))
     }
 }
 
@@ -248,8 +288,10 @@ impl<B: GuiBackend> IoSystem for Gui<B> {
     }
 
     async fn input(&mut self) -> io::Result<Action> {
-        self.inputs.recv().await
-            .ok_or(io::Error::new(io::ErrorKind::BrokenPipe, "input loop has terminated unexpectedly"))
+        self.inputs.recv().await.ok_or(io::Error::new(
+            io::ErrorKind::BrokenPipe,
+            "input loop has terminated unexpectedly",
+        ))
     }
 
     fn stop(&mut self) {
@@ -290,15 +332,24 @@ impl IoRunner for WindowRunner {
             }
             match ev {
                 Event::UserEvent(a) => send!(a),
-                Event::WindowEvent { event: WindowEvent::Resized(_), .. } => {
+                Event::WindowEvent {
+                    event: WindowEvent::Resized(_),
+                    ..
+                } => {
                     send!(Action::Resized);
                 }
-                Event::WindowEvent { event: WindowEvent::CloseRequested | WindowEvent::Destroyed, .. } => {
+                Event::WindowEvent {
+                    event: WindowEvent::CloseRequested | WindowEvent::Destroyed,
+                    ..
+                } => {
                     send!(Action::Closed);
                 }
                 // TODO: Enable and handle IME -- useful for folks with compose keys
                 // for now this is good enough
-                Event::WindowEvent { event: WindowEvent::KeyboardInput { input, .. }, .. } => {
+                Event::WindowEvent {
+                    event: WindowEvent::KeyboardInput { input, .. },
+                    ..
+                } => {
                     if let Some(key) = key4vkc(input.virtual_keycode) {
                         match input.state {
                             ElementState::Pressed => send!(Action::KeyPress { key }),
@@ -306,7 +357,10 @@ impl IoRunner for WindowRunner {
                         }
                     }
                 }
-                Event::WindowEvent { event: WindowEvent::CursorMoved { position, .. }, .. } => {
+                Event::WindowEvent {
+                    event: WindowEvent::CursorMoved { position, .. },
+                    ..
+                } => {
                     let position = XY(position.x as usize, position.y as usize);
                     let position = char4pixel_pos(position, self.char_size, self.win_size);
                     if self.prev_cursor_pos != position {
@@ -314,7 +368,10 @@ impl IoRunner for WindowRunner {
                         self.prev_cursor_pos = position;
                     }
                 }
-                Event::WindowEvent { event: WindowEvent::MouseInput { state, button, .. }, .. } => {
+                Event::WindowEvent {
+                    event: WindowEvent::MouseInput { state, button, .. },
+                    ..
+                } => {
                     if let Some(button) = mb4button(button) {
                         match state {
                             ElementState::Pressed => send!(Action::MousePress { button }),

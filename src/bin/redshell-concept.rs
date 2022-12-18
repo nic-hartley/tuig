@@ -1,7 +1,4 @@
-use std::{
-    env,
-    time::Duration, process, thread,
-};
+use std::{env, process, thread, time::Duration};
 
 use redshell::{
     app::{App, ChatApp},
@@ -9,12 +6,12 @@ use redshell::{
     io::{
         input::{Action, Key},
         output::{Color, FormattedExt, Screen, Text},
-        sys::{self, IoSystem, IoRunner},
+        sys::{self, IoRunner, IoSystem},
         XY,
     },
     text, GameState,
 };
-use tokio::time::{sleep, interval};
+use tokio::time::{interval, sleep};
 
 pub fn load_or_die() -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
     let errs = match sys::load() {
@@ -208,7 +205,8 @@ async fn run_concept(name: &str, iosys: &mut dyn IoSystem) {
 }
 
 fn help() -> ! {
-    println!(r##"
+    println!(
+        r##"
 Show off some concept art, built on the actual UI toolkit of the game.
 Pass the name as the first parameter, i.e.:
     redshell-concept <name>
@@ -218,7 +216,8 @@ Available concept art is:
 - intro:    The game's actual intro, separated into its own thing
 - chat:     A self-playing demo of the chatroom
 - mouse:    Showing off mouse interaction
-"##);
+"##
+    );
     process::exit(0)
 }
 
