@@ -186,20 +186,15 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
     let mut bg = row[0].get_fmt().bg;
     let mut bold = row[0].get_fmt().bold;
     let mut underline = row[0].get_fmt().underline;
-    let mut invert = row[0].get_fmt().invert;
     let mut attrs = [
         Attribute::NormalIntensity,
         Attribute::NoUnderline,
-        Attribute::NoReverse,
     ];
     if bold {
         attrs[0] = Attribute::Bold;
     }
     if underline {
         attrs[1] = Attribute::Underlined;
-    }
-    if invert {
-        attrs[2] = Attribute::Reverse;
     }
     crossterm::queue!(
         &mut out,
@@ -235,15 +230,6 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
                 Attribute::Underlined
             } else {
                 Attribute::NoUnderline
-            };
-            crossterm::queue!(&mut out, SetAttribute(attr))?;
-        }
-        if cell.get_fmt().invert != invert {
-            invert = cell.get_fmt().invert;
-            let attr = if invert {
-                Attribute::Reverse
-            } else {
-                Attribute::NoReverse
             };
             crossterm::queue!(&mut out, SetAttribute(attr))?;
         }

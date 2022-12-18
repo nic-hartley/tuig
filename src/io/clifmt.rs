@@ -94,7 +94,6 @@ pub struct Format {
     pub bg: Color,
     pub bold: bool,
     pub underline: bool,
-    pub invert: bool,
 }
 
 impl Format {
@@ -103,7 +102,6 @@ impl Format {
         bg: Color::Black,
         bold: false,
         underline: false,
-        invert: false,
     };
 }
 
@@ -165,7 +163,6 @@ pub trait FormattedExt: Formatted + Sized {
         bright_white => fg = Color::BrightWhite,        on_bright_white => bg = Color::BrightWhite,
         underline => underline = true,
         bold => bold = true,
-        invert => invert = true,
     }
 }
 

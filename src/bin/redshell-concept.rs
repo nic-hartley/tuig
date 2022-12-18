@@ -54,7 +54,7 @@ async fn render_demo(io: &mut dyn IoSystem) {
         }
     }
 
-    texts.extend(text!("\n", underline "underline", " ", bold "bold", " ", invert "invert", " "));
+    texts.extend(text!("\n", underline "underline", " ", bold "bold"));
 
     s.textbox(texts).pos(1, 2);
     s.header()
@@ -142,7 +142,7 @@ async fn chat_demo(io: &mut dyn IoSystem) {
 
 async fn mouse_demo(io: &mut dyn IoSystem) {
     let mut s = Screen::new(io.size());
-    s.textbox(text!(invert "Press any keyboard button to exit"));
+    s.textbox(text!(black on_white "Press any keyboard button to exit"));
     io.draw(&s).await.unwrap();
     let mut at = XY(0, 0);
     loop {
@@ -176,7 +176,7 @@ async fn mouse_demo(io: &mut dyn IoSystem) {
             }
         };
         s.resize(io.size());
-        s.textbox(text!(invert "Press any keyboard button to exit"));
+        s.textbox(text!(black on_white "Press any keyboard button to exit"));
         s.textbox(text!("{}"(text))).xy(at);
         io.draw(&s).await.unwrap();
     }
