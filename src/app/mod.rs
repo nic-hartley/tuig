@@ -11,15 +11,17 @@ use crate::{
 /// events may be batched when the app is offscreen, so that systems and the onscreen app can be updated on time.
 #[enum_dispatch::enum_dispatch]
 pub trait App {
-    // TODO: Replace String with actual events
-
     /// The name of this app's tab in the header. (should be constant, hence &'static)
     fn name(&self) -> &'static str;
 
     /// Take a single input action, returning any new events generated as a result.
-    fn input(&mut self, a: Action, events: &mut Vec<Event>);
-    /// Receive at least one event, to update the rendered game state.
-    fn on_event(&mut self, evs: &[Event]);
+    /// 
+    /// Returns `true` if it will need to be redrawn, or `false` otherwise.
+    fn input(&mut self, a: Action, events: &mut Vec<Event>) -> bool;
+    /// Receive an event, in case the app needs to care to render it.
+    /// 
+    /// Returns `true` if it will need to be redrawn, or `false` otherwise.
+    fn on_event(&mut self, evs: &Event) -> bool;
 
     /// The number of notifications this app has.
     fn notifs(&self) -> usize;

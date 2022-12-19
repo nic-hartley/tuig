@@ -121,7 +121,9 @@ async fn chat_demo(io: &mut dyn IoSystem) {
     ];
     for (chats, inputs) in frames.into_iter() {
         s.resize(io.size());
-        app.on_event(&chats);
+        for chat in chats {
+            app.on_event(&chat);
+        }
         for input in inputs.into_iter() {
             let mut _events = vec![];
             app.input(input.clone(), &mut _events);
