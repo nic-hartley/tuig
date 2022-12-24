@@ -104,7 +104,7 @@ impl IoRunner for CliRunner {
                     } else {
                         let action_code = match code {
                             ct::KeyCode::Char(c) => Key::Char(c),
-                            ct::KeyCode::F(c) => Key::F(c),
+                            ct::KeyCode::F(c) => Key::F(c as usize),
                             ct::KeyCode::Backspace => Key::Backspace,
                             ct::KeyCode::Enter => Key::Enter,
                             ct::KeyCode::Left => Key::Left,

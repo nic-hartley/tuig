@@ -243,7 +243,7 @@ macro_rules! text {
         $( $name:ident )*
         $text:literal
         $( ( $( $arg:expr ),* $(,)? ) )?
-    ),+ $(,)? ) => {
+    ),* $(,)? ) => {
         {
             #[allow(unused_imports)]
             use $crate::io::clifmt::{FormattedExt as _};
@@ -252,7 +252,7 @@ macro_rules! text {
                     $crate::io::clifmt::Text::of(
                         format!( $text $(, $( $arg ),* )? )
                     ) $( . $name () )*
-                ),+
+                ),*
             ]
         }
     };

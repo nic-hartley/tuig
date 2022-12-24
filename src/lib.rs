@@ -1,7 +1,7 @@
+pub mod agents;
 pub mod app;
 pub mod constants;
 pub mod cutscenes;
-pub mod event;
 pub mod io;
 mod util;
 

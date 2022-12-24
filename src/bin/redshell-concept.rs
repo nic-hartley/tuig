@@ -1,8 +1,8 @@
 use std::{env, process, thread, time::Duration};
 
 use redshell::{
+    agents::Event,
     app::{App, ChatApp},
-    event::Event,
     io::{
         input::{Action, Key},
         output::{Color, FormattedExt, Screen, Text},

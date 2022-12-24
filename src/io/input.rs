@@ -3,7 +3,7 @@ use crate::io::XY;
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Key {
     Char(char),
-    F(u8),
+    F(usize),
     Escape,
     Backspace,
     Up,

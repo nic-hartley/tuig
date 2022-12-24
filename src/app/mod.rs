@@ -1,5 +1,5 @@
 use crate::{
-    event::Event,
+    agents::Event,
     io::{input::Action, output::Screen},
     GameState,
 };
@@ -15,25 +15,31 @@ pub trait App {
     fn name(&self) -> &'static str;
 
     /// Take a single input action, returning any new events generated as a result.
-    /// 
+    ///
     /// Returns `true` if it will need to be redrawn, or `false` otherwise.
     fn input(&mut self, a: Action, events: &mut Vec<Event>) -> bool;
     /// Receive an event, in case the app needs to care to render it.
-    /// 
+    ///
     /// Returns `true` if it will need to be redrawn, or `false` otherwise.
-    fn on_event(&mut self, evs: &Event) -> bool;
+    fn on_event(&mut self, ev: &Event) -> bool;
 
     /// The number of notifications this app has.
     fn notifs(&self) -> usize;
     /// Display the game state on screen.
-    fn render(&self, state: &GameState, screen: &mut Screen);
+    ///
+    /// You can be sure that this will never be called except when the module is the active one; feel free to use it
+    /// for e.g. clearing notifications.
+    fn render(&mut self, state: &GameState, screen: &mut Screen);
 }
 
 mod chat;
 pub use chat::ChatApp;
+mod cli;
+pub use cli::CliApp;
 
 #[enum_dispatch::enum_dispatch(App)]
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Apps {
     ChatApp,
+    CliApp,
 }
