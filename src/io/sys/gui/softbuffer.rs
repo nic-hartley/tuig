@@ -55,7 +55,7 @@ fn color_u32(c: Color) -> u32 {
         Color::Cyan => hsv(180.0, 1.0, 0.75),
         Color::White => hsv(000.0, 0.0, 0.75),
 
-        Color::BrightBlack => hsv(000.0, 0.0, 1.0),
+        Color::BrightBlack => hsv(000.0, 0.0, 0.5),
         Color::BrightRed => hsv(000.0, 1.0, 1.0),
         Color::BrightGreen => hsv(120.0, 1.0, 1.0),
         Color::BrightYellow => hsv(060.0, 1.0, 1.0),
