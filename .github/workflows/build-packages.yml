@@ -43,9 +43,5 @@ jobs:
         name: plain-bin-${{ matrix.sys }}-${{ matrix.platform }}
         path: |
           target/release/redshell${{ matrix.ext }}
-        if-no-files-found: error
-    - uses: actions/upload-artifact@v3
-      with:
-        name: plain-bin-concept-${{ matrix.sys }}-${{ matrix.platform }}
-        path: |
+          target/release/redshell-concept${{ matrix.ext }}
         if-no-files-found: error
