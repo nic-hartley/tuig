@@ -83,10 +83,7 @@ impl ControlFlow {
 
 #[cfg(test)]
 mod cf_test {
-    use std::{
-        thread::sleep,
-        time::Duration,
-    };
+    use std::time::Duration;
 
     use mock_instant::MockClock;
 
