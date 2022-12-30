@@ -1,7 +1,7 @@
 use std::{collections::VecDeque, mem};
 
 use crate::{
-    agents::{Event, tools::AutocompleteType},
+    agents::{Event, tools::{AutocompleteType, BsdCompleter}},
     io::{
         clifmt::Text,
         input::{Action, Key},
@@ -66,13 +66,17 @@ impl CliApp {
     }
 
     fn autocomplete(&self, line: &str) -> String {
+        let completer = BsdCompleter::new()
+            .argument('f', AutocompleteType::LocalFile)
+            .argument('z', AutocompleteType::choices(&["compress", "decompress"]))
+            .flag('v')
+            .flag('q');
         let mut fake_gs = GameState::for_player("spork".into());
         fake_gs.files.insert("awoo".into(), vec![]);
         fake_gs.files.insert("awful".into(), vec![]);
         fake_gs.files.insert("thingy".into(), vec![]);
         fake_gs.files.insert("machomp".into(), vec![]);
-        AutocompleteType::LocalFile
-            .complete(line, &fake_gs)
+        completer.complete(line, &fake_gs)
     }
 
     fn keypress(&mut self, key: Key, events: &mut Vec<Event>) -> bool {

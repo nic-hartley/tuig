@@ -2,8 +2,8 @@ use crate::GameState;
 
 use super::Agent;
 
-mod completers;
-pub use completers::AutocompleteType;
+mod args;
+pub use args::{AutocompleteType, BsdCompleter};
 
 pub trait Tool {
     fn autocomplete(&self, line: &str, state: &GameState) -> String;

@@ -16,31 +16,34 @@ pub use bsd::BsdCompleter;
 use crate::GameState;
 
 fn find_autocomplete(so_far: &str, options: impl IntoIterator<Item=impl AsRef<str>>) -> String {
-    let mut res = String::new();
+    let mut res: Option<String> = None;
     for opt in options.into_iter() {
         let opt = opt.as_ref();
         if !opt.starts_with(so_far) {
             continue;
         }
         let rest = &opt[so_far.len()..];
-        if res.is_empty() {
-            res = rest.into();
-            continue;
+        if let Some(prev) = &mut res {
+            let eq_find = rest
+                .chars()
+                .zip(prev.chars())
+                .enumerate()
+                .find(|(_, (o, r))| o != r);
+            let eq_idx = eq_find.map(|(i, _)| i).unwrap_or(0);
+            prev.truncate(eq_idx);
+        } else {
+            res = Some(rest.into());
         }
-        let eq_find = rest
-            .chars()
-            .zip(res.chars())
-            .enumerate()
-            .find(|(_, (o, r))| o != r);
-        let eq_idx = eq_find.map(|(i, _)| i).unwrap_or(0);
-        res.truncate(eq_idx);
     }
-    res
+    res.unwrap_or(String::new())
 }
 
 /// Describes the various things that can be autocompleted. Used to indicate value types in the various autocompleters
 /// and holds a little bit of common logic across all of them.
+#[derive(Debug)]
 pub enum AutocompleteType {
+    /// This cannot be autocompleted
+    None,
     /// One of a fixed list of choices
     Choices(Vec<String>),
     /// A file on the local machine
@@ -56,8 +59,13 @@ pub enum AutocompleteType {
 }
 
 impl AutocompleteType {
+    pub fn choices(vals: impl IntoIterator<Item = impl AsRef<str>>) -> Self {
+        Self::Choices(vals.into_iter().map(|s| s.as_ref().to_owned()).collect())
+    }
+
     pub fn complete(&self, so_far: &str, state: &GameState) -> String {
         match self {
+            Self::None => String::new(),
             Self::Choices(opts) => find_autocomplete(so_far, opts),
             Self::LocalFile => find_autocomplete(so_far, state.files.keys()),
             _ => unimplemented!(),
