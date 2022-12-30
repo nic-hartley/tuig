@@ -52,15 +52,15 @@ impl Default for CliApp {
 impl CliApp {
     fn add_scroll(&mut self, line: Vec<Text>) {
         if self.scroll.len() == MAX_SCROLL_LINES {
-            self.scroll.pop_back();
+            self.scroll.pop_front();
         }
-        self.scroll.push_front(line.clone());
+        self.scroll.push_back(line.clone());
         self.unread += 1;
     }
 
     fn run_cmd(&mut self, line: String, events: &mut Vec<Event>) {
-        self.add_scroll(text!("> ", bright_white "{}"(line)));
-        events.push(Event::output(text!("command run: {}"(line))));
+        self.add_scroll(text!("> ", bright_white "{}"(line), "\n"));
+        events.push(Event::output(text!("command run: {}\n"(line))));
         events.push(Event::CommandDone);
         self.history.push(line);
     }
@@ -87,7 +87,7 @@ impl CliApp {
             // TODO: up/down to scroll through history
             Key::Tab => {
                 if self.autocomplete.is_empty() {
-                    self.autocomplete = self.autocomplete(&self.line);
+                    self.autocomplete = self.autocomplete(&self.line[..self.cursor]);
                 } else {
                     self.line.insert_str(self.cursor, &self.autocomplete);
                     self.cursor += self.autocomplete.len();
@@ -111,25 +111,37 @@ impl CliApp {
             return vec![];
         }
         if self.cursor == self.line.len() {
-            let cursor_ch = if self.autocomplete.is_empty() { " " } else { &self.autocomplete[..1] };
-            let rest = if self.autocomplete.len() < 1 { "" } else { &self.autocomplete[1..] };
-            text!(
-                "> ",
-                bright_white "{}"(self.line),
-                underline bright_black "{}"(cursor_ch),
-                bright_black "{}"(rest),
-            )
+            if self.autocomplete.is_empty() {
+                text![
+                    "> ",
+                    bright_white "{}"(self.line),
+                    bright_white underline " ",
+                ]
+            } else {
+                text![
+                    "> ",
+                    bright_white "{}"(self.line),
+                    bright_black underline "{}"(&self.autocomplete[..1]),
+                    bright_black "{}"(&self.autocomplete[1..]),
+                ]
+            }
         } else {
-            let pre_cursor = &self.line[..self.cursor];
-            let cursor_ch = &self.line[self.cursor..self.cursor+1];
-            let post_cursor = &self.line[self.cursor+1..];
-            text!(
-                "> ",
-                bright_white "{}"(pre_cursor),
-                bright_white underline "{}"(cursor_ch),
-                bright_white "{}"(post_cursor),
-                bright_black "{}"(self.autocomplete),
-            )
+            if self.autocomplete.is_empty() {
+                text![
+                    "> ",
+                    bright_white "{}"(&self.line[..self.cursor]),
+                    bright_white underline "{}"(&self.line[self.cursor..self.cursor+1]),
+                    bright_white "{}"(&self.line[self.cursor+1..]),
+                ]
+            } else {
+                text![
+                    "> ",
+                    bright_white "{}"(&self.line[..self.cursor]),
+                    bright_black underline "{}"(&self.autocomplete[..1]),
+                    bright_black "{}"(&self.autocomplete[1..]),
+                    bright_white "{}"(&self.line[self.cursor..]),
+                ]
+            }
         }
     }
 }
