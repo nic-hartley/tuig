@@ -1,7 +1,7 @@
 use std::{collections::VecDeque, mem};
 
 use crate::{
-    agents::Event,
+    agents::{Event, tools::AutocompleteType},
     io::{
         clifmt::Text,
         input::{Action, Key},
@@ -65,8 +65,8 @@ impl CliApp {
         self.history.push(line);
     }
 
-    fn autocomplete(&self, _line: &str) -> String {
-        "autocomplete".into()
+    fn autocomplete(&self, line: &str) -> String {
+        AutocompleteType::Choices(vec!["opt1".into(), "opt2".into(), "help".into()]).complete(line, &Default::default())
     }
 
     fn keypress(&mut self, key: Key, events: &mut Vec<Event>) -> bool {
@@ -89,12 +89,14 @@ impl CliApp {
                 if self.autocomplete.is_empty() {
                     self.autocomplete = self.autocomplete(&self.line);
                 } else {
-                    self.line.push_str(&self.autocomplete);
+                    self.line.insert_str(self.cursor, &self.autocomplete);
+                    self.cursor += self.autocomplete.len();
                     self.autocomplete = String::new();
                 }
                 return true;
             }
-            Key::End => {
+            Key::Enter => {
+                self.cursor = 0;
                 let line = mem::replace(&mut self.line, String::new());
                 self.run_cmd(line, events);
             }

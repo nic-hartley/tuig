@@ -133,11 +133,12 @@ async fn run(iosys: &mut dyn IoSystem) {
             "yotie",
             [
                 say "hey": 500,
-                say "how you doin?": 750,
+                say "how you doin?": 1500,
                 ask "good" => 1, "bad" => 2,
             ],
             [
-                say "ey that's nice": 500,
+                say "ey that's nice": 2000,
+                say "glad you're doing well": 500,
                 ask "thanks" =>  3,
             ],
             [
@@ -206,12 +207,9 @@ async fn run(iosys: &mut dyn IoSystem) {
                             tainted = true;
                         }
                     }
-                    Action::Closed | Action::KeyPress { key: Key::Escape } => {
-                        break;
-                    }
-                    other => {
-                        tainted |= apps[sel].input(other, &mut events);
-                    }
+                    Action::Closed => break,
+
+                    other => tainted |= apps[sel].input(other, &mut events),
                 }
             }
             _ = sleep(Duration::from_millis(50)) => {
