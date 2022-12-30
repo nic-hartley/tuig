@@ -13,6 +13,7 @@ jobs:
 
   test:
     strategy:
+      fail-fast: false
       matrix:
         rust: [stable, nightly, 1.59]
         platform: [windows, macos, ubuntu]
