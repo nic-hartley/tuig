@@ -792,6 +792,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "mock_instant"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "717e29a243b81f8130e31e24e04fb151b04a44b5a7d05370935f7d937e9de06d"
+
+[[package]]
 name = "ndk"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1153,6 +1159,7 @@ dependencies = [
  "enum_dispatch",
  "fontdue",
  "futures",
+ "mock_instant",
  "paste",
  "rand",
  "rayon",

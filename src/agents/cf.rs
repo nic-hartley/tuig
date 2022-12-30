@@ -3,8 +3,13 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
-    time::{Duration, Instant},
+    time::Duration,
 };
+
+#[cfg(test)]
+use mock_instant::Instant;
+#[cfg(not(test))]
+use std::time::Instant;
 
 /// See [`ControlFlow::Handle`].
 #[derive(Clone)]
@@ -80,10 +85,12 @@ impl ControlFlow {
 mod cf_test {
     use std::{
         thread::sleep,
-        time::{Duration, Instant},
+        time::Duration,
     };
 
-    use super::ControlFlow;
+    use mock_instant::MockClock;
+
+    use super::{ControlFlow, Instant};
 
     #[test]
     fn continue_ready() {
@@ -107,9 +114,9 @@ mod cf_test {
     fn sleep_until_readies_after_time() {
         let cf = ControlFlow::sleep_until(Instant::now() + Duration::from_millis(100));
         assert!(!cf.is_ready());
-        sleep(Duration::from_millis(60));
+        MockClock::advance(Duration::from_millis(60));
         assert!(!cf.is_ready());
-        sleep(Duration::from_millis(60));
+        MockClock::advance(Duration::from_millis(60));
         assert!(cf.is_ready());
     }
 
@@ -117,9 +124,9 @@ mod cf_test {
     fn sleep_for_readies_after_time() {
         let cf = ControlFlow::sleep_for(Duration::from_millis(100));
         assert!(!cf.is_ready());
-        sleep(Duration::from_millis(60));
+        MockClock::advance(Duration::from_millis(60));
         assert!(!cf.is_ready());
-        sleep(Duration::from_millis(60));
+        MockClock::advance(Duration::from_millis(60));
         assert!(cf.is_ready());
     }
 }
