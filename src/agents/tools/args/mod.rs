@@ -15,7 +15,7 @@ pub use bsd::BsdCompleter;
 
 use crate::GameState;
 
-fn find_autocomplete(so_far: &str, options: impl IntoIterator<Item=impl AsRef<str>>) -> String {
+fn find_autocomplete(so_far: &str, options: impl IntoIterator<Item = impl AsRef<str>>) -> String {
     let mut res: Option<String> = None;
     for opt in options.into_iter() {
         let opt = opt.as_ref();

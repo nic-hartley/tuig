@@ -18,7 +18,9 @@ pub struct BsdCompleter {
 
 impl BsdCompleter {
     pub fn new() -> Self {
-        Self { options: Default::default() }
+        Self {
+            options: Default::default(),
+        }
     }
 
     pub fn flag(mut self, ch: char) -> Self {
@@ -32,29 +34,26 @@ impl BsdCompleter {
     }
 
     pub fn complete(&self, line: &str, state: &GameState) -> String {
-        println!("completing {:?}", line);
         if let Some((opts, rest)) = line.split_once(' ') {
             // autocomplete arguments
-            println!("autocompleting arguments from {:?}", opts);
-            let mut kinds = opts.chars().filter_map(|c| self.options.get(&c).map(|o| o.as_ref()).flatten()).chain(repeat(&AutocompleteType::None));
+            let mut kinds = opts
+                .chars()
+                .filter_map(|c| self.options.get(&c).map(|o| o.as_ref()).flatten())
+                .chain(repeat(&AutocompleteType::None));
             let vals = rest.trim_start().split_whitespace();
             if rest.ends_with(char::is_whitespace) || rest.is_empty() {
                 // correct for split_whitespace trimming the end
                 for _ in 0..vals.count() {
                     kinds.next();
                 }
-                let last_kind = kinds.next().expect("iter chained with infinite repeat ran out");
+                let last_kind = kinds
+                    .next()
+                    .expect("iter chained with infinite repeat ran out");
                 last_kind.complete("", state)
             } else {
                 match vals.zip(&mut kinds).last() {
-                    Some((last_val, last_kind)) => {
-                        println!("completing {:?} as {:?}", last_val, last_kind);
-                        last_kind.complete(last_val, state)
-                    }
-                    None => {
-                        println!("nothing to complete (iterator was empty)");
-                        String::new()
-                    }
+                    Some((last_val, last_kind)) => last_kind.complete(last_val, state),
+                    None => String::new(),
                 }
             }
         } else {

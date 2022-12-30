@@ -1,7 +1,10 @@
 use std::{collections::VecDeque, mem};
 
 use crate::{
-    agents::{Event, tools::{AutocompleteType, BsdCompleter}},
+    agents::{
+        tools::{AutocompleteType, BsdCompleter},
+        Event,
+    },
     io::{
         clifmt::Text,
         input::{Action, Key},

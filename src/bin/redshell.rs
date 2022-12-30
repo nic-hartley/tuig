@@ -123,10 +123,8 @@ async fn run(iosys: &mut dyn IoSystem) {
     // TODO: multithreading
     let mut screen = Screen::new(iosys.size());
 
-    let mut apps: Vec<Box<dyn App>> = vec![
-        Box::new(ChatApp::default()),
-        Box::new(CliApp::default()),
-    ];
+    let mut apps: Vec<Box<dyn App>> =
+        vec![Box::new(ChatApp::default()), Box::new(CliApp::default())];
     let mut sel = 0;
     let mut agents: Vec<(Box<dyn Agent>, ControlFlow)> = vec![(
         npc!(
