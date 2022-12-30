@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::agents::tools::AutocompleteType;
+use super::AutocompleteType;
 
 /// Allows for easy completion of BSD-style commands, e.g.:
 ///

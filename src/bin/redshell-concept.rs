@@ -74,10 +74,7 @@ async fn chat_demo(io: &mut dyn IoSystem) {
     let mut s = Screen::new(io.size());
 
     let mut app = ChatApp::default();
-    let state = GameState {
-        player_name: "player".into(),
-        apps: vec![],
-    };
+    let state = GameState::for_player("player".into());
     let frames: Vec<(_, &[Action])> = vec![
         (
             vec![Event::npc_chat(

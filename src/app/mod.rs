@@ -1,7 +1,6 @@
 use crate::{
     agents::Event,
-    io::{input::Action, output::Screen},
-    GameState,
+    io::{input::Action, output::Screen}, GameState,
 };
 
 /// Each app is a single tab in the game's window view, e.g. chat. They exclusively handle IO: Processing user input
@@ -9,7 +8,6 @@ use crate::{
 ///
 /// Apps are only given input and rendered when they're on-screen, but they receive all events. Note, though, that
 /// events may be batched when the app is offscreen, so that systems and the onscreen app can be updated on time.
-#[enum_dispatch::enum_dispatch]
 pub trait App {
     /// The name of this app's tab in the header. (should be constant, hence &'static)
     fn name(&self) -> &'static str;
@@ -36,10 +34,3 @@ mod chat;
 pub use chat::ChatApp;
 mod cli;
 pub use cli::CliApp;
-
-#[enum_dispatch::enum_dispatch(App)]
-#[derive(PartialEq, Eq, Clone, Debug)]
-pub enum Apps {
-    ChatApp,
-    CliApp,
-}
