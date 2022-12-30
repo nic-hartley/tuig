@@ -1,8 +1,6 @@
 use std::{
     fmt::{self, Debug},
-    sync::{
-        Arc, Mutex,
-    },
+    sync::{Arc, Mutex},
 };
 
 use crate::io::clifmt::Text;

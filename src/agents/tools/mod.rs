@@ -35,13 +35,17 @@ impl AutocompleteType {
                         res = rest.into();
                         continue;
                     }
-                    let eq_find = rest.chars().zip(res.chars()).enumerate().find(|(_, (o, r))| o != r);
+                    let eq_find = rest
+                        .chars()
+                        .zip(res.chars())
+                        .enumerate()
+                        .find(|(_, (o, r))| o != r);
                     let eq_idx = eq_find.map(|(i, _)| i).unwrap_or(0);
                     res.truncate(eq_idx);
                 }
                 res
             }
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
 }

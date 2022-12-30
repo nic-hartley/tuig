@@ -1,4 +1,10 @@
-use std::{sync::{Arc, atomic::{AtomicBool, Ordering}}, time::{Instant, Duration}};
+use std::{
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::{Duration, Instant},
+};
 
 /// See [`ControlFlow::Handle`].
 #[derive(Clone)]
