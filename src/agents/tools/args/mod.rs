@@ -72,3 +72,76 @@ impl AutocompleteType {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn find_autocomplete_empty_for_empty_iter() {
+        let opts: &[&str] = &[];
+        assert_eq!(find_autocomplete("", opts), "");
+        assert_eq!(find_autocomplete("a", opts), "");
+    }
+
+    #[test]
+    fn find_autocomplete_presents_option() {
+        let opts: &[&str] = &["abyss"];
+        assert_eq!(find_autocomplete("", opts), "abyss");
+        assert_eq!(find_autocomplete("a", opts), "byss");
+        assert_eq!(find_autocomplete("aby", opts), "ss");
+        assert_eq!(find_autocomplete("abyss", opts), "");
+    }
+
+    #[test]
+    fn find_autocomplete_presents_conflicting_options() {
+        let opts: &[&str] = &["abyss", "absolute", "gorgonzola"];
+        assert_eq!(find_autocomplete("", opts), "");
+        assert_eq!(find_autocomplete("a", opts), "b");
+        assert_eq!(find_autocomplete("ab", opts), "");
+        assert_eq!(find_autocomplete("aby", opts), "ss");
+        assert_eq!(find_autocomplete("abs", opts), "olute");
+        assert_eq!(find_autocomplete("g", opts), "orgonzola");
+    }
+
+    #[test]
+    fn none_doesnt_autocomplete() {
+        let mut gs = GameState::for_player("miso".into());
+        gs.files.insert("moo".into(), vec![]);
+        gs.files.insert("abyss".into(), vec![]);
+        let ac = AutocompleteType::None;
+        assert_eq!(ac.complete("", &gs), "");
+        assert_eq!(ac.complete("m", &gs), "");
+        assert_eq!(ac.complete("mi", &gs), "");
+        assert_eq!(ac.complete("mo", &gs), "");
+    }
+
+    #[test]
+    fn choices_autocompletes_choices() {
+        let mut gs = GameState::for_player("miso".into());
+        gs.files.insert("moo".into(), vec![]);
+        gs.files.insert("abyss".into(), vec![]);
+        let ac = AutocompleteType::choices(&["mass", "help", "gorgonzola"]);
+        assert_eq!(ac.complete("", &gs), "");
+        assert_eq!(ac.complete("m", &gs), "ass");
+        assert_eq!(ac.complete("ma", &gs), "ss");
+        assert_eq!(ac.complete("mi", &gs), "");
+        assert_eq!(ac.complete("mo", &gs), "");
+        assert_eq!(ac.complete("a", &gs), "");
+        assert_eq!(ac.complete("g", &gs), "orgonzola");
+    }
+
+    #[test]
+    fn local_file_autocompletes_local_files() {
+        let mut gs = GameState::for_player("miso".into());
+        gs.files.insert("moo".into(), vec![]);
+        gs.files.insert("abyss".into(), vec![]);
+        let ac = AutocompleteType::LocalFile;
+        assert_eq!(ac.complete("", &gs), "");
+        assert_eq!(ac.complete("m", &gs), "oo");
+        assert_eq!(ac.complete("mi", &gs), "");
+        assert_eq!(ac.complete("mo", &gs), "o");
+        assert_eq!(ac.complete("a", &gs), "byss");
+        assert_eq!(ac.complete("abyss", &gs), "");
+    }
+}

@@ -74,3 +74,85 @@ impl BsdCompleter {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn empty_completer_doesnt_complete_no_options() {
+        let completer = BsdCompleter::new();
+        let mut gs = GameState::for_player("miso".into());
+        gs.files.insert("moo".into(), vec![]);
+        gs.files.insert("maggot".into(), vec![]);
+        gs.files.insert("abyss".into(), vec![]);
+        assert_eq!(completer.complete("", &gs), "");
+        assert_eq!(completer.complete("m", &gs), "");
+        assert_eq!(completer.complete("f", &gs), "");
+        assert_eq!(completer.complete("f m", &gs), "");
+        assert_eq!(completer.complete("z", &gs), "");
+        assert_eq!(completer.complete("z c", &gs), "");
+        assert_eq!(completer.complete("vzf", &gs), "");
+    }
+
+    #[test]
+    fn bsd_completer_completes_options() {
+        let completer = BsdCompleter::new()
+            .flag('v')
+            .flag('q')
+            .argument('z', AutocompleteType::choices(["compress", "decompress"]))
+            .argument('f', AutocompleteType::LocalFile);
+        let mut gs = GameState::for_player("miso".into());
+        gs.files.insert("moo".into(), vec![]);
+        gs.files.insert("maggot".into(), vec![]);
+        gs.files.insert("abyss".into(), vec![]);
+        assert_eq!(completer.complete("", &gs), "");
+        assert_eq!(completer.complete("v", &gs), "");
+        assert_eq!(completer.complete("vf", &gs), "");
+        assert_eq!(completer.complete("vfz", &gs), "q");
+        assert_eq!(completer.complete("vfq", &gs), "z");
+        assert_eq!(completer.complete("qvz", &gs), "f");
+    }
+
+    #[test]
+    fn bsd_completer_completes_values() {
+        let completer = BsdCompleter::new()
+            .flag('v')
+            .flag('q')
+            .argument('z', AutocompleteType::choices(["compress", "decompress"]))
+            .argument('f', AutocompleteType::LocalFile);
+        let mut gs = GameState::for_player("miso".into());
+        gs.files.insert("moo".into(), vec![]);
+        gs.files.insert("maggot".into(), vec![]);
+        gs.files.insert("abyss".into(), vec![]);
+        assert_eq!(completer.complete("", &gs), "");
+        assert_eq!(completer.complete("f", &gs), "");
+        assert_eq!(completer.complete("f ", &gs), "");
+        assert_eq!(completer.complete("f a", &gs), "byss");
+        assert_eq!(completer.complete("f ma", &gs), "ggot");
+        assert_eq!(completer.complete("z", &gs), "");
+        assert_eq!(completer.complete("z ", &gs), "");
+        assert_eq!(completer.complete("z d", &gs), "ecompress");
+        assert_eq!(completer.complete("z comp", &gs), "ress");
+    }
+
+    #[test]
+    fn bsd_completer_skips_flag_values() {
+        let completer = BsdCompleter::new()
+            .flag('v')
+            .flag('q')
+            .argument('z', AutocompleteType::choices(["compress", "decompress"]))
+            .argument('f', AutocompleteType::LocalFile);
+        let mut gs = GameState::for_player("miso".into());
+        gs.files.insert("moo".into(), vec![]);
+        gs.files.insert("maggot".into(), vec![]);
+        gs.files.insert("abyss".into(), vec![]);
+        assert_eq!(completer.complete("qf", &gs), "");
+        assert_eq!(completer.complete("fv ", &gs), "");
+        assert_eq!(completer.complete("vf a", &gs), "byss");
+        assert_eq!(completer.complete("fq ma", &gs), "ggot");
+        assert_eq!(completer.complete("vqz ", &gs), "");
+        assert_eq!(completer.complete("zqv d", &gs), "ecompress");
+        assert_eq!(completer.complete("qvz comp", &gs), "ress");
+    }
+}
