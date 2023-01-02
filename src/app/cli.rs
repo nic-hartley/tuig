@@ -93,7 +93,7 @@ impl CliApp {
         let cli_state = CliState {
             gs: &fake_gs,
             // TODO: track a real CWD
-            cwd: "stuff/".into()
+            cwd: "stuff/".into(),
         };
         if let Some((cmd, rest)) = line.split_once(char::is_whitespace) {
             if let Some(tool) = self.tools.get(cmd) {

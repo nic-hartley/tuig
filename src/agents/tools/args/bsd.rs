@@ -162,5 +162,27 @@ mod test {
         assert_eq!(completer.complete("qvz comp", &clis), "ress");
     }
 
-    // TODO: Ensure file completion respects cwd
+    #[test]
+    fn bsd_completer_respects_cwd() {
+        let completer = BsdCompleter::new()
+            .flag('v')
+            .flag('q')
+            .argument('z', AutocompleteType::choices(["compress", "decompress"]))
+            .argument('f', AutocompleteType::LocalFile);
+        let mut gs = GameState::for_player("miso".into());
+        gs.machine.files.insert("moo".into(), "".into());
+        gs.machine.files.insert("maggot".into(), "".into());
+        gs.machine.files.insert("abyss".into(), "".into());
+        gs.machine.files.insert("stuff/violin".into(), "".into());
+        gs.machine.files.insert("stuff/cello".into(), "".into());
+        gs.machine.files.insert("stuff/flute".into(), "".into());
+        let clis = CliState { gs: &gs, cwd: "stuff/".into() };
+        assert_eq!(completer.complete("qf", &clis), "");
+        assert_eq!(completer.complete("fv ", &clis), "");
+        assert_eq!(completer.complete("vf a", &clis), "");
+        assert_eq!(completer.complete("fq v", &clis), "iolin");
+        assert_eq!(completer.complete("vqz ", &clis), "");
+        assert_eq!(completer.complete("zqv d", &clis), "ecompress");
+        assert_eq!(completer.complete("qvz comp", &clis), "ress");
+    }
 }

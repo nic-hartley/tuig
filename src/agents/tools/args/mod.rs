@@ -67,7 +67,7 @@ impl AutocompleteType {
         match self {
             Self::None => String::new(),
             Self::Choices(opts) => autocomplete_with(so_far, opts),
-            Self::LocalFile => autocomplete_with(so_far, state.gs.machine.files.keys()),
+            Self::LocalFile => autocomplete_with(so_far, state.gs.machine.files.keys().filter_map(|f| f.strip_prefix(&state.cwd))),
             _ => unimplemented!(),
         }
     }
@@ -150,5 +150,22 @@ mod test {
         assert_eq!(ac.complete("abyss", &clis), "");
     }
 
-    // TODO: Ensure file completion respects cwd
+    #[test]
+    fn local_file_autocompletes_local_files_in_cwd() {
+        let mut gs = GameState::for_player("miso".into());
+        gs.machine.files.insert("moo".into(), "".into());
+        gs.machine.files.insert("abyss".into(), "".into());
+        gs.machine.files.insert("stuff/bongos".into(), "".into());
+        gs.machine.files.insert("stuff/michael_hill".into(), "".into());
+        gs.machine.files.insert("stuff/neil_baum".into(), "".into());
+        let clis = CliState { gs: &gs, cwd: "stuff/".into() };
+        let ac = AutocompleteType::LocalFile;
+        assert_eq!(ac.complete("", &clis), "");
+        assert_eq!(ac.complete("m", &clis), "ichael_hill");
+        assert_eq!(ac.complete("mi", &clis), "chael_hill");
+        assert_eq!(ac.complete("mo", &clis), "");
+        assert_eq!(ac.complete("a", &clis), "");
+        assert_eq!(ac.complete("neil_bau", &clis), "m");
+        assert_eq!(ac.complete("neil_baum", &clis), "");
+    }
 }
