@@ -80,7 +80,10 @@ impl AutocompleteType {
                 println!("so_far={}, cwd={}", so_far, state.cwd);
                 let mut dirs: Vec<_> = so_far.split('/').collect();
                 let file = dirs.pop().expect("split never returns an empty iterator");
-                let cmd_dir = dirs.into_iter().map(|s| format!("{}/", s)).collect::<String>();
+                let cmd_dir = dirs
+                    .into_iter()
+                    .map(|s| format!("{}/", s))
+                    .collect::<String>();
                 let prefix = format!("{}{}", state.cwd, cmd_dir);
                 println!("prefix={}, file={}", prefix, file);
                 autocomplete_with(
@@ -93,7 +96,7 @@ impl AutocompleteType {
                         .filter_map(|f| f.strip_prefix(&prefix))
                         .map(|f| f.split_inclusive('/').next().unwrap_or(f)),
                 )
-            },
+            }
             _ => unimplemented!(),
         }
     }
