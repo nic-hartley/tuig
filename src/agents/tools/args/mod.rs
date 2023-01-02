@@ -22,15 +22,11 @@ pub fn autocomplete_with(
     let mut completed: Option<String> = None;
     for opt in options.into_iter() {
         let opt = opt.as_ref();
-        println!("- {}", opt);
         if !opt.starts_with(prefix) {
-            println!("  doesn't start with prefix");
             continue;
         }
         let rest = &opt[prefix.len()..];
-        println!("  rest: {}", rest);
         if let Some(prev) = &mut completed {
-            println!("    updating prev: {}", prev);
             let eq_find = rest
                 .chars()
                 .zip(prev.chars())
@@ -39,10 +35,8 @@ pub fn autocomplete_with(
             let eq_idx = eq_find.map(|(i, _)| i).unwrap_or(prev.len());
             prev.truncate(eq_idx);
         } else {
-            println!("    setting completed");
             completed = Some(rest.into());
         }
-        println!("  res: {}", completed.as_ref().unwrap());
     }
     completed.unwrap_or(String::new())
 }
@@ -77,7 +71,6 @@ impl AutocompleteType {
             Self::None => String::new(),
             Self::Choices(opts) => autocomplete_with(so_far, opts),
             Self::LocalFile => {
-                println!("so_far={}, cwd={}", so_far, state.cwd);
                 let mut dirs: Vec<_> = so_far.split('/').collect();
                 let file = dirs.pop().expect("split never returns an empty iterator");
                 let cmd_dir = dirs
@@ -85,7 +78,6 @@ impl AutocompleteType {
                     .map(|s| format!("{}/", s))
                     .collect::<String>();
                 let prefix = format!("{}{}", state.cwd, cmd_dir);
-                println!("prefix={}, file={}", prefix, file);
                 autocomplete_with(
                     file,
                     state
