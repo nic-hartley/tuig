@@ -92,7 +92,6 @@ impl CliApp {
         fake_gs.machine.files.insert("machomp".into(), "".into());
         fake_gs.machine.files.insert("stuff/foo1".into(), "".into());
         fake_gs.machine.files.insert("stuff/foo2".into(), "".into());
-        // fake_gs.machine.files.insert("stuff/asdlkf".into(), "".into());
         let cli_state = CliState {
             gs: &fake_gs,
             // TODO: track a real CWD

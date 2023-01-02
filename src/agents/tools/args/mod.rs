@@ -16,29 +16,35 @@ pub use bsd::BsdCompleter;
 use crate::app::CliState;
 
 pub fn autocomplete_with(
-    so_far: &str,
+    prefix: &str,
     options: impl IntoIterator<Item = impl AsRef<str>>,
 ) -> String {
-    let mut res: Option<String> = None;
+    let mut completed: Option<String> = None;
     for opt in options.into_iter() {
         let opt = opt.as_ref();
-        if !opt.starts_with(so_far) {
+        println!("- {}", opt);
+        if !opt.starts_with(prefix) {
+            println!("  doesn't start with prefix");
             continue;
         }
-        let rest = &opt[so_far.len()..];
-        if let Some(prev) = &mut res {
+        let rest = &opt[prefix.len()..];
+        println!("  rest: {}", rest);
+        if let Some(prev) = &mut completed {
+            println!("    updating prev: {}", prev);
             let eq_find = rest
                 .chars()
                 .zip(prev.chars())
                 .enumerate()
                 .find(|(_, (o, r))| o != r);
-            let eq_idx = eq_find.map(|(i, _)| i).unwrap_or(0);
+            let eq_idx = eq_find.map(|(i, _)| i).unwrap_or(prev.len());
             prev.truncate(eq_idx);
         } else {
-            res = Some(rest.into());
+            println!("    setting completed");
+            completed = Some(rest.into());
         }
+        println!("  res: {}", completed.as_ref().unwrap());
     }
-    res.unwrap_or(String::new())
+    completed.unwrap_or(String::new())
 }
 
 /// Describes the various things that can be autocompleted. Used to indicate value types in the various autocompleters
@@ -70,15 +76,24 @@ impl AutocompleteType {
         match self {
             Self::None => String::new(),
             Self::Choices(opts) => autocomplete_with(so_far, opts),
-            Self::LocalFile => autocomplete_with(
-                so_far,
-                state
-                    .gs
-                    .machine
-                    .files
-                    .keys()
-                    .filter_map(|f| f.strip_prefix(&state.cwd)),
-            ),
+            Self::LocalFile => {
+                println!("so_far={}, cwd={}", so_far, state.cwd);
+                let mut dirs: Vec<_> = so_far.split('/').collect();
+                let file = dirs.pop().expect("split never returns an empty iterator");
+                let cmd_dir = dirs.into_iter().map(|s| format!("{}/", s)).collect::<String>();
+                let prefix = format!("{}{}", state.cwd, cmd_dir);
+                println!("prefix={}, file={}", prefix, file);
+                autocomplete_with(
+                    file,
+                    state
+                        .gs
+                        .machine
+                        .files
+                        .keys()
+                        .filter_map(|f| f.strip_prefix(&prefix))
+                        .map(|f| f.split_inclusive('/').next().unwrap_or(f)),
+                )
+            },
             _ => unimplemented!(),
         }
     }
@@ -192,5 +207,23 @@ mod test {
         assert_eq!(ac.complete("a", &clis), "");
         assert_eq!(ac.complete("neil_bau", &clis), "m");
         assert_eq!(ac.complete("neil_baum", &clis), "");
+    }
+
+    #[test]
+    fn local_file_autocompletes_directories_nicely() {
+        let mut gs = GameState::for_player("miso".into());
+        gs.machine.files.insert("moo".into(), "".into());
+        gs.machine.files.insert("abyss".into(), "".into());
+        gs.machine.files.insert("stuff/bongos".into(), "".into());
+        let clis = CliState {
+            gs: &gs,
+            cwd: "".into(),
+        };
+        let ac = AutocompleteType::LocalFile;
+        assert_eq!(ac.complete("", &clis), "");
+        assert_eq!(ac.complete("st", &clis), "uff/");
+        assert_eq!(ac.complete("stuff", &clis), "/");
+        assert_eq!(ac.complete("stuff/", &clis), "bongos");
+        assert_eq!(ac.complete("stuff/bo", &clis), "ngos");
     }
 }
