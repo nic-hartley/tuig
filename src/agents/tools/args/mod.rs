@@ -15,7 +15,10 @@ pub use bsd::BsdCompleter;
 
 use crate::app::CliState;
 
-pub fn autocomplete_with(so_far: &str, options: impl IntoIterator<Item = impl AsRef<str>>) -> String {
+pub fn autocomplete_with(
+    so_far: &str,
+    options: impl IntoIterator<Item = impl AsRef<str>>,
+) -> String {
     let mut res: Option<String> = None;
     for opt in options.into_iter() {
         let opt = opt.as_ref();
@@ -67,7 +70,15 @@ impl AutocompleteType {
         match self {
             Self::None => String::new(),
             Self::Choices(opts) => autocomplete_with(so_far, opts),
-            Self::LocalFile => autocomplete_with(so_far, state.gs.machine.files.keys().filter_map(|f| f.strip_prefix(&state.cwd))),
+            Self::LocalFile => autocomplete_with(
+                so_far,
+                state
+                    .gs
+                    .machine
+                    .files
+                    .keys()
+                    .filter_map(|f| f.strip_prefix(&state.cwd)),
+            ),
             _ => unimplemented!(),
         }
     }
@@ -111,7 +122,10 @@ mod test {
         let mut gs = GameState::for_player("miso".into());
         gs.machine.files.insert("moo".into(), "".into());
         gs.machine.files.insert("abyss".into(), "".into());
-        let clis = CliState { gs: &gs, cwd: "".into() };
+        let clis = CliState {
+            gs: &gs,
+            cwd: "".into(),
+        };
         let ac = AutocompleteType::None;
         assert_eq!(ac.complete("", &clis), "");
         assert_eq!(ac.complete("m", &clis), "");
@@ -124,7 +138,10 @@ mod test {
         let mut gs = GameState::for_player("miso".into());
         gs.machine.files.insert("moo".into(), "".into());
         gs.machine.files.insert("abyss".into(), "".into());
-        let clis = CliState { gs: &gs, cwd: "".into() };
+        let clis = CliState {
+            gs: &gs,
+            cwd: "".into(),
+        };
         let ac = AutocompleteType::choices(&["mass", "help", "gorgonzola"]);
         assert_eq!(ac.complete("", &clis), "");
         assert_eq!(ac.complete("m", &clis), "ass");
@@ -140,7 +157,10 @@ mod test {
         let mut gs = GameState::for_player("miso".into());
         gs.machine.files.insert("moo".into(), "".into());
         gs.machine.files.insert("abyss".into(), "".into());
-        let clis = CliState { gs: &gs, cwd: "".into() };
+        let clis = CliState {
+            gs: &gs,
+            cwd: "".into(),
+        };
         let ac = AutocompleteType::LocalFile;
         assert_eq!(ac.complete("", &clis), "");
         assert_eq!(ac.complete("m", &clis), "oo");
@@ -156,9 +176,14 @@ mod test {
         gs.machine.files.insert("moo".into(), "".into());
         gs.machine.files.insert("abyss".into(), "".into());
         gs.machine.files.insert("stuff/bongos".into(), "".into());
-        gs.machine.files.insert("stuff/michael_hill".into(), "".into());
+        gs.machine
+            .files
+            .insert("stuff/michael_hill".into(), "".into());
         gs.machine.files.insert("stuff/neil_baum".into(), "".into());
-        let clis = CliState { gs: &gs, cwd: "stuff/".into() };
+        let clis = CliState {
+            gs: &gs,
+            cwd: "stuff/".into(),
+        };
         let ac = AutocompleteType::LocalFile;
         assert_eq!(ac.complete("", &clis), "");
         assert_eq!(ac.complete("m", &clis), "ichael_hill");

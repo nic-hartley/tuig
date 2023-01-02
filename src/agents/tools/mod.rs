@@ -1,8 +1,8 @@
 use std::mem;
 
-use crate::{io::clifmt::Text, app::CliState};
+use crate::{app::CliState, io::clifmt::Text};
 
-use super::{Agent, Event, ControlFlow};
+use super::{Agent, ControlFlow, Event};
 
 mod args;
 pub use args::{autocomplete_with, AutocompleteType, BsdCompleter};

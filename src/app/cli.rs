@@ -1,8 +1,11 @@
-use std::{collections::{VecDeque, HashMap}, mem};
+use std::{
+    collections::{HashMap, VecDeque},
+    mem,
+};
 
 use crate::{
     agents::{
-        tools::{Tool, autocomplete_with},
+        tools::{autocomplete_with, Tool},
         Event,
     },
     io::{
@@ -18,7 +21,7 @@ use super::App;
 const MAX_SCROLL_LINES: usize = 1000;
 
 /// The high-level state of the CLI, for passing to commands.
-/// 
+///
 /// Note this is not updated live; it's the state of the CLI as of whenever the command was run.
 #[derive(Clone)]
 pub struct CliState<'gs> {
@@ -89,11 +92,11 @@ impl CliApp {
         fake_gs.machine.files.insert("machomp".into(), "".into());
         fake_gs.machine.files.insert("stuff/foo1".into(), "".into());
         fake_gs.machine.files.insert("stuff/foo2".into(), "".into());
-        fake_gs.machine.files.insert("stuff/asdlkf".into(), "".into());
+        // fake_gs.machine.files.insert("stuff/asdlkf".into(), "".into());
         let cli_state = CliState {
             gs: &fake_gs,
             // TODO: track a real CWD
-            cwd: "stuff/".into(),
+            cwd: "".into(),
         };
         if let Some((cmd, rest)) = line.split_once(char::is_whitespace) {
             if let Some(tool) = self.tools.get(cmd) {

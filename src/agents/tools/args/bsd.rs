@@ -88,7 +88,10 @@ mod test {
         gs.machine.files.insert("moo".into(), "".into());
         gs.machine.files.insert("maggot".into(), "".into());
         gs.machine.files.insert("abyss".into(), "".into());
-        let clis = CliState { gs: &gs, cwd: "".into() };
+        let clis = CliState {
+            gs: &gs,
+            cwd: "".into(),
+        };
         assert_eq!(completer.complete("", &clis), "");
         assert_eq!(completer.complete("m", &clis), "");
         assert_eq!(completer.complete("f", &clis), "");
@@ -109,7 +112,10 @@ mod test {
         gs.machine.files.insert("moo".into(), "".into());
         gs.machine.files.insert("maggot".into(), "".into());
         gs.machine.files.insert("abyss".into(), "".into());
-        let clis = CliState { gs: &gs, cwd: "".into() };
+        let clis = CliState {
+            gs: &gs,
+            cwd: "".into(),
+        };
         assert_eq!(completer.complete("", &clis), "");
         assert_eq!(completer.complete("v", &clis), "");
         assert_eq!(completer.complete("vf", &clis), "");
@@ -129,7 +135,10 @@ mod test {
         gs.machine.files.insert("moo".into(), "".into());
         gs.machine.files.insert("maggot".into(), "".into());
         gs.machine.files.insert("abyss".into(), "".into());
-        let clis = CliState { gs: &gs, cwd: "".into() };
+        let clis = CliState {
+            gs: &gs,
+            cwd: "".into(),
+        };
         assert_eq!(completer.complete("", &clis), "");
         assert_eq!(completer.complete("f", &clis), "");
         assert_eq!(completer.complete("f ", &clis), "");
@@ -152,7 +161,10 @@ mod test {
         gs.machine.files.insert("moo".into(), "".into());
         gs.machine.files.insert("maggot".into(), "".into());
         gs.machine.files.insert("abyss".into(), "".into());
-        let clis = CliState { gs: &gs, cwd: "".into() };
+        let clis = CliState {
+            gs: &gs,
+            cwd: "".into(),
+        };
         assert_eq!(completer.complete("qf", &clis), "");
         assert_eq!(completer.complete("fv ", &clis), "");
         assert_eq!(completer.complete("vf a", &clis), "byss");
@@ -176,7 +188,10 @@ mod test {
         gs.machine.files.insert("stuff/violin".into(), "".into());
         gs.machine.files.insert("stuff/cello".into(), "".into());
         gs.machine.files.insert("stuff/flute".into(), "".into());
-        let clis = CliState { gs: &gs, cwd: "stuff/".into() };
+        let clis = CliState {
+            gs: &gs,
+            cwd: "stuff/".into(),
+        };
         assert_eq!(completer.complete("qf", &clis), "");
         assert_eq!(completer.complete("fv ", &clis), "");
         assert_eq!(completer.complete("vf a", &clis), "");

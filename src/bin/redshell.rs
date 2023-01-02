@@ -1,7 +1,7 @@
 use std::{mem, thread, time::Duration};
 
 use redshell::{
-    agents::{Agent, ControlFlow, Event, tools},
+    agents::{tools, Agent, ControlFlow, Event},
     app::{App, ChatApp, CliApp},
     io::{
         input::{Action, Key},
@@ -126,35 +126,34 @@ async fn run(iosys: &mut dyn IoSystem) {
     let mut apps: Vec<Box<dyn App>> =
         vec![Box::new(ChatApp::default()), Box::new(CliApp::default())];
     let mut sel = 0;
-    let mut events = vec![
-        Event::install(tools::Ls),
-    ];
-    let mut agents: Vec<(Box<dyn Agent>, ControlFlow)> = [
-        npc!(
-            "yotie",
-            [
-                say "hey": 500,
-                say "how you doin?": 1500,
-                ask "good" => 1, "bad" => 2,
-            ],
-            [
-                say "ey that's nice": 2000,
-                say "glad you're doing well": 500,
-                ask "thanks" =>  3,
-            ],
-            [
-                say "ey that's bad": 500,
-                ask "thanks?" =>  3,
-            ],
-            [
-                say "anyway bye": 500,
-                ask "uh ok" => 100,
-            ]
-        ),
-    ].into_iter().map(|mut a| {
+    let mut events = vec![Event::install(tools::Ls)];
+    let mut agents: Vec<(Box<dyn Agent>, ControlFlow)> = [npc!(
+        "yotie",
+        [
+            say "hey": 500,
+            say "how you doin?": 1500,
+            ask "good" => 1, "bad" => 2,
+        ],
+        [
+            say "ey that's nice": 2000,
+            say "glad you're doing well": 500,
+            ask "thanks" =>  3,
+        ],
+        [
+            say "ey that's bad": 500,
+            ask "thanks?" =>  3,
+        ],
+        [
+            say "anyway bye": 500,
+            ask "uh ok" => 100,
+        ]
+    )]
+    .into_iter()
+    .map(|mut a| {
         let cf = a.start(&mut events);
         (a as Box<dyn Agent>, cf)
-    }).collect();
+    })
+    .collect();
 
     let mut replies = vec![];
     let mut tainted = true;

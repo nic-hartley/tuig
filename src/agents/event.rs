@@ -1,9 +1,9 @@
 use core::fmt;
 use std::sync::{Arc, Mutex};
 
-use crate::{io::clifmt::Text, app::App};
+use crate::{app::App, io::clifmt::Text};
 
-use super::{Agent, tools::Tool};
+use super::{tools::Tool, Agent};
 
 /// Convenience for the things that pass trait objects around, but only one of them.
 pub struct Bundle<T>(Arc<Mutex<Option<T>>>);
