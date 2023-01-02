@@ -1,8 +1,8 @@
-use std::{collections::VecDeque, mem};
+use std::{collections::{VecDeque, HashMap}, mem};
 
 use crate::{
     agents::{
-        tools::{AutocompleteType, BsdCompleter},
+        tools::{Tool, autocomplete_with},
         Event,
     },
     io::{
@@ -17,7 +17,6 @@ use super::App;
 
 const MAX_SCROLL_LINES: usize = 1000;
 
-#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct CliApp {
     /// prior commands, as entered by the player (for scrolling through with the up arrow)
     history: Vec<String>,
@@ -35,6 +34,8 @@ pub struct CliApp {
     help: String,
     /// lines of output that haven't been read yet
     unread: usize,
+    /// the tools available at the command line
+    tools: HashMap<String, Box<dyn Tool>>,
 }
 
 impl Default for CliApp {
@@ -48,6 +49,7 @@ impl Default for CliApp {
             autocomplete: Default::default(),
             help: Default::default(),
             unread: Default::default(),
+            tools: Default::default(),
         }
     }
 }
@@ -69,17 +71,20 @@ impl CliApp {
     }
 
     fn autocomplete(&self, line: &str) -> String {
-        let completer = BsdCompleter::new()
-            .argument('f', AutocompleteType::LocalFile)
-            .argument('z', AutocompleteType::choices(&["compress", "decompress"]))
-            .flag('v')
-            .flag('q');
         let mut fake_gs = GameState::for_player("spork".into());
         fake_gs.files.insert("awoo".into(), vec![]);
         fake_gs.files.insert("awful".into(), vec![]);
         fake_gs.files.insert("thingy".into(), vec![]);
         fake_gs.files.insert("machomp".into(), vec![]);
-        completer.complete(line, &fake_gs)
+        if let Some((cmd, rest)) = line.split_once(char::is_whitespace) {
+            if let Some(tool) = self.tools.get(cmd) {
+                tool.autocomplete(rest.trim_start(), &fake_gs)
+            } else {
+                String::new()
+            }
+        } else {
+            autocomplete_with(line, self.tools.keys())
+        }
     }
 
     fn keypress(&mut self, key: Key, events: &mut Vec<Event>) -> bool {
@@ -176,6 +181,11 @@ impl App for CliApp {
             Event::CommandOutput(line) => {
                 self.add_scroll(line.clone());
                 true
+            }
+            Event::InstallTool(tool) => {
+                let tool = tool.take().expect("Tool taken by something other than CLI");
+                self.tools.insert(tool.name().into(), tool);
+                false
             }
             _ => false,
         }

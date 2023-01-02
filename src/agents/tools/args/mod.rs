@@ -15,7 +15,7 @@ pub use bsd::BsdCompleter;
 
 use crate::GameState;
 
-fn find_autocomplete(so_far: &str, options: impl IntoIterator<Item = impl AsRef<str>>) -> String {
+pub fn autocomplete_with(so_far: &str, options: impl IntoIterator<Item = impl AsRef<str>>) -> String {
     let mut res: Option<String> = None;
     for opt in options.into_iter() {
         let opt = opt.as_ref();
@@ -66,8 +66,8 @@ impl AutocompleteType {
     pub fn complete(&self, so_far: &str, state: &GameState) -> String {
         match self {
             Self::None => String::new(),
-            Self::Choices(opts) => find_autocomplete(so_far, opts),
-            Self::LocalFile => find_autocomplete(so_far, state.files.keys()),
+            Self::Choices(opts) => autocomplete_with(so_far, opts),
+            Self::LocalFile => autocomplete_with(so_far, state.files.keys()),
             _ => unimplemented!(),
         }
     }
@@ -80,28 +80,28 @@ mod test {
     #[test]
     fn find_autocomplete_empty_for_empty_iter() {
         let opts: &[&str] = &[];
-        assert_eq!(find_autocomplete("", opts), "");
-        assert_eq!(find_autocomplete("a", opts), "");
+        assert_eq!(autocomplete_with("", opts), "");
+        assert_eq!(autocomplete_with("a", opts), "");
     }
 
     #[test]
     fn find_autocomplete_presents_option() {
         let opts: &[&str] = &["abyss"];
-        assert_eq!(find_autocomplete("", opts), "abyss");
-        assert_eq!(find_autocomplete("a", opts), "byss");
-        assert_eq!(find_autocomplete("aby", opts), "ss");
-        assert_eq!(find_autocomplete("abyss", opts), "");
+        assert_eq!(autocomplete_with("", opts), "abyss");
+        assert_eq!(autocomplete_with("a", opts), "byss");
+        assert_eq!(autocomplete_with("aby", opts), "ss");
+        assert_eq!(autocomplete_with("abyss", opts), "");
     }
 
     #[test]
     fn find_autocomplete_presents_conflicting_options() {
         let opts: &[&str] = &["abyss", "absolute", "gorgonzola"];
-        assert_eq!(find_autocomplete("", opts), "");
-        assert_eq!(find_autocomplete("a", opts), "b");
-        assert_eq!(find_autocomplete("ab", opts), "");
-        assert_eq!(find_autocomplete("aby", opts), "ss");
-        assert_eq!(find_autocomplete("abs", opts), "olute");
-        assert_eq!(find_autocomplete("g", opts), "orgonzola");
+        assert_eq!(autocomplete_with("", opts), "");
+        assert_eq!(autocomplete_with("a", opts), "b");
+        assert_eq!(autocomplete_with("ab", opts), "");
+        assert_eq!(autocomplete_with("aby", opts), "ss");
+        assert_eq!(autocomplete_with("abs", opts), "olute");
+        assert_eq!(autocomplete_with("g", opts), "orgonzola");
     }
 
     #[test]

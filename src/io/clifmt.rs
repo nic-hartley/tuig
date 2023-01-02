@@ -231,9 +231,13 @@ macro_rules! text1 {
         $text:literal
         $( ( $( $arg:expr ),* $(,)? ) )?
     ) => {
-        Text::of(
-            format!( $text $(, $( $arg ),* )? )
-        ) $( . $name () )*
+        {
+            #[allow(unused_imports)]
+            use $crate::io::clifmt::{FormattedExt as _};
+            $crate::io::clifmt::Text::of(
+                format!( $text $(, $( $arg ),* )? )
+            ) $( . $name () )*
+        }
     };
 }
 

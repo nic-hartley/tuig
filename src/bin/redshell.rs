@@ -1,7 +1,7 @@
 use std::{mem, thread, time::Duration};
 
 use redshell::{
-    agents::{Agent, ControlFlow, Event},
+    agents::{Agent, ControlFlow, Event, tools},
     app::{App, ChatApp, CliApp},
     io::{
         input::{Action, Key},
@@ -126,7 +126,10 @@ async fn run(iosys: &mut dyn IoSystem) {
     let mut apps: Vec<Box<dyn App>> =
         vec![Box::new(ChatApp::default()), Box::new(CliApp::default())];
     let mut sel = 0;
-    let mut agents: Vec<(Box<dyn Agent>, ControlFlow)> = vec![(
+    let mut events = vec![
+        Event::install(tools::Ls),
+    ];
+    let mut agents: Vec<(Box<dyn Agent>, ControlFlow)> = [
         npc!(
             "yotie",
             [
@@ -148,15 +151,12 @@ async fn run(iosys: &mut dyn IoSystem) {
                 ask "uh ok" => 100,
             ]
         ),
-        ControlFlow::Continue,
-    )];
+    ].into_iter().map(|mut a| {
+        let cf = a.start(&mut events);
+        (a as Box<dyn Agent>, cf)
+    }).collect();
 
-    let mut events = vec![];
     let mut replies = vec![];
-    for (agent, cf) in agents.iter_mut() {
-        *cf = agent.start(&mut events);
-    }
-
     let mut tainted = true;
     loop {
         replies.clear();
