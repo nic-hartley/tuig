@@ -13,7 +13,7 @@ mod gnu;
 mod bsd;
 pub use bsd::BsdCompleter;
 
-use crate::GameState;
+use crate::app::CliState;
 
 pub fn autocomplete_with(so_far: &str, options: impl IntoIterator<Item = impl AsRef<str>>) -> String {
     let mut res: Option<String> = None;
@@ -63,11 +63,11 @@ impl AutocompleteType {
         Self::Choices(vals.into_iter().map(|s| s.as_ref().to_owned()).collect())
     }
 
-    pub fn complete(&self, so_far: &str, state: &GameState) -> String {
+    pub fn complete(&self, so_far: &str, state: &CliState) -> String {
         match self {
             Self::None => String::new(),
             Self::Choices(opts) => autocomplete_with(so_far, opts),
-            Self::LocalFile => autocomplete_with(so_far, state.files.keys()),
+            Self::LocalFile => autocomplete_with(so_far, state.gs.machine.files.keys()),
             _ => unimplemented!(),
         }
     }
@@ -75,6 +75,8 @@ impl AutocompleteType {
 
 #[cfg(test)]
 mod test {
+    use crate::GameState;
+
     use super::*;
 
     #[test]
@@ -107,41 +109,46 @@ mod test {
     #[test]
     fn none_doesnt_autocomplete() {
         let mut gs = GameState::for_player("miso".into());
-        gs.files.insert("moo".into(), vec![]);
-        gs.files.insert("abyss".into(), vec![]);
+        gs.machine.files.insert("moo".into(), "".into());
+        gs.machine.files.insert("abyss".into(), "".into());
+        let clis = CliState { gs: &gs, cwd: "".into() };
         let ac = AutocompleteType::None;
-        assert_eq!(ac.complete("", &gs), "");
-        assert_eq!(ac.complete("m", &gs), "");
-        assert_eq!(ac.complete("mi", &gs), "");
-        assert_eq!(ac.complete("mo", &gs), "");
+        assert_eq!(ac.complete("", &clis), "");
+        assert_eq!(ac.complete("m", &clis), "");
+        assert_eq!(ac.complete("mi", &clis), "");
+        assert_eq!(ac.complete("mo", &clis), "");
     }
 
     #[test]
     fn choices_autocompletes_choices() {
         let mut gs = GameState::for_player("miso".into());
-        gs.files.insert("moo".into(), vec![]);
-        gs.files.insert("abyss".into(), vec![]);
+        gs.machine.files.insert("moo".into(), "".into());
+        gs.machine.files.insert("abyss".into(), "".into());
+        let clis = CliState { gs: &gs, cwd: "".into() };
         let ac = AutocompleteType::choices(&["mass", "help", "gorgonzola"]);
-        assert_eq!(ac.complete("", &gs), "");
-        assert_eq!(ac.complete("m", &gs), "ass");
-        assert_eq!(ac.complete("ma", &gs), "ss");
-        assert_eq!(ac.complete("mi", &gs), "");
-        assert_eq!(ac.complete("mo", &gs), "");
-        assert_eq!(ac.complete("a", &gs), "");
-        assert_eq!(ac.complete("g", &gs), "orgonzola");
+        assert_eq!(ac.complete("", &clis), "");
+        assert_eq!(ac.complete("m", &clis), "ass");
+        assert_eq!(ac.complete("ma", &clis), "ss");
+        assert_eq!(ac.complete("mi", &clis), "");
+        assert_eq!(ac.complete("mo", &clis), "");
+        assert_eq!(ac.complete("a", &clis), "");
+        assert_eq!(ac.complete("g", &clis), "orgonzola");
     }
 
     #[test]
     fn local_file_autocompletes_local_files() {
         let mut gs = GameState::for_player("miso".into());
-        gs.files.insert("moo".into(), vec![]);
-        gs.files.insert("abyss".into(), vec![]);
+        gs.machine.files.insert("moo".into(), "".into());
+        gs.machine.files.insert("abyss".into(), "".into());
+        let clis = CliState { gs: &gs, cwd: "".into() };
         let ac = AutocompleteType::LocalFile;
-        assert_eq!(ac.complete("", &gs), "");
-        assert_eq!(ac.complete("m", &gs), "oo");
-        assert_eq!(ac.complete("mi", &gs), "");
-        assert_eq!(ac.complete("mo", &gs), "o");
-        assert_eq!(ac.complete("a", &gs), "byss");
-        assert_eq!(ac.complete("abyss", &gs), "");
+        assert_eq!(ac.complete("", &clis), "");
+        assert_eq!(ac.complete("m", &clis), "oo");
+        assert_eq!(ac.complete("mi", &clis), "");
+        assert_eq!(ac.complete("mo", &clis), "o");
+        assert_eq!(ac.complete("a", &clis), "byss");
+        assert_eq!(ac.complete("abyss", &clis), "");
     }
+
+    // TODO: Ensure file completion respects cwd
 }

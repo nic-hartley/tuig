@@ -1,12 +1,12 @@
-use std::collections::HashMap;
-
 use app::App;
+use machine::Machine;
 
 pub mod agents;
 pub mod app;
 pub mod constants;
 pub mod cutscenes;
 pub mod io;
+pub mod machine;
 mod util;
 
 /// The current state of the game, including the state of the UI.
@@ -16,8 +16,8 @@ pub struct GameState {
     pub player_name: String,
     /// The apps currently available (in order of tabs)
     pub apps: Vec<Box<dyn App>>,
-    /// The files on the virtual machine
-    pub files: HashMap<String, Vec<u8>>,
+    /// The player's computer
+    pub machine: Machine,
 }
 
 impl GameState {
@@ -25,7 +25,7 @@ impl GameState {
         Self {
             player_name: name,
             apps: Default::default(),
-            files: Default::default(),
+            machine: Default::default(),
         }
     }
 }

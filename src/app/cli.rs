@@ -17,6 +17,17 @@ use super::App;
 
 const MAX_SCROLL_LINES: usize = 1000;
 
+/// The high-level state of the CLI, for passing to commands.
+/// 
+/// Note this is not updated live; it's the state of the CLI as of whenever the command was run.
+#[derive(Clone)]
+pub struct CliState<'gs> {
+    /// The game state
+    pub gs: &'gs GameState,
+    /// The current working directory of the CLI
+    pub cwd: String,
+}
+
 pub struct CliApp {
     /// prior commands, as entered by the player (for scrolling through with the up arrow)
     history: Vec<String>,
@@ -72,13 +83,21 @@ impl CliApp {
 
     fn autocomplete(&self, line: &str) -> String {
         let mut fake_gs = GameState::for_player("spork".into());
-        fake_gs.files.insert("awoo".into(), vec![]);
-        fake_gs.files.insert("awful".into(), vec![]);
-        fake_gs.files.insert("thingy".into(), vec![]);
-        fake_gs.files.insert("machomp".into(), vec![]);
+        fake_gs.machine.files.insert("awoo".into(), "".into());
+        fake_gs.machine.files.insert("awful".into(), "".into());
+        fake_gs.machine.files.insert("thingy".into(), "".into());
+        fake_gs.machine.files.insert("machomp".into(), "".into());
+        fake_gs.machine.files.insert("stuff/foo1".into(), "".into());
+        fake_gs.machine.files.insert("stuff/foo2".into(), "".into());
+        fake_gs.machine.files.insert("stuff/asdlkf".into(), "".into());
+        let cli_state = CliState {
+            gs: &fake_gs,
+            // TODO: track a real CWD
+            cwd: "stuff/".into()
+        };
         if let Some((cmd, rest)) = line.split_once(char::is_whitespace) {
             if let Some(tool) = self.tools.get(cmd) {
-                tool.autocomplete(rest.trim_start(), &fake_gs)
+                tool.autocomplete(rest.trim_start(), &cli_state)
             } else {
                 String::new()
             }

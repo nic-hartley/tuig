@@ -1,6 +1,6 @@
 use std::mem;
 
-use crate::{GameState, io::clifmt::Text};
+use crate::{io::clifmt::Text, app::CliState};
 
 use super::{Agent, Event, ControlFlow};
 
@@ -12,8 +12,8 @@ pub use ls::Ls;
 
 pub trait Tool {
     fn name(&self) -> &'static str;
-    fn autocomplete(&self, line: &str, state: &GameState) -> String;
-    fn run(&self, line: &str, state: &GameState) -> Box<dyn Agent>;
+    fn autocomplete(&self, line: &str, state: &CliState) -> String;
+    fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent>;
 }
 
 /// If a tool just needs to output based on the game state and doesn't actually do any processing, this makes that

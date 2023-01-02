@@ -1,4 +1,4 @@
-use crate::{GameState, text, text1, io::clifmt::Text};
+use crate::{text, text1, io::clifmt::Text, app::CliState};
 
 use super::{Tool, FixedOutput, BsdCompleter, AutocompleteType};
 
@@ -10,8 +10,9 @@ lazy_static::lazy_static! {
 pub struct Ls;
 
 impl Ls {
-    fn entries(state: &GameState) -> Vec<&str> {
-        let mut entries: Vec<_> = state.files.keys().map(|f| f.split_inclusive('/').next().unwrap_or(&f)).collect();
+    fn entries<'cs>(state: &CliState<'cs>) -> Vec<&'cs str> {
+        // TODO: directory-specific
+        let mut entries: Vec<_> = state.gs.machine.files.keys().filter(|f| f.starts_with(&state.cwd)).map(|f| f.split_inclusive('/').next().unwrap_or(&f)).collect();
         if entries.is_empty() {
             return vec![];
         }
@@ -20,7 +21,7 @@ impl Ls {
         entries
     }
 
-    fn list_short(width: usize, state: &GameState) -> Vec<Vec<Text>> {
+    fn list_short(width: usize, state: &CliState) -> Vec<Vec<Text>> {
         let entries = Self::entries(state);
         let (chunks, num_rows) = (0..).filter_map(|rows| {
             let chunks = entries.chunks(rows);
@@ -47,7 +48,7 @@ impl Ls {
         rows
     }
 
-    fn list_long(state: &GameState) -> Vec<Vec<Text>> {
+    fn list_long(state: &CliState) -> Vec<Vec<Text>> {
         let entries = Self::entries(state);
         vec![text!["total {}"(entries.len())]].into_iter().chain(entries.into_iter().map(|entry| {
             let mut res = vec![Text::plain(""); 2];
@@ -67,11 +68,11 @@ impl Tool for Ls {
         "ls"
     }
 
-    fn autocomplete(&self, line: &str, state: &GameState) -> String {
+    fn autocomplete(&self, line: &str, state: &CliState) -> String {
         COMPLETER.complete(line, state)
     }
 
-    fn run(&self, _line: &str, state: &GameState) -> Box<dyn crate::agents::Agent> {
+    fn run(&self, _line: &str, state: &CliState) -> Box<dyn crate::agents::Agent> {
         let rows = Self::list_short(80, state); // TODO: accommodate actual screen size
         Box::new(FixedOutput(rows))
     }

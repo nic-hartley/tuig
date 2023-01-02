@@ -34,4 +34,4 @@ pub trait App {
 mod chat;
 pub use chat::ChatApp;
 mod cli;
-pub use cli::CliApp;
+pub use cli::{CliApp, CliState};
