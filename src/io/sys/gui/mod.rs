@@ -268,7 +268,6 @@ impl<B: GuiBackend> Gui<B> {
 impl<B: GuiBackend> IoSystem for Gui<B> {
     async fn draw(&mut self, screen: &Screen) -> io::Result<()> {
         self.backend.render(&self.window, screen).await?;
-        self.window.request_redraw();
         Ok(())
     }
 
@@ -374,6 +373,7 @@ impl IoRunner for WindowRunner {
                 }
                 Event::Suspended => send!(Action::Paused),
                 Event::Resumed => send!(Action::Unpaused),
+                Event::RedrawRequested(_) => send!(Action::Resized),
 
                 // other things can be ignored (for now)
                 _ => (),

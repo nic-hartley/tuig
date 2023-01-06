@@ -220,11 +220,12 @@ async fn run(iosys: &mut dyn IoSystem) {
                         }
                     }
                     Action::Closed => break,
+                    Action::Resized => tainted = true,
 
                     other => tainted |= apps[sel].input(other, &mut events),
                 }
             }
-            _ = sleep(Duration::from_millis(50)) => {
+            _ = sleep(Duration::from_millis(25)) => {
                 // nothing to do here, we just want to make sure events are handled regularly
             }
         }
