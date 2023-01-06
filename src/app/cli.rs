@@ -6,7 +6,7 @@ use std::{
 use crate::{
     agents::{
         tools::{autocomplete_with, Tool},
-        Event,
+        Event, Bundle,
     },
     io::{
         clifmt::Text,
@@ -77,11 +77,35 @@ impl CliApp {
         self.unread += 1;
     }
 
-    fn run_cmd(&mut self, line: String, events: &mut Vec<Event>) {
-        self.add_scroll(text!("> ", bright_white "{}"(line), "\n"));
-        events.push(Event::output(text!("command run: {}\n"(line))));
-        events.push(Event::CommandDone);
-        self.history.push(line);
+    fn run_cmd(&mut self, events: &mut Vec<Event>) {
+        self.add_scroll(text!("> ", bright_white "{}"(self.line), "\n"));
+        self.history.push(self.line.clone());
+        let line = self.line.trim();
+        if line.is_empty() {
+            return;
+        }
+        let (cmd, rest) = match line.split_once(' ') {
+            Some(p) => p,
+            None => (line, ""),
+        };
+        if let Some(tool) = self.tools.get(cmd) {
+            let mut fake_gs = GameState::for_player("spork".into());
+            fake_gs.machine.files.insert("awoo".into(), "".into());
+            fake_gs.machine.files.insert("awful".into(), "".into());
+            fake_gs.machine.files.insert("thingy".into(), "".into());
+            fake_gs.machine.files.insert("machomp".into(), "".into());
+            fake_gs.machine.files.insert("stuff/foo1".into(), "".into());
+            fake_gs.machine.files.insert("stuff/foo2".into(), "".into());
+            let cli_state = CliState {
+                gs: &fake_gs,
+                // TODO: track a real CWD
+                cwd: "".into(),
+            };
+            events.push(Event::SpawnAgent(Bundle::of(tool.run(rest.trim(), &cli_state))));
+            self.prompt = false;
+        } else {
+            self.add_scroll(text![bright_red "ERROR", ": Command ", bright_white "{}"(cmd), " not found.\n"]);
+        }
     }
 
     fn autocomplete(&self, line: &str) -> String {
@@ -136,8 +160,8 @@ impl CliApp {
             }
             Key::Enter => {
                 self.cursor = 0;
-                let line = mem::replace(&mut self.line, String::new());
-                self.run_cmd(line, events);
+                self.run_cmd(events);
+                self.line.clear();
             }
             _ => return false,
         }
@@ -201,6 +225,10 @@ impl App for CliApp {
         match ev {
             Event::CommandOutput(line) => {
                 self.add_scroll(line.clone());
+                true
+            }
+            Event::CommandDone => {
+                self.prompt = true;
                 true
             }
             Event::InstallTool(tool) => {

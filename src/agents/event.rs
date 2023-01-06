@@ -9,7 +9,7 @@ use super::{tools::Tool, Agent};
 pub struct Bundle<T>(Arc<Mutex<Option<T>>>);
 
 impl<T> Bundle<T> {
-    pub fn fill(contents: T) -> Self {
+    pub fn of(contents: T) -> Self {
         Self(Arc::new(Mutex::new(Some(contents))))
     }
 
@@ -46,7 +46,7 @@ macro_rules! trait_bundle {
             pub type [< Bundled $trait >] = Bundle<Box<dyn $trait>>;
             impl [< Bundled $trait >] {
                 pub fn new(contents: impl $trait + 'static) -> Self {
-                    Bundle::fill(Box::new(contents))
+                    Bundle::of(Box::new(contents))
                 }
             }
             impl Event {

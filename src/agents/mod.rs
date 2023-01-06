@@ -4,7 +4,7 @@ mod cf;
 pub use cf::{ControlFlow, WaitHandle};
 
 mod event;
-pub use event::{BundledAgent, Event};
+pub use event::{Bundle, BundledAgent, BundledApp, BundledTool, Event};
 
 /// An agent in the system, which can react to events.
 ///

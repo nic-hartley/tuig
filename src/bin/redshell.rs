@@ -156,9 +156,13 @@ async fn run(iosys: &mut dyn IoSystem) {
     .collect();
 
     let mut replies = vec![];
+    let mut new_agents: Vec<Box<dyn Agent>> = vec![];
     let mut tainted = true;
     loop {
-        replies.clear();
+        agents.extend(new_agents.drain(..).map(|mut a| {
+            let cf = a.start(&mut replies);
+            (a, cf)
+        }));
         for (agent, cf) in agents.iter_mut().filter(|(_, cf)| cf.is_ready()) {
             *cf = agent.react(&events, &mut replies);
         }
@@ -171,7 +175,16 @@ async fn run(iosys: &mut dyn IoSystem) {
                 }
             }
         }
+        for ev in &events {
+            match ev {
+                Event::SpawnAgent(b) => if let Some(ag) = b.take() {
+                    new_agents.push(ag);
+                }
+                _ => ()
+            }
+        }
         mem::swap(&mut events, &mut replies);
+        replies.clear();
 
         let new_size = iosys.size();
         if new_size != screen.size() {

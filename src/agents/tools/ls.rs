@@ -11,7 +11,6 @@ pub struct Ls;
 
 impl Ls {
     fn entries<'cs>(state: &CliState<'cs>) -> Vec<&'cs str> {
-        // TODO: directory-specific
         let mut entries: Vec<_> = state
             .gs
             .machine
@@ -30,7 +29,7 @@ impl Ls {
 
     fn list_short(width: usize, state: &CliState) -> Vec<Vec<Text>> {
         let entries = Self::entries(state);
-        let (chunks, num_rows) = (0..)
+        let (chunks, num_rows) = (1..)
             .filter_map(|rows| {
                 let chunks = entries.chunks(rows);
                 let widths = chunks
@@ -56,6 +55,9 @@ impl Ls {
                 };
                 rows[row].push(text);
             }
+        }
+        for row in rows.iter_mut() {
+            row.push(text1!["\n"]);
         }
         rows
     }
