@@ -1,12 +1,9 @@
-use std::{
-    collections::{HashMap, VecDeque},
-    mem,
-};
+use std::collections::{HashMap, VecDeque};
 
 use crate::{
     agents::{
         tools::{autocomplete_with, Tool},
-        Event, Bundle,
+        Bundle, Event,
     },
     io::{
         clifmt::Text,
@@ -101,10 +98,14 @@ impl CliApp {
                 // TODO: track a real CWD
                 cwd: "".into(),
             };
-            events.push(Event::SpawnAgent(Bundle::of(tool.run(rest.trim(), &cli_state))));
+            events.push(Event::SpawnAgent(Bundle::of(
+                tool.run(rest.trim(), &cli_state),
+            )));
             self.prompt = false;
         } else {
-            self.add_scroll(text![bright_red "ERROR", ": Command ", bright_white "{}"(cmd), " not found.\n"]);
+            self.add_scroll(
+                text![bright_red "ERROR", ": Command ", bright_white "{}"(cmd), " not found.\n"],
+            );
         }
     }
 

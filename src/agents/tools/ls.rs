@@ -1,4 +1,8 @@
-use crate::{app::CliState, io::clifmt::Text, text, text1};
+use crate::{
+    app::CliState,
+    io::clifmt::{FormattedExt, Text},
+    text, text1,
+};
 
 use super::{AutocompleteType, BsdCompleter, FixedOutput, Tool};
 
@@ -27,39 +31,24 @@ impl Ls {
         entries
     }
 
-    fn list_short(width: usize, state: &CliState) -> Vec<Vec<Text>> {
-        let entries = Self::entries(state);
-        let (chunks, num_rows) = (1..)
-            .filter_map(|rows| {
-                let chunks = entries.chunks(rows);
-                let widths = chunks
-                    .clone()
-                    .map(|items| items.iter().map(|s| s.len()).max().unwrap());
-                let total = (widths.len() - 1) * 3 + widths.sum::<usize>();
-                if total < width {
-                    Some((chunks, rows))
+    fn list_short(state: &CliState) -> Vec<Vec<Text>> {
+        let mut line: Vec<_> = Self::entries(state)
+            .into_iter()
+            .map(|item| {
+                let text = if item.chars().any(char::is_whitespace) {
+                    text1!["'{}' "(item)]
                 } else {
-                    None
+                    text1![" {}  "(item)]
+                };
+                if item.ends_with('/') {
+                    text.cyan().bold()
+                } else {
+                    text
                 }
             })
-            .next()
-            .expect("couldn't find a fitting row length");
-        let mut rows = vec![text![]; num_rows];
-        for chunk in chunks {
-            let width = chunk.iter().map(|s| s.len()).sum();
-            for (row, item) in chunk.iter().enumerate() {
-                let text = if item.contains(char::is_whitespace) {
-                    text1!("'{:0>1$}' "(item, width))
-                } else {
-                    text1!(" {:0>1$}  "(item, width))
-                };
-                rows[row].push(text);
-            }
-        }
-        for row in rows.iter_mut() {
-            row.push(text1!["\n"]);
-        }
-        rows
+            .collect();
+        line.push(text1!["\n"]);
+        vec![line]
     }
 
     fn list_long(state: &CliState) -> Vec<Vec<Text>> {
@@ -90,7 +79,7 @@ impl Tool for Ls {
     }
 
     fn run(&self, _line: &str, state: &CliState) -> Box<dyn crate::agents::Agent> {
-        let rows = Self::list_short(80, state); // TODO: accommodate actual screen size
+        let rows = Self::list_short(state);
         Box::new(FixedOutput(rows))
     }
 }

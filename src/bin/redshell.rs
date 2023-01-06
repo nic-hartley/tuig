@@ -177,10 +177,12 @@ async fn run(iosys: &mut dyn IoSystem) {
         }
         for ev in &events {
             match ev {
-                Event::SpawnAgent(b) => if let Some(ag) = b.take() {
-                    new_agents.push(ag);
+                Event::SpawnAgent(b) => {
+                    if let Some(ag) = b.take() {
+                        new_agents.push(ag);
+                    }
                 }
-                _ => ()
+                _ => (),
             }
         }
         mem::swap(&mut events, &mut replies);
