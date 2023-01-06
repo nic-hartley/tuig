@@ -73,6 +73,29 @@ impl BsdCompleter {
             }
         }
     }
+
+    pub fn parse<'l>(&self, line: &'l str) -> Result<HashMap<char, Option<&'l str>>, String> {
+        let (opts, rest) = line.split_once(' ').unwrap_or((line, ""));
+        let mut args = rest.split_whitespace();
+        let mut res = HashMap::with_capacity(opts.len());
+        for opt in opts.chars() {
+            match self.options.get(&opt) {
+                None => Err(format!("Unknown option: {}", opt))?,
+                Some(Some(_)) => {
+                    // real argument, takes a value
+                    match args.next() {
+                        Some(v) => { res.insert(opt, Some(v)); }
+                        None => Err(format!("Option requires argument: {}", opt))?,
+                    }
+                }
+                Some(None) => {
+                    // real argument, takes no value
+                    res.insert(opt, None);
+                }
+            }
+        }
+        Ok(res)
+    }
 }
 
 #[cfg(test)]

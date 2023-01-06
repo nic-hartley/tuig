@@ -6,7 +6,6 @@ Tasks to work on in the future, in no particular order, but generally in order I
 - CLI ctrl+d to end current line
 - Refactor tool running to let them do more advanced rendering/take input
 - Write command line option parsing
-- Get `ls` to show things based on arguments
 - Make the CLI track its state for real
 - `cd` command
 - Tweak the colors to look nice c:
