@@ -1,4 +1,7 @@
-use std::collections::{HashMap, VecDeque};
+use std::{
+    sync::{Arc, RwLock},
+    collections::{HashMap, VecDeque},
+};
 
 use crate::{
     agents::{
@@ -10,7 +13,7 @@ use crate::{
         input::{Action, Key},
         output::Screen,
     },
-    text, GameState,
+    text, GameState, Machine,
 };
 
 use super::App;
@@ -20,10 +23,10 @@ const MAX_SCROLL_LINES: usize = 1000;
 /// The high-level state of the CLI, for passing to commands.
 ///
 /// Note this is not updated live; it's the state of the CLI as of whenever the command was run.
-#[derive(Clone)]
-pub struct CliState<'gs> {
-    /// The game state
-    pub gs: &'gs GameState,
+#[derive(Clone, Default)]
+pub struct CliState {
+    /// The machine currently logged into
+    pub machine: Arc<RwLock<Machine>>,
     /// The current working directory of the CLI
     pub cwd: String,
 }
@@ -86,15 +89,15 @@ impl CliApp {
             None => (line, ""),
         };
         if let Some(tool) = self.tools.get(cmd) {
-            let mut fake_gs = GameState::for_player("spork".into());
-            fake_gs.machine.files.insert("awoo".into(), "".into());
-            fake_gs.machine.files.insert("awful".into(), "".into());
-            fake_gs.machine.files.insert("thingy".into(), "".into());
-            fake_gs.machine.files.insert("machomp".into(), "".into());
-            fake_gs.machine.files.insert("stuff/foo1".into(), "".into());
-            fake_gs.machine.files.insert("stuff/foo2".into(), "".into());
+            let mut machine = Machine::default();
+            machine.files.insert("awoo".into(), "".into());
+            machine.files.insert("awful".into(), "".into());
+            machine.files.insert("thingy".into(), "".into());
+            machine.files.insert("machomp".into(), "".into());
+            machine.files.insert("stuff/foo1".into(), "".into());
+            machine.files.insert("stuff/foo2".into(), "".into());
             let cli_state = CliState {
-                gs: &fake_gs,
+                machine: Arc::new(RwLock::new(machine)),
                 // TODO: track a real CWD
                 cwd: "".into(),
             };
@@ -110,15 +113,15 @@ impl CliApp {
     }
 
     fn autocomplete(&self, line: &str) -> String {
-        let mut fake_gs = GameState::for_player("spork".into());
-        fake_gs.machine.files.insert("awoo".into(), "".into());
-        fake_gs.machine.files.insert("awful".into(), "".into());
-        fake_gs.machine.files.insert("thingy".into(), "".into());
-        fake_gs.machine.files.insert("machomp".into(), "".into());
-        fake_gs.machine.files.insert("stuff/foo1".into(), "".into());
-        fake_gs.machine.files.insert("stuff/foo2".into(), "".into());
+        let mut machine = Machine::default();
+        machine.files.insert("awoo".into(), "".into());
+        machine.files.insert("awful".into(), "".into());
+        machine.files.insert("thingy".into(), "".into());
+        machine.files.insert("machomp".into(), "".into());
+        machine.files.insert("stuff/foo1".into(), "".into());
+        machine.files.insert("stuff/foo2".into(), "".into());
         let cli_state = CliState {
-            gs: &fake_gs,
+            machine: Arc::new(RwLock::new(machine)),
             // TODO: track a real CWD
             cwd: "".into(),
         };
@@ -268,6 +271,6 @@ impl App for CliApp {
             .chain(self.prompt_line())
             .collect::<Vec<_>>();
         let main_text_height = screen.size().y() - help_height;
-        screen.textbox(main_text).pos(0, 1).height(main_text_height);
+        screen.textbox(main_text).pos(0, 1).height(main_text_height).scroll_bottom(true);
     }
 }

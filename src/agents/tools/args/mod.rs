@@ -81,8 +81,9 @@ impl AutocompleteType {
                 autocomplete_with(
                     file,
                     state
-                        .gs
                         .machine
+                        .read()
+                        .expect("lock poisoned")
                         .files
                         .keys()
                         .filter_map(|f| f.strip_prefix(&prefix))
@@ -96,7 +97,8 @@ impl AutocompleteType {
 
 #[cfg(test)]
 mod test {
-    use crate::GameState;
+    use std::sync::{Arc, RwLock};
+    use crate::Machine;
 
     use super::*;
 
@@ -129,11 +131,11 @@ mod test {
 
     #[test]
     fn none_doesnt_autocomplete() {
-        let mut gs = GameState::for_player("miso".into());
-        gs.machine.files.insert("moo".into(), "".into());
-        gs.machine.files.insert("abyss".into(), "".into());
+        let mut machine = Machine::default();
+        machine.files.insert("moo".into(), "".into());
+        machine.files.insert("abyss".into(), "".into());
         let clis = CliState {
-            gs: &gs,
+            machine: Arc::new(RwLock::new(machine)),
             cwd: "".into(),
         };
         let ac = AutocompleteType::None;
@@ -145,11 +147,11 @@ mod test {
 
     #[test]
     fn choices_autocompletes_choices() {
-        let mut gs = GameState::for_player("miso".into());
-        gs.machine.files.insert("moo".into(), "".into());
-        gs.machine.files.insert("abyss".into(), "".into());
+        let mut machine = Machine::default();
+        machine.files.insert("moo".into(), "".into());
+        machine.files.insert("abyss".into(), "".into());
         let clis = CliState {
-            gs: &gs,
+            machine: Arc::new(RwLock::new(machine)),
             cwd: "".into(),
         };
         let ac = AutocompleteType::choices(&["mass", "help", "gorgonzola"]);
@@ -164,11 +166,11 @@ mod test {
 
     #[test]
     fn local_file_autocompletes_local_files() {
-        let mut gs = GameState::for_player("miso".into());
-        gs.machine.files.insert("moo".into(), "".into());
-        gs.machine.files.insert("abyss".into(), "".into());
+        let mut machine = Machine::default();
+        machine.files.insert("moo".into(), "".into());
+        machine.files.insert("abyss".into(), "".into());
         let clis = CliState {
-            gs: &gs,
+            machine: Arc::new(RwLock::new(machine)),
             cwd: "".into(),
         };
         let ac = AutocompleteType::LocalFile;
@@ -182,16 +184,16 @@ mod test {
 
     #[test]
     fn local_file_autocompletes_local_files_in_cwd() {
-        let mut gs = GameState::for_player("miso".into());
-        gs.machine.files.insert("moo".into(), "".into());
-        gs.machine.files.insert("abyss".into(), "".into());
-        gs.machine.files.insert("stuff/bongos".into(), "".into());
-        gs.machine
+        let mut machine = Machine::default();
+        machine.files.insert("moo".into(), "".into());
+        machine.files.insert("abyss".into(), "".into());
+        machine.files.insert("stuff/bongos".into(), "".into());
+        machine
             .files
             .insert("stuff/michael_hill".into(), "".into());
-        gs.machine.files.insert("stuff/neil_baum".into(), "".into());
+        machine.files.insert("stuff/neil_baum".into(), "".into());
         let clis = CliState {
-            gs: &gs,
+            machine: Arc::new(RwLock::new(machine)),
             cwd: "stuff/".into(),
         };
         let ac = AutocompleteType::LocalFile;
@@ -206,12 +208,12 @@ mod test {
 
     #[test]
     fn local_file_autocompletes_directories_nicely() {
-        let mut gs = GameState::for_player("miso".into());
-        gs.machine.files.insert("moo".into(), "".into());
-        gs.machine.files.insert("abyss".into(), "".into());
-        gs.machine.files.insert("stuff/bongos".into(), "".into());
+        let mut machine = Machine::default();
+        machine.files.insert("moo".into(), "".into());
+        machine.files.insert("abyss".into(), "".into());
+        machine.files.insert("stuff/bongos".into(), "".into());
         let clis = CliState {
-            gs: &gs,
+            machine: Arc::new(RwLock::new(machine)),
             cwd: "".into(),
         };
         let ac = AutocompleteType::LocalFile;

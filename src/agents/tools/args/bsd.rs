@@ -100,19 +100,20 @@ impl BsdCompleter {
 
 #[cfg(test)]
 mod test {
-    use crate::GameState;
+    use std::sync::{Arc, RwLock};
+    use crate::Machine;
 
     use super::*;
 
     #[test]
     fn empty_completer_doesnt_complete_no_options() {
         let completer = BsdCompleter::new();
-        let mut gs = GameState::for_player("miso".into());
-        gs.machine.files.insert("moo".into(), "".into());
-        gs.machine.files.insert("maggot".into(), "".into());
-        gs.machine.files.insert("abyss".into(), "".into());
+        let mut machine = Machine::default();
+        machine.files.insert("moo".into(), "".into());
+        machine.files.insert("maggot".into(), "".into());
+        machine.files.insert("abyss".into(), "".into());
         let clis = CliState {
-            gs: &gs,
+            machine: Arc::new(RwLock::new(machine)),
             cwd: "".into(),
         };
         assert_eq!(completer.complete("", &clis), "");
@@ -131,12 +132,12 @@ mod test {
             .flag('q')
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
             .argument('f', AutocompleteType::LocalFile);
-        let mut gs = GameState::for_player("miso".into());
-        gs.machine.files.insert("moo".into(), "".into());
-        gs.machine.files.insert("maggot".into(), "".into());
-        gs.machine.files.insert("abyss".into(), "".into());
+        let mut machine = Machine::default();
+        machine.files.insert("moo".into(), "".into());
+        machine.files.insert("maggot".into(), "".into());
+        machine.files.insert("abyss".into(), "".into());
         let clis = CliState {
-            gs: &gs,
+            machine: Arc::new(RwLock::new(machine)),
             cwd: "".into(),
         };
         assert_eq!(completer.complete("", &clis), "");
@@ -154,12 +155,12 @@ mod test {
             .flag('q')
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
             .argument('f', AutocompleteType::LocalFile);
-        let mut gs = GameState::for_player("miso".into());
-        gs.machine.files.insert("moo".into(), "".into());
-        gs.machine.files.insert("maggot".into(), "".into());
-        gs.machine.files.insert("abyss".into(), "".into());
+        let mut machine = Machine::default();
+        machine.files.insert("moo".into(), "".into());
+        machine.files.insert("maggot".into(), "".into());
+        machine.files.insert("abyss".into(), "".into());
         let clis = CliState {
-            gs: &gs,
+            machine: Arc::new(RwLock::new(machine)),
             cwd: "".into(),
         };
         assert_eq!(completer.complete("", &clis), "");
@@ -180,12 +181,12 @@ mod test {
             .flag('q')
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
             .argument('f', AutocompleteType::LocalFile);
-        let mut gs = GameState::for_player("miso".into());
-        gs.machine.files.insert("moo".into(), "".into());
-        gs.machine.files.insert("maggot".into(), "".into());
-        gs.machine.files.insert("abyss".into(), "".into());
+        let mut machine = Machine::default();
+        machine.files.insert("moo".into(), "".into());
+        machine.files.insert("maggot".into(), "".into());
+        machine.files.insert("abyss".into(), "".into());
         let clis = CliState {
-            gs: &gs,
+            machine: Arc::new(RwLock::new(machine)),
             cwd: "".into(),
         };
         assert_eq!(completer.complete("qf", &clis), "");
@@ -204,15 +205,15 @@ mod test {
             .flag('q')
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
             .argument('f', AutocompleteType::LocalFile);
-        let mut gs = GameState::for_player("miso".into());
-        gs.machine.files.insert("moo".into(), "".into());
-        gs.machine.files.insert("maggot".into(), "".into());
-        gs.machine.files.insert("abyss".into(), "".into());
-        gs.machine.files.insert("stuff/violin".into(), "".into());
-        gs.machine.files.insert("stuff/cello".into(), "".into());
-        gs.machine.files.insert("stuff/flute".into(), "".into());
+        let mut machine = Machine::default();
+        machine.files.insert("moo".into(), "".into());
+        machine.files.insert("maggot".into(), "".into());
+        machine.files.insert("abyss".into(), "".into());
+        machine.files.insert("stuff/violin".into(), "".into());
+        machine.files.insert("stuff/cello".into(), "".into());
+        machine.files.insert("stuff/flute".into(), "".into());
         let clis = CliState {
-            gs: &gs,
+            machine: Arc::new(RwLock::new(machine)),
             cwd: "stuff/".into(),
         };
         assert_eq!(completer.complete("qf", &clis), "");

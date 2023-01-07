@@ -14,7 +14,7 @@ lazy_static::lazy_static! {
 pub struct Ls;
 
 impl Ls {
-    fn entries<'cs>(dir: &str, state: &CliState<'cs>) -> Vec<&'cs str> {
+    fn entries<'cs>(dir: &str, state: &'cs CliState) -> Vec<String> {
         let prefix = if dir.is_empty() {
             format!("{}", state.cwd)
         } else if dir.ends_with('/') {
@@ -23,12 +23,14 @@ impl Ls {
             format!("{}{}/", state.cwd, dir)
         };
         let mut entries: Vec<_> = state
-            .gs
             .machine
+            .read()
+            .expect("lock poisoned elsewhere")
             .files
             .keys()
             .filter_map(|f| f.strip_prefix(&prefix))
             .map(|f| f.split_inclusive('/').next().unwrap_or(&f))
+            .map(|p| p.to_owned())
             .collect();
         if entries.is_empty() {
             return vec![];
