@@ -167,6 +167,7 @@ fn mb4button(button: winit::event::MouseButton) -> Option<MouseButton> {
 fn char4pixel_pos(pos: XY, char_size: XY, win_size: XY) -> XY {
     // buffer around the edges
     let buf = (win_size % char_size) / 2;
+    let pos = pos.clamp(buf, win_size - char_size + buf);
     (pos - buf) / char_size
 }
 
@@ -181,7 +182,6 @@ fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
     let el = EventLoopBuilder::<Action>::with_user_event().build();
     let window = WindowBuilder::new()
         .with_inner_size(LogicalSize::new(win_size.x() as u32, win_size.y() as u32))
-        .with_resizable(false)
         .with_title("redshell")
         .build(&el)
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
@@ -324,12 +324,11 @@ impl IoRunner for WindowRunner {
             }
             match ev {
                 Event::UserEvent(a) => send!(a),
-                Event::WindowEvent {
-                    event: WindowEvent::Resized(_),
-                    ..
-                } => {
+                Event::WindowEvent { event: WindowEvent::Resized(sz), .. } => {
+                    self.win_size = XY(sz.width as usize, sz.height as usize);
                     send!(Action::Resized);
                 }
+                Event::RedrawRequested(_) => send!(Action::Resized),
                 Event::WindowEvent {
                     event: WindowEvent::CloseRequested | WindowEvent::Destroyed,
                     ..
@@ -373,7 +372,6 @@ impl IoRunner for WindowRunner {
                 }
                 Event::Suspended => send!(Action::Paused),
                 Event::Resumed => send!(Action::Unpaused),
-                Event::RedrawRequested(_) => send!(Action::Resized),
 
                 // other things can be ignored (for now)
                 _ => (),
