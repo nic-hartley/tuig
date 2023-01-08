@@ -1,6 +1,6 @@
 use crate::{
     app::CliState,
-    io::clifmt::{FormattedExt, Text},
+    io::clifmt::{Text, FormattedExt},
     text, text1,
 };
 
@@ -14,7 +14,7 @@ lazy_static::lazy_static! {
 pub struct Ls;
 
 impl Ls {
-    fn entries<'cs>(dir: &str, state: &'cs CliState) -> Vec<String> {
+    fn entries<'cs>(dir: &str, state: &'cs CliState) -> Result<Vec<String>, String> {
         let prefix = if dir.is_empty() {
             format!("{}", state.cwd)
         } else if dir.ends_with('/') {
@@ -22,26 +22,26 @@ impl Ls {
         } else {
             format!("{}{}/", state.cwd, dir)
         };
-        let mut entries: Vec<_> = state
-            .machine
-            .read()
-            .expect("lock poisoned elsewhere")
-            .files
-            .keys()
-            .filter_map(|f| f.strip_prefix(&prefix))
-            .map(|f| f.split_inclusive('/').next().unwrap_or(&f))
-            .map(|p| p.to_owned())
+        let entries = match state.machine.readdir(&prefix) {
+            Ok(e) => e,
+            Err(e) => return Err(e),
+        };
+        let mut entries: Vec<_> = entries
+            .map(|(p, _)| p.to_owned())
             .collect();
-        if entries.is_empty() {
-            return vec![];
-        }
         entries.sort_unstable();
         entries.dedup();
-        entries
+        Ok(entries)
     }
 
     fn list_short(dir: &str, state: &CliState) -> Vec<Vec<Text>> {
-        let mut line: Vec<_> = Self::entries(dir, state)
+        let entries = match Self::entries(dir, state) {
+            Ok(e) => e,
+            Err(e) => {
+                return vec![text![bright_red "ERROR", ": {}\n"(e)]];
+            }
+        };
+        let mut line: Vec<_> = entries
             .into_iter()
             .map(|item| {
                 let text = if item.chars().any(char::is_whitespace) {
@@ -61,7 +61,12 @@ impl Ls {
     }
 
     fn list_long(dir: &str, state: &CliState) -> Vec<Vec<Text>> {
-        let entries = Self::entries(dir, state);
+        let entries = match Self::entries(dir, state) {
+            Ok(e) => e,
+            Err(e) => {
+                return vec![text![bright_red "ERROR", ": {}\n"(e)]];
+            }
+        };
         vec![text!["total {}\n"(entries.len())]]
             .into_iter()
             .chain(entries.into_iter().map(|entry| {

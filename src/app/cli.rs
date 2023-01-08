@@ -1,5 +1,5 @@
 use std::{
-    sync::{Arc, RwLock},
+    sync::Arc,
     collections::{HashMap, VecDeque},
 };
 
@@ -26,7 +26,7 @@ const MAX_SCROLL_LINES: usize = 1000;
 #[derive(Clone, Default)]
 pub struct CliState {
     /// The machine currently logged into
-    pub machine: Arc<RwLock<Machine>>,
+    pub machine: Arc<Machine>,
     /// The current working directory of the CLI
     pub cwd: String,
 }
@@ -90,16 +90,16 @@ impl CliApp {
         };
         if let Some(tool) = self.tools.get(cmd) {
             let mut machine = Machine::default();
-            machine.files.insert("awoo".into(), "".into());
-            machine.files.insert("awful".into(), "".into());
-            machine.files.insert("thingy".into(), "".into());
-            machine.files.insert("machomp".into(), "".into());
-            machine.files.insert("stuff/foo1".into(), "".into());
-            machine.files.insert("stuff/foo2".into(), "".into());
+            machine.write("/awoo", "".into()).unwrap();
+            machine.write("/awful", "".into()).unwrap();
+            machine.write("/thingy", "".into()).unwrap();
+            machine.write("/machomp", "".into()).unwrap();
+            machine.write("/stuff/foo1", "".into()).unwrap();
+            machine.write("/stuff/foo2", "".into()).unwrap();
             let cli_state = CliState {
-                machine: Arc::new(RwLock::new(machine)),
+                machine: Arc::new(machine),
                 // TODO: track a real CWD
-                cwd: "".into(),
+                cwd: "/".into(),
             };
             events.push(Event::SpawnAgent(Bundle::of(
                 tool.run(rest.trim(), &cli_state),
@@ -114,16 +114,16 @@ impl CliApp {
 
     fn autocomplete(&self, line: &str) -> String {
         let mut machine = Machine::default();
-        machine.files.insert("awoo".into(), "".into());
-        machine.files.insert("awful".into(), "".into());
-        machine.files.insert("thingy".into(), "".into());
-        machine.files.insert("machomp".into(), "".into());
-        machine.files.insert("stuff/foo1".into(), "".into());
-        machine.files.insert("stuff/foo2".into(), "".into());
+        machine.write("/awoo", "".into()).unwrap();
+        machine.write("/awful", "".into()).unwrap();
+        machine.write("/thingy", "".into()).unwrap();
+        machine.write("/machomp", "".into()).unwrap();
+        machine.write("/stuff/foo1", "".into()).unwrap();
+        machine.write("/stuff/foo2", "".into()).unwrap();
         let cli_state = CliState {
-            machine: Arc::new(RwLock::new(machine)),
+            machine: Arc::new(machine),
             // TODO: track a real CWD
-            cwd: "".into(),
+            cwd: "/".into(),
         };
         if let Some((cmd, rest)) = line.split_once(char::is_whitespace) {
             if let Some(tool) = self.tools.get(cmd) {

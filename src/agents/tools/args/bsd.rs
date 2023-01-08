@@ -100,7 +100,7 @@ impl BsdCompleter {
 
 #[cfg(test)]
 mod test {
-    use std::sync::{Arc, RwLock};
+    use std::sync::Arc;
     use crate::Machine;
 
     use super::*;
@@ -109,12 +109,12 @@ mod test {
     fn empty_completer_doesnt_complete_no_options() {
         let completer = BsdCompleter::new();
         let mut machine = Machine::default();
-        machine.files.insert("moo".into(), "".into());
-        machine.files.insert("maggot".into(), "".into());
-        machine.files.insert("abyss".into(), "".into());
+        machine.write("/moo", "".into()).expect("Failed to write test file");
+        machine.write("/maggot", "".into()).expect("Failed to write test file");
+        machine.write("/abyss", "".into()).expect("Failed to write test file");
         let clis = CliState {
-            machine: Arc::new(RwLock::new(machine)),
-            cwd: "".into(),
+            machine: Arc::new(machine),
+            cwd: "/".into(),
         };
         assert_eq!(completer.complete("", &clis), "");
         assert_eq!(completer.complete("m", &clis), "");
@@ -133,12 +133,12 @@ mod test {
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
             .argument('f', AutocompleteType::LocalFile);
         let mut machine = Machine::default();
-        machine.files.insert("moo".into(), "".into());
-        machine.files.insert("maggot".into(), "".into());
-        machine.files.insert("abyss".into(), "".into());
+        machine.write("/moo", "".into()).expect("Failed to write test file");
+        machine.write("/maggot", "".into()).expect("Failed to write test file");
+        machine.write("/abyss", "".into()).expect("Failed to write test file");
         let clis = CliState {
-            machine: Arc::new(RwLock::new(machine)),
-            cwd: "".into(),
+            machine: Arc::new(machine),
+            cwd: "/".into(),
         };
         assert_eq!(completer.complete("", &clis), "");
         assert_eq!(completer.complete("v", &clis), "");
@@ -156,12 +156,12 @@ mod test {
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
             .argument('f', AutocompleteType::LocalFile);
         let mut machine = Machine::default();
-        machine.files.insert("moo".into(), "".into());
-        machine.files.insert("maggot".into(), "".into());
-        machine.files.insert("abyss".into(), "".into());
+        machine.write("/moo", "".into()).expect("Failed to write test file");
+        machine.write("/maggot", "".into()).expect("Failed to write test file");
+        machine.write("/abyss", "".into()).expect("Failed to write test file");
         let clis = CliState {
-            machine: Arc::new(RwLock::new(machine)),
-            cwd: "".into(),
+            machine: Arc::new(machine),
+            cwd: "/".into(),
         };
         assert_eq!(completer.complete("", &clis), "");
         assert_eq!(completer.complete("f", &clis), "");
@@ -182,12 +182,12 @@ mod test {
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
             .argument('f', AutocompleteType::LocalFile);
         let mut machine = Machine::default();
-        machine.files.insert("moo".into(), "".into());
-        machine.files.insert("maggot".into(), "".into());
-        machine.files.insert("abyss".into(), "".into());
+        machine.write("/moo", "".into()).expect("Failed to write test file");
+        machine.write("/maggot", "".into()).expect("Failed to write test file");
+        machine.write("/abyss", "".into()).expect("Failed to write test file");
         let clis = CliState {
-            machine: Arc::new(RwLock::new(machine)),
-            cwd: "".into(),
+            machine: Arc::new(machine),
+            cwd: "/".into(),
         };
         assert_eq!(completer.complete("qf", &clis), "");
         assert_eq!(completer.complete("fv ", &clis), "");
@@ -206,15 +206,15 @@ mod test {
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
             .argument('f', AutocompleteType::LocalFile);
         let mut machine = Machine::default();
-        machine.files.insert("moo".into(), "".into());
-        machine.files.insert("maggot".into(), "".into());
-        machine.files.insert("abyss".into(), "".into());
-        machine.files.insert("stuff/violin".into(), "".into());
-        machine.files.insert("stuff/cello".into(), "".into());
-        machine.files.insert("stuff/flute".into(), "".into());
+        machine.write("/moo", "".into()).expect("Failed to write test file");
+        machine.write("/maggot", "".into()).expect("Failed to write test file");
+        machine.write("/abyss", "".into()).expect("Failed to write test file");
+        machine.write("/stuff/violin", "".into()).expect("Failed to write test file");
+        machine.write("/stuff/cello", "".into()).expect("Failed to write test file");
+        machine.write("/stuff/flute", "".into()).expect("Failed to write test file");
         let clis = CliState {
-            machine: Arc::new(RwLock::new(machine)),
-            cwd: "stuff/".into(),
+            machine: Arc::new(machine),
+            cwd: "/stuff/".into(),
         };
         assert_eq!(completer.complete("qf", &clis), "");
         assert_eq!(completer.complete("fv ", &clis), "");

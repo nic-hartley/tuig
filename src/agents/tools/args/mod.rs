@@ -78,26 +78,24 @@ impl AutocompleteType {
                     .map(|s| format!("{}/", s))
                     .collect::<String>();
                 let prefix = format!("{}{}", state.cwd, cmd_dir);
-                autocomplete_with(
-                    file,
-                    state
-                        .machine
-                        .read()
-                        .expect("lock poisoned")
-                        .files
-                        .keys()
-                        .filter_map(|f| f.strip_prefix(&prefix))
-                        .map(|f| f.split_inclusive('/').next().unwrap_or(f)),
-                )
+                let files = match state.machine.readdir(&prefix) {
+                    Ok(f) => f,
+                    Err(_) => return String::new(),
+                };
+                autocomplete_with(file, files.map(|(f, e)| if e.is_dir() {
+                    format!("{}/", f)
+                } else {
+                    format!("{}", f)
+                }))
             }
-            _ => unimplemented!(),
+            _ => todo!(),
         }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use std::sync::{Arc, RwLock};
+    use std::sync::Arc;
     use crate::Machine;
 
     use super::*;
@@ -132,11 +130,11 @@ mod test {
     #[test]
     fn none_doesnt_autocomplete() {
         let mut machine = Machine::default();
-        machine.files.insert("moo".into(), "".into());
-        machine.files.insert("abyss".into(), "".into());
+        machine.write("/moo", "".into()).expect("Failed to write test file");
+        machine.write("/abyss", "".into()).expect("Failed to write test file");
         let clis = CliState {
-            machine: Arc::new(RwLock::new(machine)),
-            cwd: "".into(),
+            machine: Arc::new(machine),
+            cwd: "/".into(),
         };
         let ac = AutocompleteType::None;
         assert_eq!(ac.complete("", &clis), "");
@@ -148,11 +146,11 @@ mod test {
     #[test]
     fn choices_autocompletes_choices() {
         let mut machine = Machine::default();
-        machine.files.insert("moo".into(), "".into());
-        machine.files.insert("abyss".into(), "".into());
+        machine.write("/moo", "".into()).expect("Failed to write test file");
+        machine.write("/abyss", "".into()).expect("Failed to write test file");
         let clis = CliState {
-            machine: Arc::new(RwLock::new(machine)),
-            cwd: "".into(),
+            machine: Arc::new(machine),
+            cwd: "/".into(),
         };
         let ac = AutocompleteType::choices(&["mass", "help", "gorgonzola"]);
         assert_eq!(ac.complete("", &clis), "");
@@ -167,11 +165,11 @@ mod test {
     #[test]
     fn local_file_autocompletes_local_files() {
         let mut machine = Machine::default();
-        machine.files.insert("moo".into(), "".into());
-        machine.files.insert("abyss".into(), "".into());
+        machine.write("/moo", "".into()).expect("Failed to write test file");
+        machine.write("/abyss", "".into()).expect("Failed to write test file");
         let clis = CliState {
-            machine: Arc::new(RwLock::new(machine)),
-            cwd: "".into(),
+            machine: Arc::new(machine),
+            cwd: "/".into(),
         };
         let ac = AutocompleteType::LocalFile;
         assert_eq!(ac.complete("", &clis), "");
@@ -185,16 +183,14 @@ mod test {
     #[test]
     fn local_file_autocompletes_local_files_in_cwd() {
         let mut machine = Machine::default();
-        machine.files.insert("moo".into(), "".into());
-        machine.files.insert("abyss".into(), "".into());
-        machine.files.insert("stuff/bongos".into(), "".into());
-        machine
-            .files
-            .insert("stuff/michael_hill".into(), "".into());
-        machine.files.insert("stuff/neil_baum".into(), "".into());
+        machine.write("/moo", "".into()).expect("Failed to write test file");
+        machine.write("/abyss", "".into()).expect("Failed to write test file");
+        machine.write("/stuff/bongos", "".into()).expect("Failed to write test file");
+        machine.write("/stuff/michael_hill".into(), "".into()).expect("Failed to write test file");
+        machine.write("/stuff/neil_baum", "".into()).expect("Failed to write test file");
         let clis = CliState {
-            machine: Arc::new(RwLock::new(machine)),
-            cwd: "stuff/".into(),
+            machine: Arc::new(machine),
+            cwd: "/stuff/".into(),
         };
         let ac = AutocompleteType::LocalFile;
         assert_eq!(ac.complete("", &clis), "");
@@ -209,12 +205,12 @@ mod test {
     #[test]
     fn local_file_autocompletes_directories_nicely() {
         let mut machine = Machine::default();
-        machine.files.insert("moo".into(), "".into());
-        machine.files.insert("abyss".into(), "".into());
-        machine.files.insert("stuff/bongos".into(), "".into());
+        machine.write("/moo", "".into()).expect("Failed to write test file");
+        machine.write("/abyss", "".into()).expect("Failed to write test file");
+        machine.write("/stuff/bongos", "".into()).expect("Failed to write test file");
         let clis = CliState {
-            machine: Arc::new(RwLock::new(machine)),
-            cwd: "".into(),
+            machine: Arc::new(machine),
+            cwd: "/".into(),
         };
         let ac = AutocompleteType::LocalFile;
         assert_eq!(ac.complete("", &clis), "");

@@ -20,3 +20,4 @@ Tasks to work on in the future, in no particular order, but generally in order I
 - Webserver + JS frontend IoSystem?
 - Fullscreen mode
 - Settings page
+- Multiuser systems
