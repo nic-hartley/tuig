@@ -10,8 +10,8 @@ use crate::{
     },
     io::{
         clifmt::Text,
-        input::{Action, Key},
-        output::Screen,
+        input::Action,
+        output::Screen, text_input::{TextInput, TextInputRequest},
     },
     text, GameState, Machine,
 };
@@ -38,12 +38,8 @@ pub struct CliApp {
     scroll: VecDeque<Vec<Text>>,
     /// whether the prompt is currently visible
     prompt: bool,
-    /// line(s) currently being typed
-    line: String,
-    /// cursor position in the line being typed
-    cursor: usize,
-    /// any autocomplete that's been requested
-    autocomplete: String,
+    /// the text input players type into
+    input: TextInput,
     /// help text
     help: String,
     /// lines of output that haven't been read yet
@@ -58,9 +54,7 @@ impl Default for CliApp {
             history: Default::default(),
             scroll: Default::default(),
             prompt: true,
-            line: Default::default(),
-            cursor: Default::default(),
-            autocomplete: Default::default(),
+            input: TextInput::new("> "),
             help: Default::default(),
             unread: Default::default(),
             tools: Default::default(),
@@ -77,16 +71,15 @@ impl CliApp {
         self.unread += 1;
     }
 
-    fn run_cmd(&mut self, events: &mut Vec<Event>) {
-        self.add_scroll(text!("> ", bright_white "{}"(self.line), "\n"));
-        self.history.push(self.line.clone());
-        let line = self.line.trim();
-        if line.is_empty() {
+    fn run_cmd(&mut self, line: String, events: &mut Vec<Event>) {
+        self.add_scroll(text!("> ", bright_white "{}"(line), "\n"));
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
             return;
         }
-        let (cmd, rest) = match line.split_once(' ') {
+        let (cmd, rest) = match trimmed.split_once(' ') {
             Some(p) => p,
-            None => (line, ""),
+            None => (trimmed, ""),
         };
         if let Some(tool) = self.tools.get(cmd) {
             let mut machine = Machine::default();
@@ -110,6 +103,7 @@ impl CliApp {
                 text![bright_red "ERROR", ": Command ", bright_white "{}"(cmd), " not found.\n"],
             );
         }
+        self.history.push(line);
     }
 
     fn autocomplete(&self, line: &str) -> String {
@@ -135,82 +129,6 @@ impl CliApp {
             autocomplete_with(line, self.tools.keys())
         }
     }
-
-    fn keypress(&mut self, key: Key, events: &mut Vec<Event>) -> bool {
-        match key {
-            Key::Char(ch) => {
-                self.line.insert(self.cursor, ch);
-                self.cursor += 1;
-            }
-            Key::Backspace if self.cursor > 0 => {
-                self.line.remove(self.cursor - 1);
-                self.cursor -= 1;
-            }
-            Key::Delete if self.cursor < self.line.len() => {
-                self.line.remove(self.cursor);
-            }
-            Key::Left if self.cursor > 0 => self.cursor -= 1,
-            Key::Right if self.cursor < self.line.len() => self.cursor += 1,
-            // TODO: up/down to scroll through history
-            Key::Tab => {
-                if self.autocomplete.is_empty() {
-                    self.autocomplete = self.autocomplete(&self.line[..self.cursor]);
-                } else {
-                    self.line.insert_str(self.cursor, &self.autocomplete);
-                    self.cursor += self.autocomplete.len();
-                    self.autocomplete = String::new();
-                }
-                return true;
-            }
-            Key::Enter => {
-                self.cursor = 0;
-                self.run_cmd(events);
-                self.line.clear();
-            }
-            _ => return false,
-        }
-        self.autocomplete = String::new();
-        true
-    }
-
-    fn prompt_line(&self) -> Vec<Text> {
-        if !self.prompt {
-            return vec![];
-        }
-        if self.cursor == self.line.len() {
-            if self.autocomplete.is_empty() {
-                text![
-                    "> ",
-                    bright_white "{}"(self.line),
-                    bright_white underline " ",
-                ]
-            } else {
-                text![
-                    "> ",
-                    bright_white "{}"(self.line),
-                    bright_black underline "{}"(&self.autocomplete[..1]),
-                    bright_black "{}"(&self.autocomplete[1..]),
-                ]
-            }
-        } else {
-            if self.autocomplete.is_empty() {
-                text![
-                    "> ",
-                    bright_white "{}"(&self.line[..self.cursor]),
-                    bright_white underline "{}"(&self.line[self.cursor..self.cursor+1]),
-                    bright_white "{}"(&self.line[self.cursor+1..]),
-                ]
-            } else {
-                text![
-                    "> ",
-                    bright_white "{}"(&self.line[..self.cursor]),
-                    bright_black underline "{}"(&self.autocomplete[..1]),
-                    bright_black "{}"(&self.autocomplete[1..]),
-                    bright_white "{}"(&self.line[self.cursor..]),
-                ]
-            }
-        }
-    }
 }
 
 impl App for CliApp {
@@ -219,10 +137,17 @@ impl App for CliApp {
     }
 
     fn input(&mut self, a: Action, events: &mut Vec<Event>) -> bool {
-        match a {
-            Action::KeyPress { key } => self.keypress(key, events),
-            _ => false,
-        }
+        match self.input.action(a) {
+            TextInputRequest::Nothing => (),
+            TextInputRequest::Autocomplete => {
+                let complete = self.autocomplete(self.input.completable());
+                self.input.set_complete(complete);
+            },
+            TextInputRequest::Line(l) => {
+                self.run_cmd(l, events);
+            }
+        };
+        self.input.tainted()
     }
 
     fn on_event(&mut self, ev: &Event) -> bool {
@@ -268,7 +193,7 @@ impl App for CliApp {
             .iter()
             .flat_map(|v| v)
             .cloned()
-            .chain(self.prompt_line())
+            .chain(self.input.render())
             .collect::<Vec<_>>();
         let main_text_height = screen.size().y() - help_height;
         screen.textbox(main_text).pos(0, 1).height(main_text_height).scroll_bottom(true);

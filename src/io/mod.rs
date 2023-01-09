@@ -13,6 +13,7 @@ pub mod input;
 pub mod output;
 pub mod sys;
 pub mod widgets;
+pub mod text_input;
 
 impl XY {
     pub const fn x(&self) -> usize {
