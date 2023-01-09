@@ -137,17 +137,21 @@ impl App for CliApp {
     }
 
     fn input(&mut self, a: Action, events: &mut Vec<Event>) -> bool {
-        match self.input.action(a) {
-            TextInputRequest::Nothing => (),
-            TextInputRequest::Autocomplete => {
-                let complete = self.autocomplete(self.input.completable());
-                self.input.set_complete(complete);
-            },
-            TextInputRequest::Line(l) => {
-                self.run_cmd(l, events);
-            }
-        };
-        self.input.tainted()
+        if self.prompt {
+            match self.input.action(a) {
+                TextInputRequest::Nothing => (),
+                TextInputRequest::Autocomplete => {
+                    let complete = self.autocomplete(self.input.completable());
+                    self.input.set_complete(complete);
+                },
+                TextInputRequest::Line(l) => {
+                    self.run_cmd(l, events);
+                }
+            };
+            self.input.tainted()
+        } else {
+            false
+        }
     }
 
     fn on_event(&mut self, ev: &Event) -> bool {
@@ -193,7 +197,7 @@ impl App for CliApp {
             .iter()
             .flat_map(|v| v)
             .cloned()
-            .chain(self.input.render())
+            .chain(if self.prompt { self.input.render() } else { vec![] })
             .collect::<Vec<_>>();
         let main_text_height = screen.size().y() - help_height;
         screen.textbox(main_text).pos(0, 1).height(main_text_height).scroll_bottom(true);
