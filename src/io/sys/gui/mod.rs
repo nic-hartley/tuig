@@ -324,7 +324,10 @@ impl IoRunner for WindowRunner {
             }
             match ev {
                 Event::UserEvent(a) => send!(a),
-                Event::WindowEvent { event: WindowEvent::Resized(sz), .. } => {
+                Event::WindowEvent {
+                    event: WindowEvent::Resized(sz),
+                    ..
+                } => {
                     self.win_size = XY(sz.width as usize, sz.height as usize);
                     send!(Action::Resized);
                 }

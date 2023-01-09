@@ -12,8 +12,8 @@ pub mod clifmt;
 pub mod input;
 pub mod output;
 pub mod sys;
-pub mod widgets;
 pub mod text_input;
+pub mod widgets;
 
 impl XY {
     pub const fn x(&self) -> usize {

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use dashmap::{DashMap, mapref::entry::Entry as DMEntry};
+use dashmap::{mapref::entry::Entry as DMEntry, DashMap};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
@@ -103,7 +103,7 @@ impl Machine {
                 DMEntry::Occupied(p) => match p.get() {
                     Entry::File(_) => return Err(format!("{} is a file", comp)),
                     Entry::Directory(dm) => dm.clone(),
-                }
+                },
                 DMEntry::Vacant(p) => {
                     let dm = Arc::new(DashMap::new());
                     p.insert(Entry::Directory(dm.clone()));
@@ -116,9 +116,9 @@ impl Machine {
     }
 
     /// Write a file to the machine's disk at the absolute path.
-    /// 
+    ///
     /// Will overwrite any files already there, but will not replace files with directories.
-    /// 
+    ///
     /// Returns Ok(()) if everything worked, or Err(msg) if not.
     pub fn write(&mut self, path: &str, contents: String) -> Result<(), String> {
         // valid: /foo/bar
@@ -130,9 +130,7 @@ impl Machine {
             return Err(format!("filepaths cannot end with trailing slash"));
         }
         let dir = self.dir(parent)?;
-        let new = Entry::File(File {
-            contents
-        });
+        let new = Entry::File(File { contents });
         match dir.entry(file.to_owned()) {
             DMEntry::Occupied(mut p) => {
                 if p.get().is_file() {
@@ -150,42 +148,44 @@ impl Machine {
     }
 
     /// Will get any kind of [`Entry`] from the machine's disk at the absolute path.
-    /// 
+    ///
     /// Returns Ok(entry) if everything worked, or Err(msg) if not.
     pub fn entry(&self, path: &str) -> Result<Entry, String> {
         if path == "/" {
             // special-case for root: there isn't really an entry but we can fake one
             return Ok(Entry::Directory(self.root.clone()));
         }
-        let (parent, file) = path.trim_end_matches('/').rsplit_once('/').unwrap_or(("", path));
+        let (parent, file) = path
+            .trim_end_matches('/')
+            .rsplit_once('/')
+            .unwrap_or(("", path));
         let dir = self.dir(parent)?;
-        let entry = dir.get(file)
-            .ok_or(format!("no such entry: {}", path))?;
+        let entry = dir.get(file).ok_or(format!("no such entry: {}", path))?;
         Ok(entry.value().clone())
     }
 
     /// Read a file from the machine's disk at the absolute path.
-    /// 
+    ///
     /// Can only read files; if you try to read a directory this fails.
-    /// 
+    ///
     /// Returns Ok(file) if everything worked, or Err(msg) if not.
-    /// 
+    ///
     /// See also [`Self::readdir`] and [`Self::entry`].
     pub fn read(&self, path: &str) -> Result<File, String> {
         let entry = self.entry(path)?;
-        let file = entry.file()
-            .ok_or(format!("cannot read non-files"))?;
+        let file = entry.file().ok_or(format!("cannot read non-files"))?;
         Ok(file)
     }
 
     /// Iterate over the contents of a directory.
-    /// 
+    ///
     /// Returns Ok(iter) if everything worked, or Err(msg) if not.
-    /// 
+    ///
     /// See also [`Self::read`] and [`Self::entry`].
-    pub fn readdir(&self, path: &str) -> Result<impl Iterator<Item=(String, Entry)>, String> {
+    pub fn readdir(&self, path: &str) -> Result<impl Iterator<Item = (String, Entry)>, String> {
         let entry = self.entry(path)?;
-        let dir = entry.dir()
+        let dir = entry
+            .dir()
             .ok_or(format!("cannot readdir non-directory {}", path))?;
         Ok(dir.as_ref().clone().into_iter())
     }
@@ -207,7 +207,8 @@ mod test {
         mach.write("/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
 
-        let f = mach.read("/spooky")
+        let f = mach
+            .read("/spooky")
             .expect("failed to read file just written");
         assert_eq!(f.contents, "ghost");
     }
@@ -220,7 +221,8 @@ mod test {
         mach.write("/spooky", "zombie".into())
             .expect("failed to overwrite file");
 
-        let f = mach.read("/spooky")
+        let f = mach
+            .read("/spooky")
             .expect("failed to read file just written");
         assert_eq!(f.contents, "zombie");
     }
@@ -231,7 +233,8 @@ mod test {
         mach.write("/things/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
 
-        let f = mach.read("/things/spooky")
+        let f = mach
+            .read("/things/spooky")
             .expect("failed to read file just written");
         assert_eq!(f.contents, "ghost");
     }
@@ -244,9 +247,11 @@ mod test {
         mach.write("/things/spooky", "zombie".into())
             .expect("failed to overwrite file");
 
-        mach.read("/things").expect_err("/things should be a directory");
+        mach.read("/things")
+            .expect_err("/things should be a directory");
         mach.read("/spooky").expect_err("/spooky should not exist");
-        let f = mach.read("/things/spooky")
+        let f = mach
+            .read("/things/spooky")
             .expect("failed to read file just written");
         assert_eq!(f.contents, "zombie");
     }
@@ -259,7 +264,8 @@ mod test {
         mach.write("/things/spooky", "ghost".into())
             .expect_err("didn't return error on attempted file overwrite with dir");
 
-        let f = mach.read("/things")
+        let f = mach
+            .read("/things")
             .expect("could not read file that should be there");
         assert_eq!(f.contents, "many");
     }
@@ -272,7 +278,8 @@ mod test {
         mach.write("/things", "ghost".into())
             .expect_err("didn't return error on attempted dir overwrite with file");
 
-        let f = mach.read("/things/spooky")
+        let f = mach
+            .read("/things/spooky")
             .expect("could not read file that should be there");
         assert_eq!(f.contents, "ghost");
     }
@@ -283,9 +290,15 @@ mod test {
         mach.write("/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
 
-        let e = mach.entry("/spooky")
+        let e = mach
+            .entry("/spooky")
             .expect("coud not read entry that should be there");
-        assert_eq!(e, Entry::File(File { contents: "ghost".into() }));
+        assert_eq!(
+            e,
+            Entry::File(File {
+                contents: "ghost".into()
+            })
+        );
     }
 
     #[test]
@@ -294,7 +307,8 @@ mod test {
         mach.write("/thing/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
 
-        let e = mach.entry("/thing")
+        let e = mach
+            .entry("/thing")
             .expect("coud not read entry that should be there");
         assert!(matches!(e, Entry::Directory(_)));
     }
@@ -307,11 +321,28 @@ mod test {
         mach.write("/thing/cute", "me".into())
             .expect("failed to write to empty filesystem");
 
-        let es = mach.readdir("/thing")
+        let es = mach
+            .readdir("/thing")
             .expect("could not read dir that should be there");
         let mut es: Vec<_> = es.collect();
         es.sort_by(|l, r| l.0.cmp(&r.0));
-        assert_eq!(es[0], ("cute".to_owned(), Entry::File(File { contents: "me".into() })));
-        assert_eq!(es[1], ("spooky".to_owned(), Entry::File(File { contents: "ghost".into() })));
+        assert_eq!(
+            es[0],
+            (
+                "cute".to_owned(),
+                Entry::File(File {
+                    contents: "me".into()
+                })
+            )
+        );
+        assert_eq!(
+            es[1],
+            (
+                "spooky".to_owned(),
+                Entry::File(File {
+                    contents: "ghost".into()
+                })
+            )
+        );
     }
 }

@@ -2,7 +2,10 @@ use std::mem;
 
 use crate::text;
 
-use super::{input::{Action, Key}, clifmt::Text};
+use super::{
+    clifmt::Text,
+    input::{Action, Key},
+};
 
 /// Indicates what the text input needs from its owner
 pub enum TextInputRequest {
@@ -94,8 +97,8 @@ impl TextInput {
     }
 
     /// Handles an [`Action`] which should go to the textbox, for things like typing and autocompletion.
-    /// 
-    /// The type this returns indicates what needs to be done 
+    ///
+    /// The type this returns indicates what needs to be done
     pub fn action(&mut self, action: Action) -> TextInputRequest {
         match action {
             Action::KeyPress { key } => self.keypress(key),

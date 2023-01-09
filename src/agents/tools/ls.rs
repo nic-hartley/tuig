@@ -1,6 +1,6 @@
 use crate::{
     app::CliState,
-    io::clifmt::{Text, FormattedExt},
+    io::clifmt::{FormattedExt, Text},
     text, text1,
 };
 
@@ -26,9 +26,7 @@ impl Ls {
             Ok(e) => e,
             Err(e) => return Err(e),
         };
-        let mut entries: Vec<_> = entries
-            .map(|(p, _)| p.to_owned())
-            .collect();
+        let mut entries: Vec<_> = entries.map(|(p, _)| p.to_owned()).collect();
         entries.sort_unstable();
         entries.dedup();
         Ok(entries)
@@ -96,9 +94,14 @@ impl Tool for Ls {
     fn run(&self, line: &str, state: &CliState) -> Box<dyn crate::agents::Agent> {
         let args = match COMPLETER.parse(line) {
             Ok(v) => v,
-            Err(msg) => return Box::new(FixedOutput(vec![text![bright_red "ERROR", ": {}\n"(msg)]])),
+            Err(msg) => {
+                return Box::new(FixedOutput(vec![text![bright_red "ERROR", ": {}\n"(msg)]]))
+            }
         };
-        let dir = args.get(&'d').unwrap_or(&Some("")).expect("None despite arg having value");
+        let dir = args
+            .get(&'d')
+            .unwrap_or(&Some(""))
+            .expect("None despite arg having value");
         let rows = if args.get(&'l').is_some() {
             Self::list_long(dir, state)
         } else {

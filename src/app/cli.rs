@@ -1,6 +1,6 @@
 use std::{
-    sync::Arc,
     collections::{HashMap, VecDeque},
+    sync::Arc,
 };
 
 use crate::{
@@ -11,7 +11,8 @@ use crate::{
     io::{
         clifmt::Text,
         input::Action,
-        output::Screen, text_input::{TextInput, TextInputRequest},
+        output::Screen,
+        text_input::{TextInput, TextInputRequest},
     },
     text, GameState, Machine,
 };
@@ -143,7 +144,7 @@ impl App for CliApp {
                 TextInputRequest::Autocomplete => {
                     let complete = self.autocomplete(self.input.completable());
                     self.input.set_complete(complete);
-                },
+                }
                 TextInputRequest::Line(l) => {
                     self.run_cmd(l, events);
                 }
@@ -197,9 +198,17 @@ impl App for CliApp {
             .iter()
             .flat_map(|v| v)
             .cloned()
-            .chain(if self.prompt { self.input.render() } else { vec![] })
+            .chain(if self.prompt {
+                self.input.render()
+            } else {
+                vec![]
+            })
             .collect::<Vec<_>>();
         let main_text_height = screen.size().y() - help_height;
-        screen.textbox(main_text).pos(0, 1).height(main_text_height).scroll_bottom(true);
+        screen
+            .textbox(main_text)
+            .pos(0, 1)
+            .height(main_text_height)
+            .scroll_bottom(true);
     }
 }

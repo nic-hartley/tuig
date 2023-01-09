@@ -84,7 +84,9 @@ impl BsdCompleter {
                 Some(Some(_)) => {
                     // real argument, takes a value
                     match args.next() {
-                        Some(v) => { res.insert(opt, Some(v)); }
+                        Some(v) => {
+                            res.insert(opt, Some(v));
+                        }
                         None => Err(format!("Option requires argument: {}", opt))?,
                     }
                 }
@@ -100,8 +102,8 @@ impl BsdCompleter {
 
 #[cfg(test)]
 mod test {
-    use std::sync::Arc;
     use crate::Machine;
+    use std::sync::Arc;
 
     use super::*;
 
@@ -109,9 +111,15 @@ mod test {
     fn empty_completer_doesnt_complete_no_options() {
         let completer = BsdCompleter::new();
         let mut machine = Machine::default();
-        machine.write("/moo", "".into()).expect("Failed to write test file");
-        machine.write("/maggot", "".into()).expect("Failed to write test file");
-        machine.write("/abyss", "".into()).expect("Failed to write test file");
+        machine
+            .write("/moo", "".into())
+            .expect("Failed to write test file");
+        machine
+            .write("/maggot", "".into())
+            .expect("Failed to write test file");
+        machine
+            .write("/abyss", "".into())
+            .expect("Failed to write test file");
         let clis = CliState {
             machine: Arc::new(machine),
             cwd: "/".into(),
@@ -133,9 +141,15 @@ mod test {
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
             .argument('f', AutocompleteType::LocalFile);
         let mut machine = Machine::default();
-        machine.write("/moo", "".into()).expect("Failed to write test file");
-        machine.write("/maggot", "".into()).expect("Failed to write test file");
-        machine.write("/abyss", "".into()).expect("Failed to write test file");
+        machine
+            .write("/moo", "".into())
+            .expect("Failed to write test file");
+        machine
+            .write("/maggot", "".into())
+            .expect("Failed to write test file");
+        machine
+            .write("/abyss", "".into())
+            .expect("Failed to write test file");
         let clis = CliState {
             machine: Arc::new(machine),
             cwd: "/".into(),
@@ -156,9 +170,15 @@ mod test {
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
             .argument('f', AutocompleteType::LocalFile);
         let mut machine = Machine::default();
-        machine.write("/moo", "".into()).expect("Failed to write test file");
-        machine.write("/maggot", "".into()).expect("Failed to write test file");
-        machine.write("/abyss", "".into()).expect("Failed to write test file");
+        machine
+            .write("/moo", "".into())
+            .expect("Failed to write test file");
+        machine
+            .write("/maggot", "".into())
+            .expect("Failed to write test file");
+        machine
+            .write("/abyss", "".into())
+            .expect("Failed to write test file");
         let clis = CliState {
             machine: Arc::new(machine),
             cwd: "/".into(),
@@ -182,9 +202,15 @@ mod test {
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
             .argument('f', AutocompleteType::LocalFile);
         let mut machine = Machine::default();
-        machine.write("/moo", "".into()).expect("Failed to write test file");
-        machine.write("/maggot", "".into()).expect("Failed to write test file");
-        machine.write("/abyss", "".into()).expect("Failed to write test file");
+        machine
+            .write("/moo", "".into())
+            .expect("Failed to write test file");
+        machine
+            .write("/maggot", "".into())
+            .expect("Failed to write test file");
+        machine
+            .write("/abyss", "".into())
+            .expect("Failed to write test file");
         let clis = CliState {
             machine: Arc::new(machine),
             cwd: "/".into(),
@@ -206,12 +232,24 @@ mod test {
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
             .argument('f', AutocompleteType::LocalFile);
         let mut machine = Machine::default();
-        machine.write("/moo", "".into()).expect("Failed to write test file");
-        machine.write("/maggot", "".into()).expect("Failed to write test file");
-        machine.write("/abyss", "".into()).expect("Failed to write test file");
-        machine.write("/stuff/violin", "".into()).expect("Failed to write test file");
-        machine.write("/stuff/cello", "".into()).expect("Failed to write test file");
-        machine.write("/stuff/flute", "".into()).expect("Failed to write test file");
+        machine
+            .write("/moo", "".into())
+            .expect("Failed to write test file");
+        machine
+            .write("/maggot", "".into())
+            .expect("Failed to write test file");
+        machine
+            .write("/abyss", "".into())
+            .expect("Failed to write test file");
+        machine
+            .write("/stuff/violin", "".into())
+            .expect("Failed to write test file");
+        machine
+            .write("/stuff/cello", "".into())
+            .expect("Failed to write test file");
+        machine
+            .write("/stuff/flute", "".into())
+            .expect("Failed to write test file");
         let clis = CliState {
             machine: Arc::new(machine),
             cwd: "/stuff/".into(),
