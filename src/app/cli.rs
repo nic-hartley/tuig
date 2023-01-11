@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, VecDeque},
-    sync::Arc,
-};
+use std::{collections::VecDeque, sync::Arc};
 
 use crate::{
     agents::{
@@ -45,8 +42,9 @@ pub struct CliApp {
     help: String,
     /// lines of output that haven't been read yet
     unread: usize,
-    /// the tools available at the command line
-    tools: HashMap<String, Box<dyn Tool>>,
+
+    /// The current state of the CLI
+    state: CliState,
 }
 
 impl Default for CliApp {
@@ -58,7 +56,7 @@ impl Default for CliApp {
             input: TextInput::new("> "),
             help: Default::default(),
             unread: Default::default(),
-            tools: Default::default(),
+            state: Default::default(),
         }
     }
 }
@@ -82,52 +80,36 @@ impl CliApp {
             Some(p) => p,
             None => (trimmed, ""),
         };
-        if let Some(tool) = self.tools.get(cmd) {
-            let mut machine = Machine::default();
-            machine.write("/awoo", "".into()).unwrap();
-            machine.write("/awful", "".into()).unwrap();
-            machine.write("/thingy", "".into()).unwrap();
-            machine.write("/machomp", "".into()).unwrap();
-            machine.write("/stuff/foo1", "".into()).unwrap();
-            machine.write("/stuff/foo2", "".into()).unwrap();
-            let cli_state = CliState {
-                machine: Arc::new(machine),
-                // TODO: track a real CWD
-                cwd: "/".into(),
-            };
+        if let Some(tool) = self.state.machine.tools.get(cmd).map(|r| r.value().clone()) {
             events.push(Event::SpawnAgent(Bundle::of(
-                tool.run(rest.trim(), &cli_state),
+                tool.run(rest.trim(), &self.state),
             )));
             self.prompt = false;
         } else {
-            self.add_scroll(
-                text![bright_red "ERROR", ": Command ", bright_white "{}"(cmd), " not found.\n"],
-            );
+            let line =
+                text![bright_red "ERROR", ": Command ", bright_white "{}"(cmd), " not found.\n"];
+            self.add_scroll(line);
         }
         self.history.push(line);
     }
 
     fn autocomplete(&self, line: &str) -> String {
-        let mut machine = Machine::default();
-        machine.write("/awoo", "".into()).unwrap();
-        machine.write("/awful", "".into()).unwrap();
-        machine.write("/thingy", "".into()).unwrap();
-        machine.write("/machomp", "".into()).unwrap();
-        machine.write("/stuff/foo1", "".into()).unwrap();
-        machine.write("/stuff/foo2", "".into()).unwrap();
-        let cli_state = CliState {
-            machine: Arc::new(machine),
-            // TODO: track a real CWD
-            cwd: "/".into(),
-        };
         if let Some((cmd, rest)) = line.split_once(char::is_whitespace) {
-            if let Some(tool) = self.tools.get(cmd) {
-                tool.autocomplete(rest.trim_start(), &cli_state)
+            if let Some(tool) = self.state.machine.tools.get(cmd) {
+                tool.autocomplete(rest.trim_start(), &self.state)
             } else {
                 String::new()
             }
         } else {
-            autocomplete_with(line, self.tools.keys())
+            struct RefMultiAdapter<'a>(
+                dashmap::mapref::multiple::RefMulti<'a, String, Arc<dyn Tool>>,
+            );
+            impl<'a> AsRef<str> for RefMultiAdapter<'a> {
+                fn as_ref(&self) -> &str {
+                    self.0.key().as_ref()
+                }
+            }
+            autocomplete_with(line, self.state.machine.tools.iter().map(RefMultiAdapter))
         }
     }
 }
@@ -167,7 +149,10 @@ impl App for CliApp {
             }
             Event::InstallTool(tool) => {
                 let tool = tool.take().expect("Tool taken by something other than CLI");
-                self.tools.insert(tool.name().into(), tool);
+                self.state
+                    .machine
+                    .tools
+                    .insert(tool.name().into(), tool.into());
                 false
             }
             _ => false,

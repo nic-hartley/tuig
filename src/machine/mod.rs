@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use dashmap::{mapref::entry::Entry as DMEntry, DashMap};
 
+use crate::agents::tools::Tool;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
     pub contents: String,
@@ -78,11 +80,12 @@ impl PartialEq for Entry {
 impl Eq for Entry {}
 
 /// A single machine, somewhere in cyberspace. Possibly even the player's own.
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone)]
 pub struct Machine {
     /// The files on this machine
-    // TODO: Cleaner abstraction for this
     pub root: Arc<DashMap<String, Entry>>,
+    /// the tools available at the command line
+    pub tools: DashMap<String, Arc<dyn Tool>>,
 }
 
 impl Machine {
