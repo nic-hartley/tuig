@@ -86,6 +86,7 @@ impl TextInput {
                 self.cursor = 0;
                 self.autocomplete = String::new();
                 let old_line = mem::replace(&mut self.line, String::new());
+                self.tainted = true;
                 return TextInputRequest::Line(old_line);
             }
             // return early to skip tainting / clearing autocomplete
