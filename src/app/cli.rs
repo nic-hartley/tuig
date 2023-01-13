@@ -155,6 +155,11 @@ impl App for CliApp {
                     .insert(tool.name().into(), tool.into());
                 false
             }
+            Event::ChangeDir(new_dir) => {
+                // we blindly trust that whoever sent that event knew what they were doing
+                self.state.cwd = new_dir.to_owned();
+                false
+            }
             _ => false,
         }
     }

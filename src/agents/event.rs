@@ -75,6 +75,8 @@ pub enum Event {
     InstallTool(BundledTool),
     /// A line of output from a running command
     CommandOutput(Vec<Text>),
+    /// Command has changed the CLI's directory to the given (absolute) one
+    ChangeDir(String),
     /// The command that was running is done and the prompt can reappear.
     ///
     /// Note this doesn't kill the agent or stop more output from coming; it just tells the console to display the
@@ -109,5 +111,9 @@ impl Event {
             text: text.into(),
             options: options.iter().map(|&s| s.to_owned()).collect(),
         }
+    }
+
+    pub fn cd(to: &str) -> Event {
+        Event::ChangeDir(to.into())
     }
 }

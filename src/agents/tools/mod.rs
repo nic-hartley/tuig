@@ -13,6 +13,8 @@ mod touch;
 pub use touch::Touch;
 mod mkdir;
 pub use mkdir::Mkdir;
+mod cd;
+pub use cd::Cd;
 
 pub trait Tool {
     fn name(&self) -> &'static str;

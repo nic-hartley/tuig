@@ -130,6 +130,7 @@ async fn run(iosys: &mut dyn IoSystem) {
         Event::install(tools::Ls),
         Event::install(tools::Touch),
         Event::install(tools::Mkdir),
+        Event::install(tools::Cd),
     ];
     let mut agents: Vec<(Box<dyn Agent>, ControlFlow)> = [npc!(
         "yotie",
