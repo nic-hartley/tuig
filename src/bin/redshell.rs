@@ -126,7 +126,10 @@ async fn run(iosys: &mut dyn IoSystem) {
     let mut apps: Vec<(Box<dyn App>, usize)> =
         vec![(Box::new(ChatApp::default()), 0), (Box::new(CliApp::default()), 0)];
     let mut sel = 0;
-    let mut events = vec![Event::install(tools::Ls)];
+    let mut events = vec![
+        Event::install(tools::Ls),
+        Event::install(tools::Touch),
+    ];
     let mut agents: Vec<(Box<dyn Agent>, ControlFlow)> = [npc!(
         "yotie",
         [

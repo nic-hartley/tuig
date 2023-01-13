@@ -134,7 +134,7 @@ mod test {
 
     #[test]
     fn none_doesnt_autocomplete() {
-        let mut machine = Machine::default();
+        let machine = Machine::default();
         machine
             .write("/moo", "".into())
             .expect("Failed to write test file");
@@ -154,7 +154,7 @@ mod test {
 
     #[test]
     fn choices_autocompletes_choices() {
-        let mut machine = Machine::default();
+        let machine = Machine::default();
         machine
             .write("/moo", "".into())
             .expect("Failed to write test file");
@@ -177,7 +177,7 @@ mod test {
 
     #[test]
     fn local_file_autocompletes_local_files() {
-        let mut machine = Machine::default();
+        let machine = Machine::default();
         machine
             .write("/moo", "".into())
             .expect("Failed to write test file");
@@ -199,7 +199,7 @@ mod test {
 
     #[test]
     fn local_file_autocompletes_local_files_in_cwd() {
-        let mut machine = Machine::default();
+        let machine = Machine::default();
         machine
             .write("/moo", "".into())
             .expect("Failed to write test file");
@@ -231,7 +231,7 @@ mod test {
 
     #[test]
     fn local_file_autocompletes_directories_nicely() {
-        let mut machine = Machine::default();
+        let machine = Machine::default();
         machine
             .write("/moo", "".into())
             .expect("Failed to write test file");

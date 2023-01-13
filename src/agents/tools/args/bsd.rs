@@ -110,7 +110,7 @@ mod test {
     #[test]
     fn empty_completer_doesnt_complete_no_options() {
         let completer = BsdCompleter::new();
-        let mut machine = Machine::default();
+        let machine = Machine::default();
         machine
             .write("/moo", "".into())
             .expect("Failed to write test file");
@@ -140,7 +140,7 @@ mod test {
             .flag('q')
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
             .argument('f', AutocompleteType::LocalFile);
-        let mut machine = Machine::default();
+        let machine = Machine::default();
         machine
             .write("/moo", "".into())
             .expect("Failed to write test file");
@@ -169,7 +169,7 @@ mod test {
             .flag('q')
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
             .argument('f', AutocompleteType::LocalFile);
-        let mut machine = Machine::default();
+        let machine = Machine::default();
         machine
             .write("/moo", "".into())
             .expect("Failed to write test file");
@@ -201,7 +201,7 @@ mod test {
             .flag('q')
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
             .argument('f', AutocompleteType::LocalFile);
-        let mut machine = Machine::default();
+        let machine = Machine::default();
         machine
             .write("/moo", "".into())
             .expect("Failed to write test file");
@@ -231,7 +231,7 @@ mod test {
             .flag('q')
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
             .argument('f', AutocompleteType::LocalFile);
-        let mut machine = Machine::default();
+        let machine = Machine::default();
         machine
             .write("/moo", "".into())
             .expect("Failed to write test file");

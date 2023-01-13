@@ -27,3 +27,16 @@ pub trait Agent: Send + Sync {
     /// pushing/extending/otherwise adding elements.
     fn react(&mut self, events: &[Event], replies: &mut Vec<Event>) -> ControlFlow;
 }
+
+/// An agent which does nothing and immediately dies.
+// Big mood, buddy.
+pub struct NopAgent;
+impl Agent for NopAgent {
+    fn start(&mut self, _replies: &mut Vec<Event>) -> ControlFlow {
+        ControlFlow::Kill
+    }
+
+    fn react(&mut self, _events: &[Event], _replies: &mut Vec<Event>) -> ControlFlow {
+        ControlFlow::Kill
+    }
+}

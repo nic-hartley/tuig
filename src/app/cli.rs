@@ -56,7 +56,7 @@ impl Default for CliApp {
             input: TextInput::new("> "),
             help: Default::default(),
             unread: Default::default(),
-            state: Default::default(),
+            state: CliState { machine: Default::default(), cwd: "/".into() },
         }
     }
 }

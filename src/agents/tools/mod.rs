@@ -9,6 +9,8 @@ pub use args::{autocomplete_with, AutocompleteType, BsdCompleter};
 
 mod ls;
 pub use ls::Ls;
+mod touch;
+pub use touch::Touch;
 
 pub trait Tool {
     fn name(&self) -> &'static str;

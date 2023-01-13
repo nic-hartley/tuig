@@ -123,7 +123,7 @@ impl Machine {
     /// Will overwrite any files already there, but will not replace files with directories.
     ///
     /// Returns Ok(()) if everything worked, or Err(msg) if not.
-    pub fn write(&mut self, path: &str, contents: String) -> Result<(), String> {
+    pub fn write(&self, path: &str, contents: String) -> Result<(), String> {
         // valid: /foo/bar
         //        /foo//bar
         // not:   foo/bar
@@ -206,7 +206,7 @@ mod test {
 
     #[test]
     fn machine_writes_file_to_root() {
-        let mut mach = Machine::default();
+        let mach = Machine::default();
         mach.write("/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
 
@@ -218,7 +218,7 @@ mod test {
 
     #[test]
     fn machine_overwrites_file_to_root() {
-        let mut mach = Machine::default();
+        let mach = Machine::default();
         mach.write("/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
         mach.write("/spooky", "zombie".into())
@@ -232,7 +232,7 @@ mod test {
 
     #[test]
     fn machine_writes_file_in_subdir() {
-        let mut mach = Machine::default();
+        let mach = Machine::default();
         mach.write("/things/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
 
@@ -244,7 +244,7 @@ mod test {
 
     #[test]
     fn machine_overwrites_file_in_subdir() {
-        let mut mach = Machine::default();
+        let mach = Machine::default();
         mach.write("/things/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
         mach.write("/things/spooky", "zombie".into())
@@ -261,7 +261,7 @@ mod test {
 
     #[test]
     fn machine_wont_overwrite_file_with_dir() {
-        let mut mach = Machine::default();
+        let mach = Machine::default();
         mach.write("/things", "many".into())
             .expect("failed to write to empty filesystem");
         mach.write("/things/spooky", "ghost".into())
@@ -275,7 +275,7 @@ mod test {
 
     #[test]
     fn machine_wont_overwrite_dir_with_file() {
-        let mut mach = Machine::default();
+        let mach = Machine::default();
         mach.write("/things/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
         mach.write("/things", "ghost".into())
@@ -289,7 +289,7 @@ mod test {
 
     #[test]
     fn machine_entry_reads_file() {
-        let mut mach = Machine::default();
+        let mach = Machine::default();
         mach.write("/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
 
@@ -306,7 +306,7 @@ mod test {
 
     #[test]
     fn machine_entry_reads_dir() {
-        let mut mach = Machine::default();
+        let mach = Machine::default();
         mach.write("/thing/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
 
@@ -318,7 +318,7 @@ mod test {
 
     #[test]
     fn machine_readdir_reads_dir() {
-        let mut mach = Machine::default();
+        let mach = Machine::default();
         mach.write("/thing/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
         mach.write("/thing/cute", "me".into())
