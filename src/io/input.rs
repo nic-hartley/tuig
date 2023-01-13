@@ -28,6 +28,21 @@ pub enum Key {
     RightSuper,
 }
 
+impl Key {
+    pub fn is_shift(&self) -> bool {
+        matches!(self, Self::LeftShift | Self::RightShift)
+    }
+    pub fn is_ctrl(&self) -> bool {
+        matches!(self, Self::LeftCtrl | Self::RightCtrl)
+    }
+    pub fn is_alt(&self) -> bool {
+        matches!(self, Self::LeftAlt | Self::RightAlt)
+    }
+    pub fn is_super(&self) -> bool {
+        matches!(self, Self::LeftSuper | Self::RightSuper)
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum MouseButton {
     Left,

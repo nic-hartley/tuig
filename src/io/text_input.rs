@@ -30,6 +30,8 @@ pub struct TextInput {
     autocomplete: String,
     /// whether the textbox needs to be redrawn since it was last rendered
     tainted: bool,
+    /// whether the shift key is currently being held
+    shift: bool,
 }
 
 impl TextInput {
@@ -41,6 +43,7 @@ impl TextInput {
             cursor: 0,
             autocomplete: String::new(),
             tainted: true,
+            shift: false,
         }
     }
 
@@ -61,7 +64,12 @@ impl TextInput {
     fn keypress(&mut self, key: Key) -> TextInputRequest {
         match key {
             Key::Char(ch) => {
-                self.line.insert(self.cursor, ch);
+                let chs: String = if self.shift {
+                    ch.to_uppercase().collect()
+                } else {
+                    ch.to_lowercase().collect()
+                };
+                self.line.insert_str(self.cursor, &chs);
                 self.cursor += 1;
             }
             Key::Backspace if self.cursor > 0 => {
@@ -102,6 +110,14 @@ impl TextInput {
     /// The type this returns indicates what needs to be done
     pub fn action(&mut self, action: Action) -> TextInputRequest {
         match action {
+            Action::KeyPress { key } if key.is_shift() => {
+                self.shift = true;
+                TextInputRequest::Nothing
+            }
+            Action::KeyRelease { key } if key.is_shift() => {
+                self.shift = false;
+                TextInputRequest::Nothing
+            }
             Action::KeyPress { key } => self.keypress(key),
             _ => TextInputRequest::Nothing,
         }
