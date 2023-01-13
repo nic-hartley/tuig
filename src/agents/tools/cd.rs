@@ -1,8 +1,12 @@
 use std::mem;
 
-use crate::{app::CliState, text, agents::{Agent, Event, ControlFlow}};
+use crate::{
+    agents::{Agent, ControlFlow, Event},
+    app::CliState,
+    text,
+};
 
-use super::{FixedOutput, Tool, AutocompleteType};
+use super::{AutocompleteType, FixedOutput, Tool};
 
 struct CdAgent(String);
 impl Agent for CdAgent {
@@ -54,4 +58,3 @@ impl Tool for Cd {
         }
     }
 }
-

@@ -123,8 +123,10 @@ async fn run(iosys: &mut dyn IoSystem) {
     // TODO: multithreading
     let mut screen = Screen::new(iosys.size());
 
-    let mut apps: Vec<(Box<dyn App>, usize)> =
-        vec![(Box::new(ChatApp::default()), 0), (Box::new(CliApp::default()), 0)];
+    let mut apps: Vec<(Box<dyn App>, usize)> = vec![
+        (Box::new(ChatApp::default()), 0),
+        (Box::new(CliApp::default()), 0),
+    ];
     let mut sel = 0;
     let mut events = vec![
         Event::install(tools::Ls),

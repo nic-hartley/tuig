@@ -1,7 +1,8 @@
 use crate::{
     app::CliState,
     io::clifmt::{FormattedExt, Text},
-    text, text1, machine::Entry,
+    machine::Entry,
+    text, text1,
 };
 
 use super::{AutocompleteType, BsdCompleter, FixedOutput, Tool};

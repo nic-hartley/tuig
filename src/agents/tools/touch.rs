@@ -1,6 +1,6 @@
 use crate::{app::CliState, text};
 
-use super::{FixedOutput, Tool, AutocompleteType};
+use super::{AutocompleteType, FixedOutput, Tool};
 
 pub struct Touch;
 
@@ -34,4 +34,3 @@ impl Tool for Touch {
         Box::new(FixedOutput(lines))
     }
 }
-

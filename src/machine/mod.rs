@@ -123,9 +123,9 @@ impl Machine {
     }
 
     /// Create an empty directory on the filepath.
-    /// 
+    ///
     /// If `parents` is true, will also create any parents. (`mkdir -p`)
-    /// 
+    ///
     /// If the directory exists, this does nothing.
     pub fn mkdir(&self, path: &str, make_parents: bool) -> Result<(), String> {
         if !path.ends_with('/') {
@@ -137,7 +137,8 @@ impl Machine {
             // root already exists
             return Ok(());
         }
-        let (parent, file) = trimmed.rsplit_once('/')
+        let (parent, file) = trimmed
+            .rsplit_once('/')
             .ok_or(format!("absolute path {} doesn't start with /", path))?;
         let dir = self.dir(parent, make_parents)?;
         let res = match dir.entry(file.to_owned()) {
@@ -166,7 +167,8 @@ impl Machine {
         //        /foo//bar
         // not:   foo/bar
         //        /foo/bar/
-        let (parent, file) = path.rsplit_once('/')
+        let (parent, file) = path
+            .rsplit_once('/')
             .ok_or(format!("absolute path {} doesn't start with /", path))?;
         if file.is_empty() {
             return Err(format!("filepaths cannot end with trailing slash"));

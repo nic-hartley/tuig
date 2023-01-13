@@ -207,7 +207,8 @@ mod test {
         machine
             .write("/abyss", "".into())
             .expect("Failed to write test file");
-        machine.mkdir("/stuff/", true)
+        machine
+            .mkdir("/stuff/", true)
             .expect("Failed to create test dir");
         machine
             .write("/stuff/bongos", "".into())
@@ -241,7 +242,8 @@ mod test {
         machine
             .write("/abyss", "".into())
             .expect("Failed to write test file");
-        machine.mkdir("/stuff/", true)
+        machine
+            .mkdir("/stuff/", true)
             .expect("Failed to create test dir");
         machine
             .write("/stuff/bongos", "".into())

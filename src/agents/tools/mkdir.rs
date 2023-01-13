@@ -1,6 +1,6 @@
 use crate::{app::CliState, text};
 
-use super::{BsdCompleter, FixedOutput, Tool, AutocompleteType, NoOutput};
+use super::{AutocompleteType, BsdCompleter, FixedOutput, NoOutput, Tool};
 
 lazy_static::lazy_static! {
     static ref COMPLETER: BsdCompleter = BsdCompleter::new()
@@ -28,7 +28,11 @@ impl Tool for Mkdir {
         let with_parents = args.contains_key(&'p');
         let file = match args.get(&'d') {
             Some(path) => path.expect("no value to option with value"),
-            None => return Box::new(FixedOutput(vec![text![bright_red "ERROR", ": provide a directory to make\n"]])),
+            None => {
+                return Box::new(FixedOutput(vec![
+                    text![bright_red "ERROR", ": provide a directory to make\n"],
+                ]))
+            }
         };
         let path = if file.starts_with('/') {
             file.into()
@@ -36,10 +40,11 @@ impl Tool for Mkdir {
             format!("{}{}", state.cwd, file)
         };
         if let Err(e) = state.machine.mkdir(&path, with_parents) {
-            Box::new(FixedOutput(vec![text![bright_red "ERROR", ": failed to write {}: {}\n"(file, e)]]))
+            Box::new(FixedOutput(vec![
+                text![bright_red "ERROR", ": failed to write {}: {}\n"(file, e)],
+            ]))
         } else {
             Box::new(NoOutput)
         }
     }
 }
-
