@@ -241,6 +241,8 @@ mod test {
         machine
             .write("/abyss", "".into())
             .expect("Failed to write test file");
+        machine.mkdir("/stuff/", true)
+            .expect("Failed to create test dir");
         machine
             .write("/stuff/violin", "".into())
             .expect("Failed to write test file");

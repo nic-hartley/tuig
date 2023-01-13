@@ -89,7 +89,7 @@ pub struct Machine {
 }
 
 impl Machine {
-    fn dir(&self, path: &str) -> Result<Arc<DashMap<String, Entry>>, String> {
+    fn dir(&self, path: &str, make: bool) -> Result<Arc<DashMap<String, Entry>>, String> {
         if path.is_empty() {
             return Ok(self.root.clone());
         }
@@ -108,14 +108,52 @@ impl Machine {
                     Entry::Directory(dm) => dm.clone(),
                 },
                 DMEntry::Vacant(p) => {
-                    let dm = Arc::new(DashMap::new());
-                    p.insert(Entry::Directory(dm.clone()));
-                    dm
+                    if make {
+                        let dm = Arc::new(DashMap::new());
+                        p.insert(Entry::Directory(dm.clone()));
+                        dm
+                    } else {
+                        return Err(format!("Directory {} doesn't exist", comp));
+                    }
                 }
             };
             dir = into;
         }
         Ok(dir)
+    }
+
+    /// Create an empty directory on the filepath.
+    /// 
+    /// If `parents` is true, will also create any parents. (`mkdir -p`)
+    /// 
+    /// If the directory exists, this does nothing.
+    pub fn mkdir(&self, path: &str, make_parents: bool) -> Result<(), String> {
+        if !path.ends_with('/') {
+            return Err(format!("directories must end with trailing slashes"));
+        }
+
+        let trimmed = path.trim_end_matches('/');
+        if trimmed.is_empty() {
+            // root already exists
+            return Ok(());
+        }
+        let (parent, file) = trimmed.rsplit_once('/')
+            .ok_or(format!("absolute path {} doesn't start with /", path))?;
+        let dir = self.dir(parent, make_parents)?;
+        let res = match dir.entry(file.to_owned()) {
+            DMEntry::Occupied(p) => {
+                if p.get().is_file() {
+                    Err(format!("{} is a file", trimmed))
+                } else {
+                    Ok(())
+                }
+            }
+            DMEntry::Vacant(p) => {
+                p.insert(Entry::Directory(Default::default()));
+                Ok(())
+            }
+        };
+        res
     }
 
     /// Write a file to the machine's disk at the absolute path.
@@ -128,18 +166,19 @@ impl Machine {
         //        /foo//bar
         // not:   foo/bar
         //        /foo/bar/
-        let (parent, file) = path.rsplit_once('/').unwrap_or(("", path));
+        let (parent, file) = path.rsplit_once('/')
+            .ok_or(format!("absolute path {} doesn't start with /", path))?;
         if file.is_empty() {
             return Err(format!("filepaths cannot end with trailing slash"));
         }
-        let dir = self.dir(parent)?;
+        let dir = self.dir(parent, false)?;
         let new = Entry::File(File { contents });
         match dir.entry(file.to_owned()) {
             DMEntry::Occupied(mut p) => {
                 if p.get().is_file() {
                     p.insert(new);
                 } else {
-                    return Err(format!("path is a directory"));
+                    return Err(format!("{} is a directory", path));
                 }
             }
             DMEntry::Vacant(p) => {
@@ -162,7 +201,7 @@ impl Machine {
             .trim_end_matches('/')
             .rsplit_once('/')
             .unwrap_or(("", path));
-        let dir = self.dir(parent)?;
+        let dir = self.dir(parent, false)?;
         let entry = dir.get(file).ok_or(format!("no such entry: {}", path))?;
         Ok(entry.value().clone())
     }
@@ -231,8 +270,17 @@ mod test {
     }
 
     #[test]
+    fn machine_file_wont_write_with_dir() {
+        let mach = Machine::default();
+        mach.write("/dir/file", "".into())
+            .expect_err("successfully wrote to nonexistent subdirectory");
+    }
+
+    #[test]
     fn machine_writes_file_in_subdir() {
         let mach = Machine::default();
+        mach.mkdir("/things/", true)
+            .expect("failed to mkdir in empty filesystem");
         mach.write("/things/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
 
@@ -245,6 +293,8 @@ mod test {
     #[test]
     fn machine_overwrites_file_in_subdir() {
         let mach = Machine::default();
+        mach.mkdir("/things/", true)
+            .expect("failed to mkdir in empty filesystem");
         mach.write("/things/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
         mach.write("/things/spooky", "zombie".into())
@@ -276,6 +326,8 @@ mod test {
     #[test]
     fn machine_wont_overwrite_dir_with_file() {
         let mach = Machine::default();
+        mach.mkdir("/things/", true)
+            .expect("failed to mkdir in empty filesystem");
         mach.write("/things/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
         mach.write("/things", "ghost".into())
@@ -307,11 +359,13 @@ mod test {
     #[test]
     fn machine_entry_reads_dir() {
         let mach = Machine::default();
-        mach.write("/thing/spooky", "ghost".into())
+        mach.mkdir("/things/", true)
+            .expect("failed to mkdir in empty filesystem");
+        mach.write("/things/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
 
         let e = mach
-            .entry("/thing")
+            .entry("/things")
             .expect("coud not read entry that should be there");
         assert!(matches!(e, Entry::Directory(_)));
     }
@@ -319,13 +373,15 @@ mod test {
     #[test]
     fn machine_readdir_reads_dir() {
         let mach = Machine::default();
-        mach.write("/thing/spooky", "ghost".into())
+        mach.mkdir("/things/", true)
+            .expect("failed to mkdir in empty filesystem");
+        mach.write("/things/spooky", "ghost".into())
             .expect("failed to write to empty filesystem");
-        mach.write("/thing/cute", "me".into())
+        mach.write("/things/cute", "me".into())
             .expect("failed to write to empty filesystem");
 
         let es = mach
-            .readdir("/thing")
+            .readdir("/things")
             .expect("could not read dir that should be there");
         let mut es: Vec<_> = es.collect();
         es.sort_by(|l, r| l.0.cmp(&r.0));

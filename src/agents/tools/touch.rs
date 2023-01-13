@@ -22,8 +22,13 @@ impl Tool for Touch {
     fn run(&self, line: &str, state: &CliState) -> Box<dyn crate::agents::Agent> {
         let mut lines = vec![];
         for file in line.split_whitespace() {
-            if let Err(e) = state.machine.write(file, String::new()) {
-                lines.push(text![bright_red "ERROR", ": failed to write {}: {}"(file, e)]);
+            let path = if file.starts_with('/') {
+                file.into()
+            } else {
+                format!("{}{}", state.cwd, file)
+            };
+            if let Err(e) = state.machine.write(&path, String::new()) {
+                lines.push(text![bright_red "ERROR", ": failed to write {}: {}\n"(file, e)]);
             }
         }
         Box::new(FixedOutput(lines))

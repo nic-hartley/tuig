@@ -1,7 +1,7 @@
 use crate::{
     app::CliState,
     io::clifmt::{FormattedExt, Text},
-    text, text1,
+    text, text1, machine::Entry,
 };
 
 use super::{AutocompleteType, BsdCompleter, FixedOutput, Tool};
@@ -14,7 +14,7 @@ lazy_static::lazy_static! {
 pub struct Ls;
 
 impl Ls {
-    fn entries<'cs>(dir: &str, state: &'cs CliState) -> Result<Vec<String>, String> {
+    fn entries<'cs>(dir: &str, state: &'cs CliState) -> Result<Vec<(String, Entry)>, String> {
         let prefix = if dir.is_empty() {
             format!("{}", state.cwd)
         } else if dir.ends_with('/') {
@@ -26,9 +26,9 @@ impl Ls {
             Ok(e) => e,
             Err(e) => return Err(e),
         };
-        let mut entries: Vec<_> = entries.map(|(p, _)| p.to_owned()).collect();
-        entries.sort_unstable();
-        entries.dedup();
+        let mut entries: Vec<_> = entries.collect();
+        entries.sort_unstable_by(|l, r| l.0.cmp(&r.0));
+        entries.dedup_by(|l, r| l.0 == r.0);
         Ok(entries)
     }
 
@@ -41,20 +41,22 @@ impl Ls {
         };
         let mut line: Vec<_> = entries
             .into_iter()
-            .map(|item| {
-                let text = if item.chars().any(char::is_whitespace) {
-                    text1!["'{}' "(item)]
+            .map(|(name, entry)| {
+                let text = if name.chars().any(char::is_whitespace) {
+                    text1!["'{}' "(name)]
                 } else {
-                    text1![" {}  "(item)]
+                    text1![" {}  "(name)]
                 };
-                if item.ends_with('/') {
+                if entry.is_dir() {
                     text.cyan().bold()
                 } else {
                     text
                 }
             })
             .collect();
-        line.push(text1!["\n"]);
+        if !line.is_empty() {
+            line.push(text1!["\n"]);
+        }
         vec![line]
     }
 
@@ -67,13 +69,16 @@ impl Ls {
         };
         vec![text!["total {}\n"(entries.len())]]
             .into_iter()
-            .chain(entries.into_iter().map(|entry| {
+            .chain(entries.into_iter().map(|(name, entry)| {
                 let mut res = vec![Text::plain(""); 3];
-                res[0] = text1!["{} "(entry.len())];
-                res[1] = if entry.ends_with('/') {
-                    text1![cyan bold "{}"(entry)]
+                res[0] = match &entry {
+                    Entry::File(f) => text1!["{} "(f.contents.len())],
+                    Entry::Directory(d) => text1!["{} "(d.len())],
+                };
+                res[1] = if entry.is_dir() {
+                    text1![cyan bold "{}"(name)]
                 } else {
-                    text1!["{}"(entry)]
+                    text1!["{}"(name)]
                 };
                 res[2] = text1!["\n"];
                 res

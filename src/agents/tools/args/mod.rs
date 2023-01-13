@@ -51,6 +51,7 @@ pub enum AutocompleteType {
     Choices(Vec<String>),
     /// A file on the local machine
     LocalFile,
+    // TODO: LocalDirectory
     /// A known hostname
     Hostname,
     /// A file somewhere on a remote machine, i.e. `hostname:filepath`
@@ -206,6 +207,8 @@ mod test {
         machine
             .write("/abyss", "".into())
             .expect("Failed to write test file");
+        machine.mkdir("/stuff/", true)
+            .expect("Failed to create test dir");
         machine
             .write("/stuff/bongos", "".into())
             .expect("Failed to write test file");
@@ -238,6 +241,8 @@ mod test {
         machine
             .write("/abyss", "".into())
             .expect("Failed to write test file");
+        machine.mkdir("/stuff/", true)
+            .expect("Failed to create test dir");
         machine
             .write("/stuff/bongos", "".into())
             .expect("Failed to write test file");
