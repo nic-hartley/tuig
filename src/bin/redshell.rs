@@ -123,14 +123,19 @@ async fn run(iosys: &mut dyn IoSystem) {
     // TODO: multithreading
     let mut screen = Screen::new(iosys.size());
 
-    let mut apps: Vec<Box<dyn App>> =
-        vec![Box::new(ChatApp::default()), Box::new(CliApp::default())];
+    let mut apps: Vec<(Box<dyn App>, usize)> =
+        vec![(Box::new(ChatApp::default()), 0), (Box::new(CliApp::default()), 0)];
     let mut sel = 0;
     let mut events = vec![Event::install(tools::Ls)];
     let mut agents: Vec<(Box<dyn Agent>, ControlFlow)> = [npc!(
         "yotie",
         [
             say "hey": 500,
+            say "hello": 500,
+            say "hi": 500,
+            say "my close personal friend": 1000,
+            say "whose name I do not need to say": 1000,
+            say "because we're so close and all": 1000,
             say "how you doin?": 1500,
             ask "good" => 1, "bad" => 2,
         ],
@@ -140,7 +145,8 @@ async fn run(iosys: &mut dyn IoSystem) {
             ask "thanks" =>  3,
         ],
         [
-            say "ey that's bad": 500,
+            say "ey that's bad": 2000,
+            say "sucks you're doing meh": 500,
             ask "thanks?" =>  3,
         ],
         [
@@ -167,13 +173,16 @@ async fn run(iosys: &mut dyn IoSystem) {
             *cf = agent.react(&events, &mut replies);
         }
         agents.retain(|(_, cf)| cf != &ControlFlow::Kill);
-        for (i, app) in apps.iter_mut().enumerate() {
+        for (i, (app, old_notifs)) in apps.iter_mut().enumerate() {
             for ev in &events {
                 let ev_taint = app.on_event(ev);
                 if i == sel {
                     tainted |= ev_taint;
                 }
             }
+            let new_notifs = app.notifs();
+            tainted |= new_notifs != *old_notifs;
+            *old_notifs = new_notifs;
         }
         for ev in &events {
             match ev {
@@ -195,14 +204,14 @@ async fn run(iosys: &mut dyn IoSystem) {
 
         if tainted {
             screen.resize(new_size);
-            apps[sel].render(&Default::default(), &mut screen);
+            apps[sel].0.render(&Default::default(), &mut screen);
             {
                 let mut header = screen
                     .header()
                     .profile("test thing")
                     .selected(sel)
                     .time("right now >:3");
-                for app in &apps {
+                for (app, _) in &apps {
                     header = header.tab(app.name(), app.notifs());
                 }
             }
@@ -222,7 +231,7 @@ async fn run(iosys: &mut dyn IoSystem) {
                     Action::Closed => break,
                     Action::Resized => tainted = true,
 
-                    other => tainted |= apps[sel].input(other, &mut events),
+                    other => tainted |= apps[sel].0.input(other, &mut events),
                 }
             }
             _ = sleep(Duration::from_millis(25)) => {

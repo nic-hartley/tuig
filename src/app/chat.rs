@@ -108,16 +108,13 @@ impl super::App for ChatApp {
                 dm.sel = 0;
                 events.push(ev);
             }
-            Key::Up => {
-                if self.current_dm > 0 {
-                    self.current_dm -= 1;
-                }
+            Key::Up if self.current_dm > 0 => {
+                self.current_dm -= 1;
                 self.clear_current_unread();
             }
-            Key::Down => {
-                if self.current_dm < self.dms.len() - 1 {
-                    self.current_dm += 1;
-                }
+            Key::Up => {}
+            Key::Down if self.current_dm < self.dms.len() - 1 => {
+                self.current_dm += 1;
                 self.clear_current_unread();
             }
             _ => return false,
@@ -156,7 +153,6 @@ impl super::App for ChatApp {
                 open: true,
             }),
         }
-        self.clear_current_unread();
         true
     }
 
