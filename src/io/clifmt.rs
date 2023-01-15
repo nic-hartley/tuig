@@ -151,7 +151,7 @@ pub trait FormattedExt: Formatted + Sized {
     }
 
     /// Copy another item's formatting into this one.
-    /// 
+    ///
     /// The two objects don't need to be the same type, e.g. you can copy a [`Text`]'s formatting to a [`Cell`].
     #[must_use]
     fn fmt_of(mut self, rhs: &dyn Formatted) -> Self {

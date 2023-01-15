@@ -1,5 +1,5 @@
 //! Implements CPU-based rendering for GUIs.
-//! 
+//!
 //! This should be available on more or less all platforms.
 
 use std::io;

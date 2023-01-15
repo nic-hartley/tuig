@@ -16,15 +16,12 @@ pub use bsd::BsdArgs;
 use crate::app::CliState;
 
 /// Autocomplete a prefix against any iterable of anything that can be `AsRef`'d into a `str`.
-/// 
+///
 /// This returns only the completion part, i.e. excluding the prefix.
-/// 
+///
 /// Slightly more formally, this filters for items which start with `prefix`, then returns the longest common prefix
 /// among those.
-pub fn autocomplete(
-    prefix: &str,
-    options: impl IntoIterator<Item = impl AsRef<str>>,
-) -> String {
+pub fn autocomplete(prefix: &str, options: impl IntoIterator<Item = impl AsRef<str>>) -> String {
     let mut completed: Option<String> = None;
     for opt in options.into_iter() {
         let rest = match opt.as_ref().strip_prefix(prefix) {

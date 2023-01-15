@@ -12,7 +12,7 @@ pub use super::widgets::*;
 use super::XY;
 
 /// A text framebuffer.
-/// 
+///
 /// Allows you to render things onto it, then can be rendered onto the screen. This strategy avoids flickering,
 /// partial renders, etc. and helps deduplicate rendering effort.
 pub struct Screen {
@@ -37,14 +37,14 @@ impl Screen {
     }
 
     /// All of the cells of this screen, in rows.
-    /// 
+    ///
     /// i.e. for the screen:
-    /// 
+    ///
     /// ```text
     /// 1 2
     /// 3 4
     /// ```
-    /// 
+    ///
     /// this will return `&[1, 2, 3, 4]
     pub fn cells(&self) -> &[Cell] {
         &self.cells
@@ -72,7 +72,7 @@ impl Screen {
     }
 
     /// Write some formatted text to the position on screen.
-    /// 
+    ///
     /// This **does not** handle newlines or anything else. If you want that, see [`Textbox`].
     pub fn write(&mut self, pos: XY, text: Vec<Text>) {
         let XY(mut x, y) = pos;

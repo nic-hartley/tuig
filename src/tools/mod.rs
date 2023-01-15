@@ -2,7 +2,11 @@
 
 use std::mem;
 
-use crate::{app::CliState, io::clifmt::Text, agents::{Agent, Event, ControlFlow}};
+use crate::{
+    agents::{Agent, ControlFlow, Event},
+    app::CliState,
+    io::clifmt::Text,
+};
 
 mod args;
 pub use args::{autocomplete, AutocompleteType, BsdArgs};
@@ -19,7 +23,7 @@ pub use cd::Cd;
 /// Common interface for all CLI tool.
 pub trait Tool {
     /// The name of the tool. This must be constant and identical for all tools of this type.
-    /// 
+    ///
     /// This is what the CLI uses to map invoked commands to the correct tool.
     fn name(&self) -> &'static str;
     /// Attempt to perform autocompletion, given the line up to the cursor location.

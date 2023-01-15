@@ -33,7 +33,7 @@ fn entries<'cs>(dir: &str, state: &'cs CliState) -> Result<Vec<(String, Entry)>,
 }
 
 /// Produces a short listing of the entries, with just their names, color-coded by type
-/// 
+///
 /// See [`Self::entries`].
 fn list_short(entries: Vec<(String, Entry)>) -> Vec<Vec<Text>> {
     let mut line: Vec<_> = entries
@@ -58,7 +58,7 @@ fn list_short(entries: Vec<(String, Entry)>) -> Vec<Vec<Text>> {
 }
 
 /// Produces a long listing of the entries, with names, sizes, etc. and color-coded by type.
-/// 
+///
 /// See [`Self::entries`].
 fn list_long(entries: Vec<(String, Entry)>) -> Vec<Vec<Text>> {
     vec![text!["total {}\n"(entries.len())]]

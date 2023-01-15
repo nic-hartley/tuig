@@ -8,7 +8,7 @@ use crate::{
 };
 
 /// The header at the top of the window, which lists tabs, the current time, etc.
-/// 
+///
 /// e.g.:
 /// ```text
 /// chat 2 | terminal   | you are ...               12:34:56

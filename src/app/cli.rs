@@ -1,17 +1,16 @@
 use std::{collections::VecDeque, sync::Arc};
 
 use crate::{
-    tools::{autocomplete, Tool},
-    agents::{
-        Bundle, Event,
-    },
+    agents::{Bundle, Event},
     io::{
         clifmt::Text,
         helpers::{TextInput, TextInputRequest},
         input::Action,
         output::Screen,
     },
-    text, GameState, Machine,
+    text,
+    tools::{autocomplete, Tool},
+    GameState, Machine,
 };
 
 use super::App;
@@ -72,7 +71,7 @@ impl CliApp {
     }
 
     /// Actually run a command.
-    /// 
+    ///
     /// Adds the line to the scrollback, finds the tool and runs it or errors, etc.
     fn run_cmd(&mut self, line: String, events: &mut Vec<Event>) {
         self.add_scroll(text!("> ", bright_white "{}"(line), "\n"));
@@ -106,9 +105,7 @@ impl CliApp {
             }
         } else {
             /// Tiny adapter so `AsRef` will get the key instead of the value
-            struct Adapter<'a>(
-                dashmap::mapref::multiple::RefMulti<'a, String, Arc<dyn Tool>>,
-            );
+            struct Adapter<'a>(dashmap::mapref::multiple::RefMulti<'a, String, Arc<dyn Tool>>);
             impl<'a> AsRef<str> for Adapter<'a> {
                 fn as_ref(&self) -> &str {
                     self.0.key().as_ref()

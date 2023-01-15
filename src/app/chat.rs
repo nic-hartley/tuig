@@ -57,7 +57,7 @@ struct DM {
 }
 
 /// The direct message tab.
-/// 
+///
 /// Allows the user to chat directly with NPCs, potentially with multiple conversations at a time.
 #[derive(PartialEq, Eq, Clone, Debug, Default)]
 pub struct ChatApp {

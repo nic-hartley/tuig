@@ -7,15 +7,15 @@ use super::AutocompleteType;
 /// Allows for easy completion and parsing of BSD-style command options, e.g.:
 ///
 /// ## Completion
-/// 
+///
 /// - `tar |`: tries to complete x, f, etc. (the various option characters)
 /// - `tar x|`: the same thing
 /// - `tar x |`: doesn't try to complete anything; as far as it cares the options are done
 /// - `tar xf |`: tries to autocomplete a filename
 /// - `tar xf abc|`: tries to autocomplete a filename starting with `abc`
-/// 
+///
 /// ## Parsing
-/// 
+///
 /// - `tar`: `{}`
 /// - `tar x`: `{ 'x': None }`
 /// - `tar xf filename`: `{ 'x': None, f: Some("filename") }`
@@ -33,7 +33,7 @@ impl BsdArgs {
         }
     }
 
-    /// Add a valueless option. This will appear in the option string 
+    /// Add a valueless option. This will appear in the option string
     pub fn flag(mut self, ch: char) -> Self {
         self.options.insert(ch, None);
         self

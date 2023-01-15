@@ -9,7 +9,7 @@ use redshell::{
         output::Screen,
         sys::{self, IoSystem},
     },
-    GameState, tools,
+    tools, GameState,
 };
 use tokio::time::sleep;
 

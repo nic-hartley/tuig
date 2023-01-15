@@ -215,7 +215,7 @@ fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
 }
 
 /// Common interface for all of the GUI backends.
-/// 
+///
 /// This is deliberately not a trait object. Unlike most of the other interfaces in Redshell, we're only gonna have
 /// one GUI backend at a time and won't need to be able to swap them on the fly. If we *do*, that will happen at a
 /// higher level -- replacing the current [`IoSystem`] with another.

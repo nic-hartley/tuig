@@ -13,7 +13,7 @@ pub use event::{Bundle, BundledAgent, BundledApp, BundledTool, Event};
 pub trait Agent: Send + Sync {
     /// Called once on (re)start, to queue any starting events/ControlFlow as necessary. This will always be called
     /// before `react`.
-    /// 
+    ///
     /// By default, does nothing and returns [`ControlFlow::Continue`] to allow [`Self::react`] to be called, under
     /// the assumption that your interesting code sits there.
     fn start(&mut self, _replies: &mut Vec<Event>) -> ControlFlow {
@@ -25,7 +25,7 @@ pub trait Agent: Send + Sync {
     ///
     /// Limitations on the [`Extend`] trait mean we just use the concrete type `Vec`. **Do not** do anything except
     /// pushing/extending/otherwise adding elements.
-    /// 
+    ///
     /// By default, does nothing and returns [`ControlFlow::Kill`], under the assumption that you'd have implemented
     /// `react` if you wanted your agent to stay alive and do things.
     fn react(&mut self, _events: &[Event], _replies: &mut Vec<Event>) -> ControlFlow {

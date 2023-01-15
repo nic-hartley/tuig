@@ -13,10 +13,10 @@ pub mod sys;
 pub mod widgets;
 
 /// A position or size, with an X and a Y component.
-/// 
+///
 /// You can do most arithmetic with `XY` that you could with integers, both elementwise with other `XY`s (e.g.
 /// `XY(2, 3) * XY(4, 5) == XY(8, 15)`) and with scalars (e.g. `XY(2, 3) * 4 == XY(8, 12)`).
-/// 
+///
 /// `XY`s aren't totally ordered because the components can be ordered differently, e.g. `XY(1, 5)` and `XY(2, 3)`,
 /// the x is less but the y is greater. However, some methods (where it makes sense) are provided separately from
 /// [`Ord`], and they operate elementwise, e.g. [`Self::clamp`].

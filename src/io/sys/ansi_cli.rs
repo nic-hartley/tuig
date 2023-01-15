@@ -1,5 +1,4 @@
 /// Implements the (crossterm-based) rendering to CLI.
-
 use std::{io, mem, time::Duration};
 
 use crossterm::{
@@ -48,7 +47,9 @@ impl IoRunner for CliRunner {
         macro_rules! mods {
             ( $mods:ident, $action:ident ) => {
                 if $mods.contains(ct::KeyModifiers::SHIFT) {
-                    try_send!($action { key: Key::LeftShift });
+                    try_send!($action {
+                        key: Key::LeftShift
+                    });
                 }
                 if $mods.contains(ct::KeyModifiers::CONTROL) {
                     try_send!($action { key: Key::LeftCtrl });
@@ -223,7 +224,8 @@ fn render_row(row: &[Cell]) -> Vec<u8> {
         SetForegroundColor(ct4rs_color(fg)),
         SetBackgroundColor(ct4rs_color(bg)),
         SetAttributes(attrs.as_ref().into()),
-    ).unwrap();
+    )
+    .unwrap();
     out.extend_from_slice(row[0].ch.encode_utf8(&mut ch_b).as_bytes());
 
     for cell in &row[1..] {
