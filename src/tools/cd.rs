@@ -16,10 +16,6 @@ impl Agent for CdAgent {
         replies.push(Event::CommandDone);
         ControlFlow::Kill
     }
-
-    fn react(&mut self, _events: &[Event], _replies: &mut Vec<Event>) -> ControlFlow {
-        ControlFlow::Kill
-    }
 }
 
 /// Implementation of [`Tool`] for the `cd` command, to change the current working directory

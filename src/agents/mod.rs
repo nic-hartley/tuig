@@ -25,7 +25,12 @@ pub trait Agent: Send + Sync {
     ///
     /// Limitations on the [`Extend`] trait mean we just use the concrete type `Vec`. **Do not** do anything except
     /// pushing/extending/otherwise adding elements.
-    fn react(&mut self, events: &[Event], replies: &mut Vec<Event>) -> ControlFlow;
+    /// 
+    /// By default, does nothing and returns [`ControlFlow::Kill`], under the assumption that you'd have implemented
+    /// `react` if you wanted your agent to stay alive and do things.
+    fn react(&mut self, _events: &[Event], _replies: &mut Vec<Event>) -> ControlFlow {
+        ControlFlow::Kill
+    }
 }
 
 /// An agent which does nothing and immediately dies.
@@ -33,10 +38,6 @@ pub trait Agent: Send + Sync {
 pub struct NopAgent;
 impl Agent for NopAgent {
     fn start(&mut self, _replies: &mut Vec<Event>) -> ControlFlow {
-        ControlFlow::Kill
-    }
-
-    fn react(&mut self, _events: &[Event], _replies: &mut Vec<Event>) -> ControlFlow {
         ControlFlow::Kill
     }
 }

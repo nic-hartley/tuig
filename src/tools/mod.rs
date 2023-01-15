@@ -28,7 +28,7 @@ pub trait Tool {
     fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent>;
 }
 
-/// [`Agent`] implementation that just outputs some fixed text, signals the CLI it's done, and dies.
+/// [`Agent`] implementation that outputs some pre-given text, signals the CLI it's done, and dies.
 struct FixedOutput(Vec<Vec<Text>>);
 
 impl Agent for FixedOutput {
@@ -38,22 +38,13 @@ impl Agent for FixedOutput {
         replies.push(Event::CommandDone);
         ControlFlow::Kill
     }
-
-    fn react(&mut self, _events: &[Event], _replies: &mut Vec<Event>) -> ControlFlow {
-        ControlFlow::Kill
-    }
 }
 
-/// An agent which does nothing and immediately dies.
-// Big mood, buddy.
+/// An agent which tells the CLI it's done and immediately dies.
 pub struct NoOutput;
 impl Agent for NoOutput {
     fn start(&mut self, replies: &mut Vec<Event>) -> ControlFlow {
         replies.push(Event::CommandDone);
-        ControlFlow::Kill
-    }
-
-    fn react(&mut self, _events: &[Event], _replies: &mut Vec<Event>) -> ControlFlow {
         ControlFlow::Kill
     }
 }
