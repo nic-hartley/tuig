@@ -6,7 +6,7 @@ use redshell::{
         input::{Action, Key},
         output::Screen,
         sys::{self, IoSystem},
-    }, cutscenes,
+    }, cutscenes, GameState, app::{ChatApp, CliApp},
 };
 use tokio::time::sleep;
 
@@ -122,8 +122,18 @@ async fn run(iosys: &mut dyn IoSystem) {
     // TODO: multithreading
     let mut screen = Screen::new(iosys.size());
 
-    let mut state = cutscenes::intro(iosys, &mut screen).await
-        .expect("aaa"); // TODO: figure out a better error handling mechanism
+    let mut state = if let Some(name) = std::env::args().skip(1).next() {
+        GameState {
+            player_name: name,
+            apps: vec![Box::new(ChatApp::default()), Box::new(CliApp::default())],
+            machine: Default::default(),
+        }
+    } else {
+        // TODO: figure out a better error handling mechanism
+        cutscenes::intro(iosys, &mut screen).await
+            .expect("aaa")
+    };
+
     let mut prev_notifs = vec![0; state.apps.len()];
     let mut sel = 0;
     let mut events = vec![
