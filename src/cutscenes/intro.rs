@@ -415,6 +415,7 @@ async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<Stri
     Ok(name)
 }
 
+/// Run the intro cutscene
 pub async fn run(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<GameState> {
     let seed = sprinkler_wave(io, screen).await?;
     loading_text(io, screen, seed).await?;
