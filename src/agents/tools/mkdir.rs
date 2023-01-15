@@ -7,6 +7,7 @@ lazy_static::lazy_static! {
         .flag('p').argument('d', AutocompleteType::LocalFile);
 }
 
+/// Implementation of [`Tool`] for the `mkdir` command, to create an empty directory.
 pub struct Mkdir;
 
 impl Tool for Mkdir {

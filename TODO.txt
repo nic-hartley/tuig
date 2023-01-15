@@ -17,3 +17,5 @@ Tasks to work on in the future, in no particular order, but generally in order I
 - Fullscreen mode
 - Settings page
 - Multiuser systems
+- Help system for CLI
+- Better path abstraction than strings

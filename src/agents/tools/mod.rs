@@ -16,14 +16,19 @@ pub use mkdir::Mkdir;
 mod cd;
 pub use cd::Cd;
 
+/// Common interface for all CLI tools
 pub trait Tool {
+    /// The name of the tool. This must be constant and identical for all tools of this type.
+    /// 
+    /// This is what the CLI uses to map invoked commands to the correct tool.
     fn name(&self) -> &'static str;
-    fn autocomplete(&self, line: &str, state: &CliState) -> String;
+    /// Attempt to perform autocompletion, given the line up to the cursor location.
+    fn autocomplete(&self, prefix: &str, state: &CliState) -> String;
+    /// Create an agent to make this command have effects
     fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent>;
 }
 
-/// If a tool just needs to output based on the game state and doesn't actually do any processing, this makes that
-/// easy. It implements `Agent` just to output the lines, then signal that it's done.
+/// [`Agent`] implementation that just outputs some fixed text, signals the CLI it's done, and dies.
 struct FixedOutput(Vec<Vec<Text>>);
 
 impl Agent for FixedOutput {

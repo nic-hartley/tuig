@@ -2,6 +2,7 @@ use crate::{app::CliState, text};
 
 use super::{AutocompleteType, FixedOutput, Tool};
 
+/// Implementation of [`Tool`] for the `touch` command, to create an empty file.
 pub struct Touch;
 
 impl Tool for Touch {
