@@ -1,4 +1,4 @@
-use std::mem;
+use std::{mem, collections::VecDeque};
 
 use crate::text;
 
@@ -22,21 +22,31 @@ pub enum TextInputRequest {
 pub struct TextInput {
     /// prompt displayed before the user's text
     prompt: String,
+
     /// line(s) currently being typed
     line: String,
     /// cursor position in the line being typed
     cursor: usize,
     /// any autocomplete that's been requested
     autocomplete: String,
+
     /// whether the textbox needs to be redrawn since it was last rendered
     tainted: bool,
+
     /// whether the shift key is currently being held
     shift: bool,
+
+    /// previous lines entered, for scrolling through
+    history: VecDeque<String>,
+    /// where in the history we are. (history.len() = next line.)
+    hist_pos: usize,
+    /// the number of history items to store
+    hist_cap: usize,
 }
 
 impl TextInput {
     /// Create a new text input element.
-    pub fn new(prompt: &str) -> Self {
+    pub fn new(prompt: &str, history: usize) -> Self {
         Self {
             prompt: prompt.into(),
             line: String::new(),
@@ -44,6 +54,9 @@ impl TextInput {
             autocomplete: String::new(),
             tainted: true,
             shift: false,
+            history: Default::default(),
+            hist_pos: 0,
+            hist_cap: history,
         }
     }
 
@@ -61,9 +74,26 @@ impl TextInput {
         self.tainted
     }
 
+    fn cur_line(&self) -> &str {
+        if self.hist_pos < self.history.len() {
+            &self.history[self.hist_pos]
+        } else {
+            &self.line
+        }
+    }
+
+    fn pick_hist(&mut self) {
+        if self.hist_pos == self.history.len() {
+            return;
+        }
+        self.line = self.history[self.hist_pos].clone();
+        self.hist_pos = self.history.len();
+    }
+
     fn keypress(&mut self, key: Key) -> TextInputRequest {
         match key {
             Key::Char(ch) => {
+                self.pick_hist();
                 let chs: String = if self.shift {
                     ch.to_uppercase().collect()
                 } else {
@@ -73,28 +103,46 @@ impl TextInput {
                 self.cursor += 1;
             }
             Key::Backspace if self.cursor > 0 => {
+                self.pick_hist();
                 self.line.remove(self.cursor - 1);
                 self.cursor -= 1;
             }
-            Key::Delete if self.cursor < self.line.len() => {
+            Key::Delete if self.cursor < self.cur_line().len() => {
+                self.pick_hist();
                 self.line.remove(self.cursor);
             }
             Key::Left if self.cursor > 0 => self.cursor -= 1,
-            Key::Right if self.cursor < self.line.len() => self.cursor += 1,
-            // TODO: up/down to scroll through history
+            Key::Right if self.cursor < self.cur_line().len() => self.cursor += 1,
+            Key::Up if self.hist_pos > 0 => {
+                self.hist_pos -= 1;
+                self.cursor = self.cursor.clamp(0, self.cur_line().len());
+            },
+            Key::Down if self.hist_pos < self.history.len() => {
+                self.hist_pos += 1;
+                self.cursor = self.cursor.clamp(0, self.cur_line().len());
+            },
             Key::Tab => {
                 if self.autocomplete.is_empty() {
                     return TextInputRequest::Autocomplete;
                 } else {
+                    self.pick_hist();
                     self.line.insert_str(self.cursor, &self.autocomplete);
                     self.cursor += self.autocomplete.len();
                 }
             }
             Key::Enter => {
+                self.pick_hist();
                 self.cursor = 0;
                 self.autocomplete = String::new();
                 let old_line = mem::replace(&mut self.line, String::new());
                 self.tainted = true;
+                if !old_line.trim().is_empty() {
+                    if self.history.len() == self.hist_cap {
+                        self.history.pop_front();
+                    }
+                    self.history.push_back(old_line.clone());
+                }
+                self.hist_pos = self.history.len();
                 return TextInputRequest::Line(old_line);
             }
             // return early to skip tainting / clearing autocomplete
@@ -126,17 +174,18 @@ impl TextInput {
     /// Builds a `Vec<Text>` with the prompt line, for rendering.
     pub fn render<'s>(&mut self) -> Vec<Text> {
         self.tainted = false;
-        if self.cursor == self.line.len() {
+        let line = self.cur_line();
+        if self.cursor == line.len() {
             if self.autocomplete.is_empty() {
                 text![
                     "{}"(self.prompt),
-                    bright_white "{}"(self.line),
+                    bright_white "{}"(line),
                     bright_white underline " ",
                 ]
             } else {
                 text![
                     "{}"(self.prompt),
-                    bright_white "{}"(self.line),
+                    bright_white "{}"(line),
                     bright_black underline "{}"(&self.autocomplete[..1]),
                     bright_black "{}"(&self.autocomplete[1..]),
                 ]
@@ -145,17 +194,17 @@ impl TextInput {
             if self.autocomplete.is_empty() {
                 text![
                     "{}"(self.prompt),
-                    bright_white "{}"(&self.line[..self.cursor]),
-                    bright_white underline "{}"(&self.line[self.cursor..self.cursor+1]),
-                    bright_white "{}"(&self.line[self.cursor+1..]),
+                    bright_white "{}"(&line[..self.cursor]),
+                    bright_white underline "{}"(&line[self.cursor..self.cursor+1]),
+                    bright_white "{}"(&line[self.cursor+1..]),
                 ]
             } else {
                 text![
                     "{}"(self.prompt),
-                    bright_white "{}"(&self.line[..self.cursor]),
+                    bright_white "{}"(&line[..self.cursor]),
                     bright_black underline "{}"(&self.autocomplete[..1]),
                     bright_black "{}"(&self.autocomplete[1..]),
-                    bright_white "{}"(&self.line[self.cursor..]),
+                    bright_white "{}"(&line[self.cursor..]),
                 ]
             }
         }

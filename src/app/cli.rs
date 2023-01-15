@@ -30,8 +30,6 @@ pub struct CliState {
 }
 
 pub struct CliApp {
-    /// prior commands, as entered by the player (for scrolling through with the up arrow)
-    history: Vec<String>,
     /// prior lines of output (for rendering, and limited to ~MAX_SCROLL_LINES lines, depending on word wrap)
     scroll: VecDeque<Vec<Text>>,
     /// whether the prompt is currently visible
@@ -50,10 +48,9 @@ pub struct CliApp {
 impl Default for CliApp {
     fn default() -> Self {
         Self {
-            history: Default::default(),
             scroll: Default::default(),
             prompt: true,
-            input: TextInput::new("> "),
+            input: TextInput::new("> ", 100),
             help: Default::default(),
             unread: Default::default(),
             state: CliState {
@@ -93,7 +90,6 @@ impl CliApp {
                 text![bright_red "ERROR", ": Command ", bright_white "{}"(cmd), " not found.\n"];
             self.add_scroll(line);
         }
-        self.history.push(line);
     }
 
     fn autocomplete(&self, line: &str) -> String {
