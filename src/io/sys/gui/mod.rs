@@ -1,3 +1,5 @@
+//! Implements GUI rendering of the screen, and contains all the rendering backends.
+
 use std::{
     io,
     sync::{Arc, Once},
@@ -21,9 +23,13 @@ use crate::io::{
 
 use super::{IoRunner, IoSystem};
 
+#[cfg(feature = "sys_gui_softbuffer")]
+pub mod softbuffer;
+
 const REGULAR_TTF: &[u8] = include_bytes!("inconsolata-reg.ttf");
 const BOLD_TTF: &[u8] = include_bytes!("inconsolata-bold.ttf");
 
+/// Convert a winit [`VirtualKeyCode`] to a Redshell [`Key`]
 fn key4vkc(vkc: Option<VirtualKeyCode>) -> Option<Key> {
     match vkc? {
         VirtualKeyCode::Key1 => Some(Key::Char('1')),
@@ -143,7 +149,7 @@ fn key4vkc(vkc: Option<VirtualKeyCode>) -> Option<Key> {
         VirtualKeyCode::Semicolon => Some(Key::Char(';')),
         VirtualKeyCode::Slash => Some(Key::Char('/')),
         VirtualKeyCode::Tab => Some(Key::Tab),
-        // TODO: Figure out
+        // TODO: Figure out what the hell these are
         // - VirtualKeyCode::Ax
         // - VirtualKeyCode::Capital
         // - VirtualKeyCode::Convert
@@ -155,6 +161,7 @@ fn key4vkc(vkc: Option<VirtualKeyCode>) -> Option<Key> {
     }
 }
 
+/// Convert a winit [`MouseButton`](winit::event::MouseButton) to a Redshell [`MouseButton`]
 fn mb4button(button: winit::event::MouseButton) -> Option<MouseButton> {
     match button {
         winit::event::MouseButton::Left => Some(MouseButton::Left),
@@ -164,6 +171,7 @@ fn mb4button(button: winit::event::MouseButton) -> Option<MouseButton> {
     }
 }
 
+/// Convert pxiel position in the window to logical position in the char array
 fn char4pixel_pos(pos: XY, char_size: XY, win_size: XY) -> XY {
     // buffer around the edges
     let buf = (win_size % char_size) / 2;
@@ -206,6 +214,11 @@ fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
     })
 }
 
+/// Common interface for all of the GUI backends.
+/// 
+/// This is deliberately not a trait object. Unlike most of the other interfaces in Redshell, we're only gonna have
+/// one GUI backend at a time and won't need to be able to swap them on the fly. If we *do*, that will happen at a
+/// higher level -- replacing the current [`IoSystem`] with another.
 #[async_trait::async_trait]
 pub trait GuiBackend: Send + Sync + Sized {
     /// Create a new rendering backend with the given font size. The font size is `fontdue`'s understanding of it: The
@@ -234,6 +247,7 @@ pub trait GuiBackend: Send + Sync + Sized {
     fn char_size(&self) -> XY;
 }
 
+/// Provides the common (winit) functionality for a GUI, deferring the actual rendering to a [`GuiBackend`]
 pub struct Gui<B: GuiBackend> {
     window: Window,
     inputs: mpsc::UnboundedReceiver<Action>,
@@ -291,6 +305,7 @@ impl<B: GuiBackend> IoSystem for Gui<B> {
     }
 }
 
+/// Runner for the main thread (as required by Windows windowing) to pull and convert events.
 pub struct WindowRunner {
     el: EventLoop<Action>,
     act_send: mpsc::UnboundedSender<Action>,
@@ -382,6 +397,3 @@ impl IoRunner for WindowRunner {
         });
     }
 }
-
-#[cfg(feature = "sys_gui_softbuffer")]
-pub mod softbuffer;
