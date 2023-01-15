@@ -1,5 +1,8 @@
+//! The various data types representing different player to the game.
+
 use crate::io::XY;
 
+/// A key which can be pressed or released
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Key {
     Char(char),
@@ -43,6 +46,7 @@ impl Key {
     }
 }
 
+/// A mouse button which can be pressed or released
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum MouseButton {
     Left,
@@ -52,6 +56,7 @@ pub enum MouseButton {
     ScrollDown,
 }
 
+/// An action the player has taken in the window.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Action {
     /// A key was pressed. Note this theoretically handles modifiers by sending them when they're pressed, but

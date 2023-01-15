@@ -5,9 +5,6 @@ use std::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign},
 };
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub struct XY(pub usize, pub usize);
-
 pub mod clifmt;
 pub mod helpers;
 pub mod input;
@@ -15,11 +12,24 @@ pub mod output;
 pub mod sys;
 pub mod widgets;
 
+/// A position or size, with an X and a Y component.
+/// 
+/// You can do most arithmetic with `XY` that you could with integers, both elementwise with other `XY`s (e.g.
+/// `XY(2, 3) * XY(4, 5) == XY(8, 15)`) and with scalars (e.g. `XY(2, 3) * 4 == XY(8, 12)`).
+/// 
+/// `XY`s aren't totally ordered because the components can be ordered differently, e.g. `XY(1, 5)` and `XY(2, 3)`,
+/// the x is less but the y is greater. However, some methods (where it makes sense) are provided separately from
+/// [`Ord`], and they operate elementwise, e.g. [`Self::clamp`].
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct XY(pub usize, pub usize);
+
 impl XY {
+    /// The X component
     pub const fn x(&self) -> usize {
         self.0
     }
 
+    /// The Y component
     pub const fn y(&self) -> usize {
         self.1
     }
@@ -103,5 +113,17 @@ impl From<(usize, usize)> for XY {
 impl Into<(usize, usize)> for XY {
     fn into(self) -> (usize, usize) {
         (self.0, self.1)
+    }
+}
+
+impl PartialOrd for XY {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        let o0 = self.0.cmp(&other.0);
+        let o1 = self.1.cmp(&other.1);
+        if o0 == o1 {
+            Some(o0)
+        } else {
+            None
+        }
     }
 }
