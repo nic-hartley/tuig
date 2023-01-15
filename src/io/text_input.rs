@@ -1,4 +1,4 @@
-use std::{mem, collections::VecDeque};
+use std::{collections::VecDeque, mem};
 
 use crate::text;
 
@@ -116,11 +116,11 @@ impl TextInput {
             Key::Up if self.hist_pos > 0 => {
                 self.hist_pos -= 1;
                 self.cursor = self.cursor.clamp(0, self.cur_line().len());
-            },
+            }
             Key::Down if self.hist_pos < self.history.len() => {
                 self.hist_pos += 1;
                 self.cursor = self.cursor.clamp(0, self.cur_line().len());
-            },
+            }
             Key::Tab => {
                 if self.autocomplete.is_empty() {
                     return TextInputRequest::Autocomplete;
