@@ -5,10 +5,10 @@ use crate::{
     text, text1,
 };
 
-use super::{AutocompleteType, BsdCompleter, FixedOutput, Tool};
+use super::{AutocompleteType, BsdArgs, FixedOutput, Tool};
 
 lazy_static::lazy_static! {
-    static ref COMPLETER: BsdCompleter = BsdCompleter::new()
+    static ref COMPLETER: BsdArgs = BsdArgs::new()
         .flag('l').argument('d', AutocompleteType::LocalFile);
 }
 

@@ -5,7 +5,7 @@ use crate::{app::CliState, io::clifmt::Text};
 use super::{Agent, ControlFlow, Event};
 
 mod args;
-pub use args::{autocomplete_with, AutocompleteType, BsdCompleter};
+pub use args::{autocomplete_with, AutocompleteType, BsdArgs};
 
 mod ls;
 pub use ls::Ls;

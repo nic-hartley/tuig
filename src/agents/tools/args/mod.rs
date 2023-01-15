@@ -11,7 +11,7 @@
 mod gnu;
 // pub use gnu::GnuCompleter;
 mod bsd;
-pub use bsd::BsdCompleter;
+pub use bsd::BsdArgs;
 
 use crate::app::CliState;
 

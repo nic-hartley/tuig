@@ -1,9 +1,9 @@
 use crate::{app::CliState, text};
 
-use super::{AutocompleteType, BsdCompleter, FixedOutput, NoOutput, Tool};
+use super::{AutocompleteType, BsdArgs, FixedOutput, NoOutput, Tool};
 
 lazy_static::lazy_static! {
-    static ref COMPLETER: BsdCompleter = BsdCompleter::new()
+    static ref COMPLETER: BsdArgs = BsdArgs::new()
         .flag('p').argument('d', AutocompleteType::LocalFile);
 }
 
