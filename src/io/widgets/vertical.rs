@@ -3,6 +3,7 @@ use crate::{
     io::output::{Cell, Screen},
 };
 
+/// A vertical line across all or part of the screen
 pub struct Vertical<'a> {
     pub(in super::super) screen: &'a mut Screen,
     pub(in super::super) col: usize,

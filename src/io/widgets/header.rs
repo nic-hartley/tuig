@@ -7,6 +7,12 @@ use crate::{
     text, text1,
 };
 
+/// The header at the top of the window, which lists tabs, the current time, etc.
+/// 
+/// e.g.:
+/// ```text
+/// chat 2 | terminal   | you are ...               12:34:56
+/// ```
 pub struct Header<'a> {
     pub(in super::super) screen: &'a mut Screen,
     pub(in super::super) tabs: Vec<(String, usize)>,

@@ -256,11 +256,10 @@ mod test {
 
     fn charat(x: usize, y: usize) -> char {
         // compare:
-        // [(...)%FILLER.len()]
-        // .chars().cycle().nth(...).unwrap()
-        // .chars().nth((...)%FILLER.len()).unwrap()
+        // [(...) % FILLER.len()]
+        // .chars().nth((...) % FILLER.len()).unwrap()
         // unfortunately the first one is invalid
-        FILLER.chars().cycle().nth(x * 5 + y * 3).unwrap()
+        FILLER.chars().nth((x * 5 + y * 3) % FILLER.len()).unwrap()
     }
 
     /// Generate a screen filled with miscellaneous "random" data, to fairly reliably check that stuff was left blank
