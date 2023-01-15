@@ -4,11 +4,13 @@ use dashmap::{mapref::entry::Entry as DMEntry, DashMap};
 
 use crate::tools::Tool;
 
+/// Represents a file on an in-game machine
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
     pub contents: String,
 }
 
+/// Represents a directory entry on an in-game machine
 #[derive(Clone, Debug)]
 pub enum Entry {
     File(File),
@@ -16,6 +18,7 @@ pub enum Entry {
 }
 
 impl Entry {
+    /// Convert this to a `File`, or return `None`
     pub fn file(self) -> Option<File> {
         match self {
             Self::File(f) => Some(f),
@@ -23,6 +26,7 @@ impl Entry {
         }
     }
 
+    /// Check whether this is a file
     pub fn is_file(&self) -> bool {
         match self {
             Self::File(_) => true,
@@ -30,17 +34,19 @@ impl Entry {
         }
     }
 
-    pub fn is_dir(&self) -> bool {
-        match self {
-            Self::Directory(_) => true,
-            _ => false,
-        }
-    }
-
+    /// Convert this to a [`Entry::Directory`]'s contents, or return `None`
     pub fn dir(self) -> Option<Arc<DashMap<String, Entry>>> {
         match self {
             Self::Directory(d) => Some(d),
             _ => None,
+        }
+    }
+
+    /// Check whether this is a directory
+    pub fn is_dir(&self) -> bool {
+        match self {
+            Self::Directory(_) => true,
+            _ => false,
         }
     }
 }
@@ -79,7 +85,7 @@ impl PartialEq for Entry {
 #[cfg(test)]
 impl Eq for Entry {}
 
-/// A single machine, somewhere in cyberspace. Possibly even the player's own.
+/// A single machine in-game, somewhere in the CyberZone. Possibly even the player's own.
 #[derive(Default, Clone)]
 pub struct Machine {
     /// The files on this machine
