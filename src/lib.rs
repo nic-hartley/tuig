@@ -20,13 +20,3 @@ pub struct GameState {
     /// The player's computer
     pub machine: Machine,
 }
-
-impl GameState {
-    pub fn for_player(name: String) -> Self {
-        Self {
-            player_name: name,
-            apps: Default::default(),
-            machine: Default::default(),
-        }
-    }
-}
