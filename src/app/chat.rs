@@ -56,6 +56,9 @@ struct DM {
     open: bool,
 }
 
+/// The direct message tab.
+/// 
+/// Allows the user to chat directly with NPCs, potentially with multiple conversations at a time.
 #[derive(PartialEq, Eq, Clone, Debug, Default)]
 pub struct ChatApp {
     /// The DMs the player has going
@@ -182,9 +185,9 @@ impl super::App for ChatApp {
                 match msg {
                     Message::Normal { text, from_player } => {
                         let name = if *from_player {
-                            Text::of(format!("{0:>1$}", state.player_name, MAX_USERNAME))
+                            text1!["{0:>1$}"(state.player_name, MAX_USERNAME)]
                         } else {
-                            Text::of(format!("{0:>1$}", dm.target, MAX_USERNAME)).cyan()
+                            text1![cyan "{0:>1$}"(dm.target, MAX_USERNAME)]
                         };
                         output.push(name);
                         output.push(Text::plain(": "));

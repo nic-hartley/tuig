@@ -1,3 +1,5 @@
+//! Common structural code for apps.
+
 use crate::{
     agents::Event,
     io::{input::Action, output::Screen},

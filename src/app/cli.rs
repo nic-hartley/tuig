@@ -30,15 +30,15 @@ pub struct CliState {
 }
 
 pub struct CliApp {
-    /// prior lines of output (for rendering, and limited to ~MAX_SCROLL_LINES lines, depending on word wrap)
+    /// Prior lines of output (for rendering, and limited to ~MAX_SCROLL_LINES lines, depending on word wrap)
     scroll: VecDeque<Vec<Text>>,
-    /// whether the prompt is currently visible
+    /// Whether the prompt is currently visible
     prompt: bool,
-    /// the text input players type into
+    /// The text input players type into
     input: TextInput,
-    /// help text
+    /// Help text
     help: String,
-    /// lines of output that haven't been read yet
+    /// Lines of output that haven't been read yet
     unread: usize,
 
     /// The current state of the CLI
@@ -62,6 +62,7 @@ impl Default for CliApp {
 }
 
 impl CliApp {
+    /// Add a line to the scrollback, potentially popping off an old line too
     fn add_scroll(&mut self, line: Vec<Text>) {
         if self.scroll.len() == MAX_SCROLL_LINES {
             self.scroll.pop_front();
@@ -70,6 +71,9 @@ impl CliApp {
         self.unread += 1;
     }
 
+    /// Actually run a command.
+    /// 
+    /// Adds the line to the scrollback, finds the tool and runs it or errors, etc.
     fn run_cmd(&mut self, line: String, events: &mut Vec<Event>) {
         self.add_scroll(text!("> ", bright_white "{}"(line), "\n"));
         let trimmed = line.trim();
@@ -92,6 +96,7 @@ impl CliApp {
         }
     }
 
+    /// Tries to run autocomplete for the given line, i.e. autocompleting a tool name or letting the tool autocomplete
     fn autocomplete(&self, line: &str) -> String {
         if let Some((cmd, rest)) = line.split_once(char::is_whitespace) {
             if let Some(tool) = self.state.machine.tools.get(cmd) {
@@ -100,15 +105,16 @@ impl CliApp {
                 String::new()
             }
         } else {
-            struct RefMultiAdapter<'a>(
+            /// Tiny adapter so `AsRef` will get the key instead of the value
+            struct Adapter<'a>(
                 dashmap::mapref::multiple::RefMulti<'a, String, Arc<dyn Tool>>,
             );
-            impl<'a> AsRef<str> for RefMultiAdapter<'a> {
+            impl<'a> AsRef<str> for Adapter<'a> {
                 fn as_ref(&self) -> &str {
                     self.0.key().as_ref()
                 }
             }
-            autocomplete(line, self.state.machine.tools.iter().map(RefMultiAdapter))
+            autocomplete(line, self.state.machine.tools.iter().map(Adapter))
         }
     }
 }
