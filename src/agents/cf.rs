@@ -16,6 +16,7 @@ use std::time::Instant;
 pub struct WaitHandle(Arc<AtomicBool>);
 
 impl WaitHandle {
+    /// Create a new waiting handle
     fn new() -> Self {
         WaitHandle(Arc::new(AtomicBool::new(false)))
     }
@@ -25,6 +26,7 @@ impl WaitHandle {
         self.0.store(true, Ordering::Release);
     }
 
+    /// Check whether [`Self::wake`] has been called on this handle yet
     fn is_woken(&self) -> bool {
         self.0.load(Ordering::Acquire)
     }

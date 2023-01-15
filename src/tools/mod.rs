@@ -1,3 +1,5 @@
+//! Contains all of the CLI tools, plus the common code and abstractions they share.
+
 use std::mem;
 
 use crate::{app::CliState, io::clifmt::Text, agents::{Agent, Event, ControlFlow}};
@@ -14,7 +16,7 @@ pub use mkdir::Mkdir;
 mod cd;
 pub use cd::Cd;
 
-/// Common interface for all CLI tools
+/// Common interface for all CLI tool.
 pub trait Tool {
     /// The name of the tool. This must be constant and identical for all tools of this type.
     /// 
