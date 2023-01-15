@@ -134,11 +134,13 @@ macro_rules! npc {
     };
 }
 
+/// Main game loop
 #[tokio::main]
 async fn run(iosys: &mut dyn IoSystem) {
     // TODO: multithreading
     let mut screen = Screen::new(iosys.size());
 
+    // get the state, optionally from running the intro cutscene
     let mut state = if let Some(name) = std::env::args().skip(1).next() {
         GameState {
             player_name: name,

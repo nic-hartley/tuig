@@ -13,6 +13,7 @@ use redshell::{
 };
 use tokio::time::{interval, sleep};
 
+/// Attempt to load a system, or explode and die somewhat cleanly
 pub fn load_or_die() -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
     let errs = match sys::load() {
         Ok(pair) => return pair,
@@ -31,6 +32,7 @@ pub fn load_or_die() -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
     std::process::exit(1);
 }
 
+/// Run the render demo
 async fn render_demo(io: &mut dyn IoSystem) {
     let mut s = Screen::new(io.size());
     s.horizontal(1);
@@ -64,6 +66,7 @@ async fn render_demo(io: &mut dyn IoSystem) {
     sleep(Duration::from_secs(5)).await;
 }
 
+/// Run the intro cutscene
 async fn intro_demo(io: &mut dyn IoSystem) {
     let size = io.size();
     redshell::cutscenes::intro(io, &mut Screen::new(size))
@@ -71,6 +74,7 @@ async fn intro_demo(io: &mut dyn IoSystem) {
         .expect("Failed to run intro");
 }
 
+/// Run the demo of the chat app
 async fn chat_demo(io: &mut dyn IoSystem) {
     let mut s = Screen::new(io.size());
 
@@ -138,6 +142,7 @@ async fn chat_demo(io: &mut dyn IoSystem) {
     sleep(Duration::from_secs(1)).await;
 }
 
+/// Lil demo showing mouse interaction (very cool)
 async fn mouse_demo(io: &mut dyn IoSystem) {
     let mut s = Screen::new(io.size());
     s.textbox(text!(black on_white "Press any keyboard button to exit"));
@@ -192,6 +197,7 @@ async fn mouse_demo(io: &mut dyn IoSystem) {
     }
 }
 
+/// Actually run one of the demos
 #[tokio::main]
 async fn run_concept(name: &str, iosys: &mut dyn IoSystem) {
     match name {
@@ -204,6 +210,7 @@ async fn run_concept(name: &str, iosys: &mut dyn IoSystem) {
     iosys.stop();
 }
 
+/// Print a help message and exit
 fn help() -> ! {
     println!(
         r##"
