@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use dashmap::{mapref::entry::Entry as DMEntry, DashMap};
 
-use crate::agents::tools::Tool;
+use crate::tools::Tool;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {

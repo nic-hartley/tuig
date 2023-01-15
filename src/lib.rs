@@ -7,6 +7,7 @@ pub mod constants;
 pub mod cutscenes;
 pub mod io;
 pub mod machine;
+pub mod tools;
 mod util;
 
 /// The current state of the game, including the state of the UI.

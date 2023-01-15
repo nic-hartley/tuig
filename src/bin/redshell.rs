@@ -1,7 +1,7 @@
 use std::{mem, thread, time::Duration};
 
 use redshell::{
-    agents::{tools, Agent, ControlFlow, Event},
+    agents::{Agent, ControlFlow, Event},
     app::{ChatApp, CliApp},
     cutscenes,
     io::{
@@ -9,7 +9,7 @@ use redshell::{
         output::Screen,
         sys::{self, IoSystem},
     },
-    GameState,
+    GameState, tools,
 };
 use tokio::time::sleep;
 

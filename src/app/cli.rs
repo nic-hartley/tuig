@@ -1,8 +1,8 @@
 use std::{collections::VecDeque, sync::Arc};
 
 use crate::{
+    tools::{autocomplete, Tool},
     agents::{
-        tools::{autocomplete, Tool},
         Bundle, Event,
     },
     io::{

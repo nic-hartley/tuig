@@ -1,5 +1,3 @@
-pub mod tools;
-
 mod cf;
 pub use cf::{ControlFlow, WaitHandle};
 

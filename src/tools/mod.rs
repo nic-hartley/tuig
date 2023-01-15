@@ -1,8 +1,6 @@
 use std::mem;
 
-use crate::{app::CliState, io::clifmt::Text};
-
-use super::{Agent, ControlFlow, Event};
+use crate::{app::CliState, io::clifmt::Text, agents::{Agent, Event, ControlFlow}};
 
 mod args;
 pub use args::{autocomplete, AutocompleteType, BsdArgs};
@@ -32,7 +30,7 @@ pub trait Tool {
 struct FixedOutput(Vec<Vec<Text>>);
 
 impl Agent for FixedOutput {
-    fn start(&mut self, replies: &mut Vec<super::Event>) -> ControlFlow {
+    fn start(&mut self, replies: &mut Vec<Event>) -> ControlFlow {
         let lines = mem::take(&mut self.0);
         replies.extend(lines.into_iter().map(|l| Event::CommandOutput(l)));
         replies.push(Event::CommandDone);
