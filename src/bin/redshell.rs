@@ -2,11 +2,14 @@ use std::{mem, thread, time::Duration};
 
 use redshell::{
     agents::{tools, Agent, ControlFlow, Event},
+    app::{ChatApp, CliApp},
+    cutscenes,
     io::{
         input::{Action, Key},
         output::Screen,
         sys::{self, IoSystem},
-    }, cutscenes, GameState, app::{ChatApp, CliApp},
+    },
+    GameState,
 };
 use tokio::time::sleep;
 
@@ -50,8 +53,7 @@ impl NPC {
         let options = if self.message != self.state().messages.len() - 1 {
             vec![]
         } else {
-            self
-                .state()
+            self.state()
                 .options
                 .iter()
                 .map(|(s, _)| s.clone())
@@ -145,8 +147,7 @@ async fn run(iosys: &mut dyn IoSystem) {
         }
     } else {
         // TODO: figure out a better error handling mechanism
-        cutscenes::intro(iosys, &mut screen).await
-            .expect("aaa")
+        cutscenes::intro(iosys, &mut screen).await.expect("aaa")
     };
 
     let mut prev_notifs = vec![0; state.apps.len()];
@@ -187,7 +188,7 @@ async fn run(iosys: &mut dyn IoSystem) {
     let mut agents: Vec<(Box<dyn Agent>, ControlFlow)> = vec![];
 
     let mut replies = vec![];
-    /// Whether or not the screen needs to be redrawn since it was last rendered
+    // Whether or not the screen needs to be redrawn since it was last rendered
     let mut tainted = true;
     loop {
         // feed all the agents this round of events
@@ -201,7 +202,12 @@ async fn run(iosys: &mut dyn IoSystem) {
         // delete agents who asked to die
         agents.retain(|(_, cf)| cf != &ControlFlow::Kill);
         // feed events to the apps, update notifications accordingly
-        for (i, (app, old_notifs)) in state.apps.iter_mut().zip(prev_notifs.iter_mut()).enumerate() {
+        for (i, (app, old_notifs)) in state
+            .apps
+            .iter_mut()
+            .zip(prev_notifs.iter_mut())
+            .enumerate()
+        {
             for ev in &events {
                 let ev_taint = app.on_event(ev);
                 if i == sel {
@@ -216,13 +222,15 @@ async fn run(iosys: &mut dyn IoSystem) {
         for ev in &events {
             match ev {
                 Event::SpawnAgent(b) => {
-                    let mut ag = b.take()
+                    let mut ag = b
+                        .take()
                         .expect("agent bundle taken before sole consumer got it");
                     let cf = ag.start(&mut replies);
                     agents.push((ag, cf));
                 }
                 Event::AddTab(b) => {
-                    let app = b.take()
+                    let app = b
+                        .take()
                         .expect("app bundle taken before sole consumer got it");
                     state.apps.push(app);
                 }
@@ -235,6 +243,7 @@ async fn run(iosys: &mut dyn IoSystem) {
 
         // wait for 25ms or the next input (whichever is sooner) before redrawing
         // TODO: rewrite this to just handle inputs for 25ms instead, this varying tick speed will only cause trouble
+        // TODO: the structure of this probably massively changes with multithreading anyway
         tokio::select! {
             inp = iosys.input() => {
                 match inp.unwrap() {
@@ -245,22 +254,23 @@ async fn run(iosys: &mut dyn IoSystem) {
                         }
                     }
                     Action::Closed => break,
-                    Action::Resized => tainted = true,
+                    Action::Redraw => tainted = true,
 
                     other => tainted |= state.apps[sel].input(other, &mut events),
                 }
             }
             _ = sleep(Duration::from_millis(25)) => {
-                // nothing to do here, we just want to make sure events are handled regularly
+                // nothing to do here, we just want to make sure it loops every so often
             }
         }
 
-        // get the correct screen size
+        // ensure the screen size is up to date
         let new_size = iosys.size();
         if new_size != screen.size() {
             tainted = true;
         }
 
+        // redraw, if necessary
         if tainted {
             screen.resize(new_size);
             state.apps[sel].render(&Default::default(), &mut screen);

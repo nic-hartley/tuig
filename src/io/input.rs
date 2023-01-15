@@ -67,7 +67,7 @@ pub enum Action {
     /// The mouse has moved to a new location, possibly while holding a button
     MouseMove { pos: XY },
     /// Allows pushing redraw notifications, rather than having to update constantly and risk missing it
-    Resized,
+    Redraw,
     /// User requested the program end externally, e.g. clicking the X button in the window
     Closed,
     /// User requested that the program pause temporarily

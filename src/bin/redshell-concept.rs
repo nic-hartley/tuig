@@ -171,7 +171,7 @@ async fn mouse_demo(io: &mut dyn IoSystem) {
                         text = format!("Moved to {:?}", pos);
                         at = pos;
                     }
-                    Action::Resized => {
+                    Action::Redraw => {
                         text = format!("Window resized");
                     }
                     Action::Paused => {

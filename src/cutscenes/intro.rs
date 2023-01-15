@@ -4,6 +4,7 @@ use rand::prelude::*;
 use tokio::time::{sleep_until, Instant};
 
 use crate::{
+    app::{ChatApp, CliApp},
     cell,
     io::{
         clifmt::{FormattedExt, Text},
@@ -11,7 +12,7 @@ use crate::{
         output::{Cell, Screen},
         sys::IoSystem,
     },
-    text, text1, GameState, app::{ChatApp, CliApp},
+    text, text1, GameState,
 };
 
 async fn sleep(s: f32) {
@@ -284,7 +285,7 @@ async fn name_input(
                     key: Key::LeftShift | Key::RightShift,
                 } => caps = false,
                 // we want to redraw on resize but nothing else
-                Action::Resized => (),
+                Action::Redraw => (),
                 // other inputs can get ignored
                 _ => redraw = false,
             }
@@ -340,7 +341,7 @@ async fn do_choice<'a>(
                     }
                 }
                 // we want to redraw on resize but nothing else
-                Action::Resized => (),
+                Action::Redraw => (),
                 _ => redraw = false,
             }
             if redraw {
@@ -421,5 +422,9 @@ pub async fn run(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<GameS
     // screen should now be blank so we can start on the actual intro
     let name = tutorial(io, screen).await?;
 
-    Ok(GameState { player_name: name, apps: vec![Box::new(ChatApp::default()), Box::new(CliApp::default())], machine: Default::default() })
+    Ok(GameState {
+        player_name: name,
+        apps: vec![Box::new(ChatApp::default()), Box::new(CliApp::default())],
+        machine: Default::default(),
+    })
 }

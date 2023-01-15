@@ -329,9 +329,9 @@ impl IoRunner for WindowRunner {
                     ..
                 } => {
                     self.win_size = XY(sz.width as usize, sz.height as usize);
-                    send!(Action::Resized);
+                    send!(Action::Redraw);
                 }
-                Event::RedrawRequested(_) => send!(Action::Resized),
+                Event::RedrawRequested(_) => send!(Action::Redraw),
                 Event::WindowEvent {
                     event: WindowEvent::CloseRequested | WindowEvent::Destroyed,
                     ..

@@ -129,7 +129,7 @@ impl IoRunner for CliRunner {
                     }
                     mods!(modifiers, KeyRelease);
                 }
-                ct::Event::Resize(..) => try_send!(Resized),
+                ct::Event::Resize(..) => try_send!(Redraw),
                 ct::Event::Mouse(ct::MouseEvent {
                     row,
                     column: col,
