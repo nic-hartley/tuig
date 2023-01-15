@@ -2,7 +2,7 @@ use std::{collections::VecDeque, sync::Arc};
 
 use crate::{
     agents::{
-        tools::{autocomplete_with, Tool},
+        tools::{autocomplete, Tool},
         Bundle, Event,
     },
     io::{
@@ -108,7 +108,7 @@ impl CliApp {
                     self.0.key().as_ref()
                 }
             }
-            autocomplete_with(line, self.state.machine.tools.iter().map(RefMultiAdapter))
+            autocomplete(line, self.state.machine.tools.iter().map(RefMultiAdapter))
         }
     }
 }
