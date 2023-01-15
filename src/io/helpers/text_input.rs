@@ -1,11 +1,14 @@
 use std::{collections::VecDeque, mem};
 
-use crate::text;
-
-use super::{
-    clifmt::Text,
-    input::{Action, Key},
+use crate::{
+    io::{
+        clifmt::Text,
+        input::{Action, Key},
+    },
+    text,
 };
+
+use super::ModState;
 
 /// Indicates what the text input needs from its owner
 pub enum TextInputRequest {
@@ -33,8 +36,8 @@ pub struct TextInput {
     /// whether the textbox needs to be redrawn since it was last rendered
     tainted: bool,
 
-    /// whether the shift key is currently being held
-    shift: bool,
+    /// the current state of the keyboard modifiers
+    modstate: ModState,
 
     /// previous lines entered, for scrolling through
     history: VecDeque<String>,
@@ -53,7 +56,7 @@ impl TextInput {
             cursor: 0,
             autocomplete: String::new(),
             tainted: true,
-            shift: false,
+            modstate: Default::default(),
             history: Default::default(),
             hist_pos: 0,
             hist_cap: history,
@@ -92,9 +95,9 @@ impl TextInput {
 
     fn keypress(&mut self, key: Key) -> TextInputRequest {
         match key {
-            Key::Char(ch) => {
+            Key::Char(ch) if !self.modstate.hotkeying() => {
                 self.pick_hist();
-                let chs: String = if self.shift {
+                let chs: String = if self.modstate.shift {
                     ch.to_uppercase().collect()
                 } else {
                     ch.to_lowercase().collect()
@@ -158,14 +161,7 @@ impl TextInput {
     /// The type this returns indicates what needs to be done
     pub fn action(&mut self, action: Action) -> TextInputRequest {
         match action {
-            Action::KeyPress { key } if key.is_shift() => {
-                self.shift = true;
-                TextInputRequest::Nothing
-            }
-            Action::KeyRelease { key } if key.is_shift() => {
-                self.shift = false;
-                TextInputRequest::Nothing
-            }
+            act if self.modstate.action(&act) => TextInputRequest::Nothing,
             Action::KeyPress { key } => self.keypress(key),
             _ => TextInputRequest::Nothing,
         }

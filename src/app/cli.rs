@@ -7,9 +7,9 @@ use crate::{
     },
     io::{
         clifmt::Text,
+        helpers::{TextInput, TextInputRequest},
         input::Action,
         output::Screen,
-        text_input::{TextInput, TextInputRequest},
     },
     text, GameState, Machine,
 };

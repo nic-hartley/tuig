@@ -9,10 +9,10 @@ use std::{
 pub struct XY(pub usize, pub usize);
 
 pub mod clifmt;
+pub mod helpers;
 pub mod input;
 pub mod output;
 pub mod sys;
-pub mod text_input;
 pub mod widgets;
 
 impl XY {
