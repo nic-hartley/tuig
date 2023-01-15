@@ -10,43 +10,55 @@ use redshell::{
 };
 use tokio::time::sleep;
 
+/// A single step in the conversation tree of an [`NPC`]
 struct ChatState {
     messages: Vec<(String, usize)>,
     options: Vec<(String, usize)>,
 }
 
+/// Extremely temporary NPC implementation. Very simplistic, can only do basic conversation trees.
 #[derive(Default)]
 struct NPC {
+    /// The name of the NPC
     name: String,
+    /// All of the states it could possibly be in
     all_states: Vec<ChatState>,
+    /// Which state it's currently in
     state: usize,
+    /// Which message in the state it's currently in
     message: usize,
 }
 
 impl NPC {
+    /// Get the current state
     fn state(&self) -> &ChatState {
         &self.all_states[*&self.state]
     }
 
+    /// Get the current message/delay tuple
     fn message(&self) -> &(String, usize) {
         &self.state().messages[*&self.message]
     }
 
+    /// Advance to the next message/state
     fn advance(&mut self, replies: &mut Vec<Event>) -> ControlFlow {
         if self.state >= self.all_states.len() {
             return ControlFlow::Kill;
         }
         let (text, delay) = self.message().clone();
-        let mut options = vec![];
-        if self.message == self.state().messages.len() - 1 {
-            options = self
+        // only present state transitions on the last message
+        let options = if self.message != self.state().messages.len() - 1 {
+            vec![]
+        } else {
+            self
                 .state()
                 .options
                 .iter()
                 .map(|(s, _)| s.clone())
-                .collect();
-        }
+                .collect()
+        };
 
+        // advance to the next message (or beyond the end, to indicate to wait for replies)
         self.message += 1;
         replies.push(Event::NPCChatMessage {
             from: self.name.clone(),
@@ -64,6 +76,7 @@ impl Agent for NPC {
 
     fn react(&mut self, events: &[Event], replies: &mut Vec<Event>) -> ControlFlow {
         if self.state >= self.all_states.len() {
+            // reached the end of the conversation tree
             ControlFlow::Kill
         } else if self.message >= self.all_states[self.state].messages.len() {
             // look for a reply
@@ -88,11 +101,13 @@ impl Agent for NPC {
             }
             cf
         } else {
+            // send the next message
             self.advance(replies)
         }
     }
 }
 
+/// Create an NPC with kinda grody but mostly functional syntax
 macro_rules! npc {
     ( $name:literal, $(
         [
@@ -100,7 +115,7 @@ macro_rules! npc {
             ask $( $option:literal => $state:literal ),* $(,)?
         ]
     ),* $(,)? ) => {
-        Box::new(NPC {
+        NPC {
             name: $name.into(),
             all_states: vec![ $(
                 ChatState {
@@ -113,7 +128,7 @@ macro_rules! npc {
                 }
             ),* ],
             ..Default::default()
-        })
+        }
     };
 }
 
@@ -141,53 +156,51 @@ async fn run(iosys: &mut dyn IoSystem) {
         Event::install(tools::Touch),
         Event::install(tools::Mkdir),
         Event::install(tools::Cd),
+        Event::spawn(npc!(
+            "yotie",
+            [
+                say "hey": 500,
+                say "hello": 500,
+                say "hi": 500,
+                say "my close personal friend": 1000,
+                say "whose name I do not need to say": 1000,
+                say "because we're so close and all": 1000,
+                say "how you doin?": 1500,
+                ask "good" => 1, "bad" => 2,
+            ],
+            [
+                say "ey that's nice": 2000,
+                say "glad you're doing well": 500,
+                ask "thanks" => 3,
+            ],
+            [
+                say "ey that's bad": 2000,
+                say "sucks you're doing meh": 500,
+                ask "thanks?" => 3,
+            ],
+            [
+                say "anyway bye": 500,
+                ask "uh ok" => 100,
+            ],
+        )),
     ];
-    let mut agents: Vec<(Box<dyn Agent>, ControlFlow)> = [npc!(
-        "yotie",
-        [
-            say "hey": 500,
-            say "hello": 500,
-            say "hi": 500,
-            say "my close personal friend": 1000,
-            say "whose name I do not need to say": 1000,
-            say "because we're so close and all": 1000,
-            say "how you doin?": 1500,
-            ask "good" => 1, "bad" => 2,
-        ],
-        [
-            say "ey that's nice": 2000,
-            say "glad you're doing well": 500,
-            ask "thanks" =>  3,
-        ],
-        [
-            say "ey that's bad": 2000,
-            say "sucks you're doing meh": 500,
-            ask "thanks?" =>  3,
-        ],
-        [
-            say "anyway bye": 500,
-            ask "uh ok" => 100,
-        ]
-    )]
-    .into_iter()
-    .map(|mut a| {
-        let cf = a.start(&mut events);
-        (a as Box<dyn Agent>, cf)
-    })
-    .collect();
+    let mut agents: Vec<(Box<dyn Agent>, ControlFlow)> = vec![];
 
     let mut replies = vec![];
-    let mut new_agents: Vec<Box<dyn Agent>> = vec![];
+    /// Whether or not the screen needs to be redrawn since it was last rendered
     let mut tainted = true;
     loop {
-        agents.extend(new_agents.drain(..).map(|mut a| {
-            let cf = a.start(&mut replies);
-            (a, cf)
-        }));
-        for (agent, cf) in agents.iter_mut().filter(|(_, cf)| cf.is_ready()) {
+        // feed all the agents this round of events
+        for (agent, cf) in agents.iter_mut() {
+            if !cf.is_ready() {
+                // skip it until it *is* ready
+                continue;
+            }
             *cf = agent.react(&events, &mut replies);
         }
+        // delete agents who asked to die
         agents.retain(|(_, cf)| cf != &ControlFlow::Kill);
+        // feed events to the apps, update notifications accordingly
         for (i, (app, old_notifs)) in state.apps.iter_mut().zip(prev_notifs.iter_mut()).enumerate() {
             for ev in &events {
                 let ev_taint = app.on_event(ev);
@@ -199,19 +212,50 @@ async fn run(iosys: &mut dyn IoSystem) {
             tainted |= new_notifs != *old_notifs;
             *old_notifs = new_notifs;
         }
+        // handle system events
         for ev in &events {
             match ev {
                 Event::SpawnAgent(b) => {
-                    if let Some(ag) = b.take() {
-                        new_agents.push(ag);
-                    }
+                    let mut ag = b.take()
+                        .expect("agent bundle taken before sole consumer got it");
+                    let cf = ag.start(&mut replies);
+                    agents.push((ag, cf));
+                }
+                Event::AddTab(b) => {
+                    let app = b.take()
+                        .expect("app bundle taken before sole consumer got it");
+                    state.apps.push(app);
                 }
                 _ => (),
             }
         }
+        // and get ready for the next round of event processing
         mem::swap(&mut events, &mut replies);
         replies.clear();
 
+        // wait for 25ms or the next input (whichever is sooner) before redrawing
+        // TODO: rewrite this to just handle inputs for 25ms instead, this varying tick speed will only cause trouble
+        tokio::select! {
+            inp = iosys.input() => {
+                match inp.unwrap() {
+                    Action::KeyPress { key: Key::F(num) } => {
+                        if num <= state.apps.len() {
+                            sel = num as usize - 1;
+                            tainted = true;
+                        }
+                    }
+                    Action::Closed => break,
+                    Action::Resized => tainted = true,
+
+                    other => tainted |= state.apps[sel].input(other, &mut events),
+                }
+            }
+            _ = sleep(Duration::from_millis(25)) => {
+                // nothing to do here, we just want to make sure events are handled regularly
+            }
+        }
+
+        // get the correct screen size
         let new_size = iosys.size();
         if new_size != screen.size() {
             tainted = true;
@@ -232,26 +276,6 @@ async fn run(iosys: &mut dyn IoSystem) {
             }
             iosys.draw(&screen).await.unwrap();
             tainted = false;
-        }
-
-        tokio::select! {
-            inp = iosys.input() => {
-                match inp.unwrap() {
-                    Action::KeyPress { key: Key::F(num) } => {
-                        if num <= state.apps.len() {
-                            sel = num as usize - 1;
-                            tainted = true;
-                        }
-                    }
-                    Action::Closed => break,
-                    Action::Resized => tainted = true,
-
-                    other => tainted |= state.apps[sel].input(other, &mut events),
-                }
-            }
-            _ = sleep(Duration::from_millis(25)) => {
-                // nothing to do here, we just want to make sure events are handled regularly
-            }
         }
     }
     iosys.stop();
