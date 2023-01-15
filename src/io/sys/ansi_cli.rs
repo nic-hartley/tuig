@@ -1,3 +1,5 @@
+/// Implements the (crossterm-based) rendering to CLI.
+
 use std::{io, mem, time::Duration};
 
 use crossterm::{
@@ -28,22 +30,6 @@ use crate::io::{
 
 use super::{IoRunner, IoSystem};
 
-macro_rules! mods {
-    ( $mods:ident, $action:ident ) => {
-        if $mods.contains(ct::KeyModifiers::SHIFT) {
-            try_send!($action {
-                key: Key::LeftShift
-            });
-        }
-        if $mods.contains(ct::KeyModifiers::CONTROL) {
-            try_send!($action { key: Key::LeftCtrl });
-        }
-        if $mods.contains(ct::KeyModifiers::ALT) {
-            try_send!($action { key: Key::LeftAlt });
-        }
-    };
-}
-
 fn io4ct_btn(ct: ct::MouseButton) -> MouseButton {
     match ct {
         ct::MouseButton::Left => MouseButton::Left,
@@ -59,6 +45,19 @@ pub struct CliRunner {
 
 impl IoRunner for CliRunner {
     fn run(&mut self) {
+        macro_rules! mods {
+            ( $mods:ident, $action:ident ) => {
+                if $mods.contains(ct::KeyModifiers::SHIFT) {
+                    try_send!($action { key: Key::LeftShift });
+                }
+                if $mods.contains(ct::KeyModifiers::CONTROL) {
+                    try_send!($action { key: Key::LeftCtrl });
+                }
+                if $mods.contains(ct::KeyModifiers::ALT) {
+                    try_send!($action { key: Key::LeftAlt });
+                }
+            };
+        }
         macro_rules! try_send {
             ( $type:ident $( ($nt:expr) )? $( { $($br:tt)* } )? ) => {
                 match self.actions.send(Action::$type $(($nt))? $({$($br)*})? ) {
@@ -68,10 +67,13 @@ impl IoRunner for CliRunner {
             }
         }
         loop {
+            // check whether we've been told to stop
             match self.stop.try_recv() {
                 Err(oneshot::error::TryRecvError::Empty) => (),
                 _ => return,
             }
+            // get an event from the terminal
+            // (this has a timeout so we regularly check whether we should stop)
             match crossterm::event::poll(Duration::from_millis(100)) {
                 Ok(false) => continue,
                 Ok(true) => (),
@@ -80,6 +82,7 @@ impl IoRunner for CliRunner {
                     return;
                 }
             }
+            // we have an event, so get it
             let ev = match crossterm::event::read() {
                 Ok(ev) => ev,
                 Err(e) => {
@@ -87,6 +90,7 @@ impl IoRunner for CliRunner {
                     return;
                 }
             };
+            // process the event into a redshell `Event`
             match ev {
                 ct::Event::Key(ct::KeyEvent { code, modifiers }) => {
                     mods!(modifiers, KeyPress);
@@ -171,6 +175,7 @@ impl IoRunner for CliRunner {
     }
 }
 
+/// Crossterm color for Redshell colors
 fn ct4rs_color(rs: RedshellColor) -> CrosstermColor {
     match rs {
         RedshellColor::BrightBlack => CrosstermColor::DarkGrey,
@@ -192,7 +197,10 @@ fn ct4rs_color(rs: RedshellColor) -> CrosstermColor {
     }
 }
 
-fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
+/// Render a single row of cells into a `Vec<u8>` that can be printed
+fn render_row(row: &[Cell]) -> Vec<u8> {
+    // `unwrap` is sprinkled throughout this code, and is safe because we're queueing/writing into a `Vec`,
+    // which is an infallible destination for bytes. (barring allocation failure but that's not handled rn anyway.)
     let mut out = vec![];
 
     let mut ch_b = [0u8; 4];
@@ -215,17 +223,17 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
         SetForegroundColor(ct4rs_color(fg)),
         SetBackgroundColor(ct4rs_color(bg)),
         SetAttributes(attrs.as_ref().into()),
-    )?;
+    ).unwrap();
     out.extend_from_slice(row[0].ch.encode_utf8(&mut ch_b).as_bytes());
 
     for cell in &row[1..] {
         if cell.get_fmt().fg != fg {
             fg = cell.get_fmt().fg;
-            crossterm::queue!(&mut out, SetForegroundColor(ct4rs_color(fg)))?;
+            crossterm::execute!(&mut out, SetForegroundColor(ct4rs_color(fg))).unwrap();
         }
         if cell.get_fmt().bg != bg {
             bg = cell.get_fmt().bg;
-            crossterm::queue!(&mut out, SetBackgroundColor(ct4rs_color(bg)))?;
+            crossterm::execute!(&mut out, SetBackgroundColor(ct4rs_color(bg))).unwrap();
         }
         if cell.get_fmt().bold != bold {
             bold = cell.get_fmt().bold;
@@ -234,7 +242,7 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
             } else {
                 Attribute::NormalIntensity
             };
-            crossterm::queue!(&mut out, SetAttribute(attr))?;
+            crossterm::execute!(&mut out, SetAttribute(attr)).unwrap();
         }
         if cell.get_fmt().underline != underline {
             underline = cell.get_fmt().underline;
@@ -243,13 +251,13 @@ fn render_row(row: &[Cell]) -> io::Result<Vec<u8>> {
             } else {
                 Attribute::NoUnderline
             };
-            crossterm::queue!(&mut out, SetAttribute(attr))?;
+            crossterm::execute!(&mut out, SetAttribute(attr)).unwrap();
         }
         out.extend_from_slice(cell.ch.encode_utf8(&mut ch_b).as_bytes());
     }
-    crossterm::queue!(&mut out, MoveDown(1), MoveToColumn(0))?;
+    crossterm::execute!(&mut out, MoveDown(1), MoveToColumn(0)).unwrap();
 
-    Ok(out)
+    out
 }
 
 pub struct AnsiIo {
@@ -319,7 +327,7 @@ impl IoSystem for AnsiIo {
             let mut out = vec![];
             crossterm::queue!(&mut out, MoveTo(0, 0))?;
             for row in screen.rows() {
-                out.extend(render_row(row)?);
+                out.extend(render_row(row));
             }
             Ok(out)
         })?;
