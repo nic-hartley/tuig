@@ -65,7 +65,8 @@ async fn render_demo(io: &mut dyn IoSystem) {
 }
 
 async fn intro_demo(io: &mut dyn IoSystem) {
-    redshell::cutscenes::intro(io)
+    let size = io.size();
+    redshell::cutscenes::intro(io, &mut Screen::new(size))
         .await
         .expect("Failed to run intro");
 }

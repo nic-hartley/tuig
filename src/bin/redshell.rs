@@ -2,12 +2,11 @@ use std::{mem, thread, time::Duration};
 
 use redshell::{
     agents::{tools, Agent, ControlFlow, Event},
-    app::{App, ChatApp, CliApp},
     io::{
         input::{Action, Key},
         output::Screen,
         sys::{self, IoSystem},
-    },
+    }, cutscenes,
 };
 use tokio::time::sleep;
 
@@ -123,10 +122,9 @@ async fn run(iosys: &mut dyn IoSystem) {
     // TODO: multithreading
     let mut screen = Screen::new(iosys.size());
 
-    let mut apps: Vec<(Box<dyn App>, usize)> = vec![
-        (Box::new(ChatApp::default()), 0),
-        (Box::new(CliApp::default()), 0),
-    ];
+    let mut state = cutscenes::intro(iosys, &mut screen).await
+        .expect("aaa"); // TODO: figure out a better error handling mechanism
+    let mut prev_notifs = vec![0; state.apps.len()];
     let mut sel = 0;
     let mut events = vec![
         Event::install(tools::Ls),
@@ -180,7 +178,7 @@ async fn run(iosys: &mut dyn IoSystem) {
             *cf = agent.react(&events, &mut replies);
         }
         agents.retain(|(_, cf)| cf != &ControlFlow::Kill);
-        for (i, (app, old_notifs)) in apps.iter_mut().enumerate() {
+        for (i, (app, old_notifs)) in state.apps.iter_mut().zip(prev_notifs.iter_mut()).enumerate() {
             for ev in &events {
                 let ev_taint = app.on_event(ev);
                 if i == sel {
@@ -211,14 +209,14 @@ async fn run(iosys: &mut dyn IoSystem) {
 
         if tainted {
             screen.resize(new_size);
-            apps[sel].0.render(&Default::default(), &mut screen);
+            state.apps[sel].render(&Default::default(), &mut screen);
             {
                 let mut header = screen
                     .header()
-                    .profile("test thing")
+                    .profile(&state.player_name)
                     .selected(sel)
                     .time("right now >:3");
-                for (app, _) in &apps {
+                for app in &state.apps {
                     header = header.tab(app.name(), app.notifs());
                 }
             }
@@ -230,7 +228,7 @@ async fn run(iosys: &mut dyn IoSystem) {
             inp = iosys.input() => {
                 match inp.unwrap() {
                     Action::KeyPress { key: Key::F(num) } => {
-                        if num <= apps.len() {
+                        if num <= state.apps.len() {
                             sel = num as usize - 1;
                             tainted = true;
                         }
@@ -238,7 +236,7 @@ async fn run(iosys: &mut dyn IoSystem) {
                     Action::Closed => break,
                     Action::Resized => tainted = true,
 
-                    other => tainted |= apps[sel].0.input(other, &mut events),
+                    other => tainted |= state.apps[sel].input(other, &mut events),
                 }
             }
             _ = sleep(Duration::from_millis(25)) => {

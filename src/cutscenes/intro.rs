@@ -11,7 +11,7 @@ use crate::{
         output::{Cell, Screen},
         sys::IoSystem,
     },
-    text, text1,
+    text, text1, GameState, app::{ChatApp, CliApp},
 };
 
 async fn sleep(s: f32) {
@@ -414,14 +414,12 @@ async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<Stri
     Ok(name)
 }
 
-pub async fn run(io: &mut dyn IoSystem) -> io::Result<String> {
-    let mut screen = Screen::new(io.size());
-
-    let seed = sprinkler_wave(io, &mut screen).await?;
-    loading_text(io, &mut screen, seed).await?;
+pub async fn run(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<GameState> {
+    let seed = sprinkler_wave(io, screen).await?;
+    loading_text(io, screen, seed).await?;
 
     // screen should now be blank so we can start on the actual intro
-    let name = tutorial(io, &mut screen).await?;
+    let name = tutorial(io, screen).await?;
 
-    Ok(name)
+    Ok(GameState { player_name: name, apps: vec![Box::new(ChatApp::default()), Box::new(CliApp::default())], machine: Default::default() })
 }
