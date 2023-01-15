@@ -138,6 +138,7 @@ fn gen_lines() -> Vec<Text> {
         "COMPILING",
         "ASSEMBLING",
         "GENERATING",
+        "VALIDATING",
     ];
     let mut nouns = [
         "ENCRYPTOR",
@@ -152,6 +153,7 @@ fn gen_lines() -> Vec<Text> {
         "PROGRAM CODE",
         "COMPILER",
         "INTERPRETER",
+        "NEURAL LINK",
     ];
     assert!(verbs.len() == nouns.len());
     verbs.shuffle(&mut rng);

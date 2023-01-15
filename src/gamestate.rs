@@ -1,13 +1,6 @@
-use app::App;
-use machine::Machine;
+use std::sync::Arc;
 
-pub mod agents;
-pub mod app;
-pub mod constants;
-pub mod cutscenes;
-pub mod io;
-pub mod machine;
-mod util;
+use crate::{app::App, machine::Machine};
 
 /// The current state of the game, including the state of the UI.
 #[derive(Default)]
@@ -15,9 +8,10 @@ pub struct GameState {
     /// The player's name, of course
     pub player_name: String,
     /// The apps currently available (in order of tabs)
+    // TODO: Something friendly to parallelization?
     pub apps: Vec<Box<dyn App>>,
     /// The player's computer
-    pub machine: Machine,
+    pub machine: Arc<Machine>,
 }
 
 impl GameState {
@@ -25,7 +19,7 @@ impl GameState {
         Self {
             player_name: name,
             apps: Default::default(),
-            machine: Default::default(),
+            machine: Arc::new(Default::default()),
         }
     }
 }

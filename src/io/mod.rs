@@ -5,10 +5,11 @@ use std::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign},
 };
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct XY(pub usize, pub usize);
 
 pub mod clifmt;
+pub mod helpers;
 pub mod input;
 pub mod output;
 pub mod sys;
@@ -21,6 +22,11 @@ impl XY {
 
     pub const fn y(&self) -> usize {
         self.1
+    }
+
+    /// Contain this XY within the given bounds, elementwise.
+    pub fn clamp(self, min: Self, max: Self) -> XY {
+        XY(self.0.clamp(min.0, max.0), self.1.clamp(min.1, max.1))
     }
 }
 

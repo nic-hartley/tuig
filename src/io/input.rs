@@ -1,9 +1,9 @@
 use crate::io::XY;
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Key {
     Char(char),
-    F(u8),
+    F(usize),
     Escape,
     Backspace,
     Up,
@@ -28,7 +28,22 @@ pub enum Key {
     RightSuper,
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+impl Key {
+    pub fn is_shift(&self) -> bool {
+        matches!(self, Self::LeftShift | Self::RightShift)
+    }
+    pub fn is_ctrl(&self) -> bool {
+        matches!(self, Self::LeftCtrl | Self::RightCtrl)
+    }
+    pub fn is_alt(&self) -> bool {
+        matches!(self, Self::LeftAlt | Self::RightAlt)
+    }
+    pub fn is_super(&self) -> bool {
+        matches!(self, Self::LeftSuper | Self::RightSuper)
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum MouseButton {
     Left,
     Middle,
@@ -37,7 +52,7 @@ pub enum MouseButton {
     ScrollDown,
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Action {
     /// A key was pressed. Note this theoretically handles modifiers by sending them when they're pressed, but
     /// depending on the input mechanism it may only be able to send them when a non-modifier key is pressed.

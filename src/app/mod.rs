@@ -1,5 +1,5 @@
 use crate::{
-    event::Event,
+    agents::Event,
     io::{input::Action, output::Screen},
     GameState,
 };
@@ -9,29 +9,29 @@ use crate::{
 ///
 /// Apps are only given input and rendered when they're on-screen, but they receive all events. Note, though, that
 /// events may be batched when the app is offscreen, so that systems and the onscreen app can be updated on time.
-#[enum_dispatch::enum_dispatch]
 pub trait App {
-    // TODO: Replace String with actual events
-
     /// The name of this app's tab in the header. (should be constant, hence &'static)
     fn name(&self) -> &'static str;
 
     /// Take a single input action, returning any new events generated as a result.
-    fn input(&mut self, a: Action, events: &mut Vec<Event>);
-    /// Receive at least one event, to update the rendered game state.
-    fn on_event(&mut self, evs: &[Event]);
+    ///
+    /// Returns `true` if it will need to be redrawn, or `false` otherwise.
+    fn input(&mut self, a: Action, events: &mut Vec<Event>) -> bool;
+    /// Receive an event, in case the app needs to care to render it.
+    ///
+    /// Returns `true` if it will need to be redrawn, or `false` otherwise.
+    fn on_event(&mut self, ev: &Event) -> bool;
 
     /// The number of notifications this app has.
     fn notifs(&self) -> usize;
     /// Display the game state on screen.
-    fn render(&self, state: &GameState, screen: &mut Screen);
+    ///
+    /// You can be sure that this will never be called except when the module is the active one; feel free to use it
+    /// for e.g. clearing notifications.
+    fn render(&mut self, state: &GameState, screen: &mut Screen);
 }
 
 mod chat;
 pub use chat::ChatApp;
-
-#[enum_dispatch::enum_dispatch(App)]
-#[derive(PartialEq, Eq, Clone, Debug)]
-pub enum Apps {
-    ChatApp,
-}
+mod cli;
+pub use cli::{CliApp, CliState};

@@ -1,8 +1,8 @@
 use std::{env, process, thread, time::Duration};
 
 use redshell::{
+    agents::Event,
     app::{App, ChatApp},
-    event::Event,
     io::{
         input::{Action, Key},
         output::{Color, FormattedExt, Screen, Text},
@@ -74,10 +74,7 @@ async fn chat_demo(io: &mut dyn IoSystem) {
     let mut s = Screen::new(io.size());
 
     let mut app = ChatApp::default();
-    let state = GameState {
-        player_name: "player".into(),
-        apps: vec![],
-    };
+    let state = GameState::for_player("player".into());
     let frames: Vec<(_, &[Action])> = vec![
         (
             vec![Event::npc_chat(
@@ -121,7 +118,9 @@ async fn chat_demo(io: &mut dyn IoSystem) {
     ];
     for (chats, inputs) in frames.into_iter() {
         s.resize(io.size());
-        app.on_event(&chats);
+        for chat in chats {
+            app.on_event(&chat);
+        }
         for input in inputs.into_iter() {
             let mut _events = vec![];
             app.input(input.clone(), &mut _events);
