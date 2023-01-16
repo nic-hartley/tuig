@@ -3,9 +3,9 @@
 //! - [`Format`], which contains various common formatting options (i.e. the common ANSI ones)
 //! - [`Text`] and [`Cell`], which apply a `Format` to anything `impl AsRef<str>`, and `char` respectively
 //!     - They use a common subtype `Formatted` and `Deref` internally to ensure a common set of methods
-//! - [`text!`], which constructs a `Vec<Text>` for use in passing to other things
-//! - [`text1!`], which constructs a single formatted `Text`
-//! - [`cell!`], which constructs a `Cell`
+//! - [`text!`][crate::text], which constructs a `Vec<Text>` for use in passing to other things
+//! - [`text1!`][crate::text1], which constructs a single formatted `Text`
+//! - [`cell!`][crate::cell], which constructs a `Cell`
 //!
 //! `Text` and `Cell` are then used in the various UI widgets.
 

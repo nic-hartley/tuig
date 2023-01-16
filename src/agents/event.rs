@@ -63,6 +63,7 @@ trait_bundle! {
     add_tab => AddTab(App),
 }
 
+/// A single thing which has happened, which an [`Agent`] may or may not want to respond to.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Event {

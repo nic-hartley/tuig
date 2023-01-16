@@ -39,10 +39,12 @@ impl PartialEq for WaitHandle {
 }
 impl Eq for WaitHandle {}
 
-/// What should happen to an [`Agent`] after it finishes [react][Agent::react]ing to [`Event`]s.
+/// What should happen to an [`Agent`][super::Agent] after it finishes [react][super::Agent::react]ing to
+/// [`Event`][super::Event]s.
 ///
-/// Note that this only defines when [`Agent::react`] can start being called again -- if there are no events
-/// availalbe, it may not actually be called! This should be rare in the actual game but it may happen in tests.
+/// Note that this only defines when [`Agent::react`][super::Agent::react] can start being called again -- if there
+/// are no events availalbe, it may not actually be called! This should be rare in the actual game but it may happen
+/// in tests.
 #[derive(PartialEq, Eq, Clone)]
 pub enum ControlFlow {
     /// Continue as normal and update next time.

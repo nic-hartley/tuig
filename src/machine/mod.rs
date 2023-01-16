@@ -1,3 +1,6 @@
+//! Representations of the various bits of "physical" computers in-game, at a high enough level to be convenient while
+//! still offering the space for exciting and interesting tools.
+
 use std::sync::Arc;
 
 use dashmap::{mapref::entry::Entry as DMEntry, DashMap};
