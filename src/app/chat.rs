@@ -92,12 +92,12 @@ impl super::App for ChatApp {
             _ => return false,
         };
         match key {
-            Key::Left => {
+            Key::Left if !self.dm().options.is_empty() => {
                 if self.dm().sel > 0 {
                     self.dms[self.current_dm].sel -= 1
                 }
             }
-            Key::Right => {
+            Key::Right if !self.dm().options.is_empty() => {
                 if self.dm().sel < self.dm().options.len() - 1 {
                     self.dms[self.current_dm].sel += 1
                 }
@@ -185,9 +185,9 @@ impl super::App for ChatApp {
                 match msg {
                     Message::Normal { text, from_player } => {
                         let name = if *from_player {
-                            text1!["{0:>1$}"(state.player_name, MAX_USERNAME)]
+                            text1![cyan "{0:>1$}"(state.player_name, MAX_USERNAME)]
                         } else {
-                            text1![cyan "{0:>1$}"(dm.target, MAX_USERNAME)]
+                            text1![white "{0:>1$}"(dm.target, MAX_USERNAME)]
                         };
                         output.push(name);
                         output.push(Text::plain(": "));
@@ -215,6 +215,9 @@ impl super::App for ChatApp {
             screen
                 .textbox(output)
                 .pos(0, HEADER_HEIGHT)
+                .indent(MAX_USERNAME + 2)
+                .first_indent(0)
+                .scroll_bottom(true)
                 .width(size.x() - list_pane_size);
         }
 

@@ -225,7 +225,11 @@ async fn render(io: &mut dyn IoSystem, screen: &mut Screen, text: &[Text]) -> io
         // trim trailing newline
         last.text = last.text.trim_end().into();
     }
-    screen.textbox(text_v).scroll_bottom(true);
+    screen
+        .textbox(text_v)
+        .scroll_bottom(true)
+        .indent(10 + 2)
+        .first_indent(0);
     io.draw(screen).await
 }
 
@@ -410,7 +414,18 @@ async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<Stri
         }
         "no" => (), // continues below
     }
-    admin_say!(2.0 => "ok goodbye");
+    admin_say!(
+        0.25 => "...";
+        0.25 => "ok, look";
+        0.25 => "I haven't written the tutorial yet, so.";
+        0.25 => "Press F1 to open the first tab, F2 for the second, etc.";
+        0.25 => "Tab #1 is chat. There's only two people to chat with and neither is a great conversationalist.";
+        0.25 => "Tab #2 is your CLI. There's only, like, four commands, and none of them do anything cool.";
+        0.25 => "And that's it for now!";
+        0.25 => "But please do try them and let me know what you think.";
+        0.25 => "Thanks!";
+        5.0 => "ok good luck";
+    );
 
     Ok(name)
 }

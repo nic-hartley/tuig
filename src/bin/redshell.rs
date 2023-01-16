@@ -49,25 +49,32 @@ impl NPC {
             return ControlFlow::Kill;
         }
         let (text, delay) = self.message().clone();
-        // only present state transitions on the last message
-        let options = if self.message != self.state().messages.len() - 1 {
-            vec![]
+        // advance to the next message (or beyond the end, to indicate to wait for replies)
+        self.message += 1;
+        if self.message != self.state().messages.len() {
+            // if it's not the last message, we can send now (and then just ignore events until the next mssage)
+            replies.push(Event::NPCChatMessage {
+                from: self.name.clone(),
+                text,
+                options: vec![],
+            });
+            ControlFlow::sleep_for(Duration::from_millis(delay as u64))
         } else {
-            self.state()
+            // otherwise we send the replies and `Continue`, to make sure we don't miss a thing
+            let options = self
+                .state()
                 .options
                 .iter()
                 .map(|(s, _)| s.clone())
-                .collect()
-        };
+                .collect();
 
-        // advance to the next message (or beyond the end, to indicate to wait for replies)
-        self.message += 1;
-        replies.push(Event::NPCChatMessage {
-            from: self.name.clone(),
-            text,
-            options,
-        });
-        ControlFlow::sleep_for(Duration::from_millis(delay as u64))
+            replies.push(Event::NPCChatMessage {
+                from: self.name.clone(),
+                text,
+                options,
+            });
+            ControlFlow::Continue
+        }
     }
 }
 
@@ -160,6 +167,21 @@ async fn run(iosys: &mut dyn IoSystem) {
         Event::install(tools::Mkdir),
         Event::install(tools::Cd),
         Event::spawn(npc!(
+            "admin",
+            [
+                say "hi": 500,
+                ask "controls?" => 1, "hi" => 0,
+            ],
+            [
+                say "sure!": 250,
+                say "Press F1, F2, etc. to switch to tab 1, tab 2, etc.": 250,
+                say "Tab #1 is chat. There's only two people to chat with and neither is a great conversationalist.": 250,
+                say "Tab #2 is your CLI. There's only, like, four commands, and none of them do anything cool.": 250,
+                say "And that's it for now!": 250,
+                ask "oh ok. hi." => 0,
+            ],
+        )),
+        Event::spawn(npc!(
             "yotie",
             [
                 say "hey": 500,
@@ -239,9 +261,6 @@ async fn run(iosys: &mut dyn IoSystem) {
                 _ => (),
             }
         }
-        // and get ready for the next round of event processing
-        mem::swap(&mut events, &mut replies);
-        replies.clear();
 
         // wait for 25ms or the next input (whichever is sooner) before redrawing
         // TODO: rewrite this to just handle inputs for 25ms instead, this varying tick speed will only cause trouble
@@ -258,7 +277,7 @@ async fn run(iosys: &mut dyn IoSystem) {
                     Action::Closed => break,
                     Action::Redraw => tainted = true,
 
-                    other => tainted |= state.apps[sel].input(other, &mut events),
+                    other => tainted |= state.apps[sel].input(other, &mut replies),
                 }
             }
             _ = sleep(Duration::from_millis(25)) => {
@@ -289,6 +308,10 @@ async fn run(iosys: &mut dyn IoSystem) {
             iosys.draw(&screen).await.unwrap();
             tainted = false;
         }
+
+        // and get ready for the next round of event processing
+        mem::swap(&mut events, &mut replies);
+        replies.clear();
     }
     iosys.stop();
 }

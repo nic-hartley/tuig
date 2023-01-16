@@ -17,11 +17,11 @@ pub trait App {
 
     /// Take a single input action, returning any new events generated as a result.
     ///
-    /// Returns `true` if it will need to be redrawn, or `false` otherwise.
+    /// Returns whether this item was tainted, i.e. true if it needs to be redrawn.
     fn input(&mut self, a: Action, events: &mut Vec<Event>) -> bool;
     /// Receive an event, in case the app needs to care to render it.
     ///
-    /// Returns `true` if it will need to be redrawn, or `false` otherwise.
+    /// Returns whether this item was tainted, i.e. true if it needs to be redrawn.
     fn on_event(&mut self, ev: &Event) -> bool;
 
     /// The number of notifications this app has.
