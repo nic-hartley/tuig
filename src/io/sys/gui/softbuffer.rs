@@ -49,7 +49,6 @@ fn color_u32(c: Color) -> u32 {
     }
 
     match c {
-        // TODO: Tweak these colors to look as nice as possible
         Color::Black => hsv(000.0, 0.0, 0.05),
         Color::Red => hsv(000.0, 1.0, 0.75),
         Color::Green => hsv(120.0, 1.0, 0.75),
@@ -177,7 +176,7 @@ impl GuiBackend for SoftbufferBackend {
                 let cell = &screen[y][x];
                 let fmt = cell.get_fmt();
 
-                // TODO: Select bold or normal font
+                // select bold or normal font (this is really how we do bold, it bugs me too)
                 let font = if fmt.bold { &self.bold } else { &self.regular };
                 let (metrics, char_buf) = font.rasterize(cell.ch, self.scale);
 
@@ -236,7 +235,6 @@ impl GuiBackend for SoftbufferBackend {
                         let char_row = line_row - y_offset + y_cutoff;
                         let char_col = line_col - x_offset + x_cutoff;
                         let val = char_buf[char_row * metrics.width + char_col];
-                        // TODO: switch to [f32; 3] color and u8 from rasterized?
                         let pct = val as f32 / 255.0;
                         let color = lerp(bg, fg, pct);
                         dest[line_col] = color;

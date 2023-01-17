@@ -53,7 +53,6 @@ pub enum AutocompleteType {
     Choices(Vec<String>),
     /// A file on the local machine
     LocalFile,
-    // TODO: LocalDirectory
     /// A known hostname
     Hostname,
     /// A file somewhere on a remote machine, i.e. `hostname:filepath`

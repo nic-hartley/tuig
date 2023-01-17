@@ -28,7 +28,6 @@ impl<'a> Header<'a> {
             tabs: Vec::with_capacity(5),
             selected: None,
             profile: "".into(),
-            // TODO: Use an actual time type
             time: "".into(),
         }
     }

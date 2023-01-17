@@ -48,7 +48,6 @@ struct DM {
     /// How many messages have piled up since the player last looked at this chat
     unread: usize,
     /// The current options available in this DM
-    // TODO: Replace this with something real
     options: Vec<String>,
     /// Which option is selected (will be zero if there's no options)
     sel: usize,
@@ -87,8 +86,8 @@ impl super::App for ChatApp {
     fn input(&mut self, a: Action, events: &mut Vec<Event>) -> bool {
         let key = match a {
             Action::KeyPress { key, .. } => key,
-            Action::MouseMove { .. } => return false, // TODO: Handle mouse move
-            Action::MousePress { .. } => return false, // TODO: Handle mouse press
+            Action::MouseMove { .. } => return false,
+            Action::MousePress { .. } => return false,
             _ => return false,
         };
         match key {
@@ -177,7 +176,6 @@ impl super::App for ChatApp {
             let dm = self.dm();
             // per message: 1 for name, 1 for colon, 1 for message contents, 1 for newline
             // plus 1 + 2 * current_dm.options.len() for the options line including spaces between
-            // TODO: update messages to be Vec<Text>, and update this expression accordingly
             let chunks =
                 dm.msgs.iter().map(|_| 1 + 1 + 1 + 1).sum::<usize>() + dm.options.len() * 2;
             let mut output = Vec::with_capacity(chunks);

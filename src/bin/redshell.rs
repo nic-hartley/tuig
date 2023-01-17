@@ -144,7 +144,6 @@ macro_rules! npc {
 /// Main game loop
 #[tokio::main]
 async fn run(iosys: &mut dyn IoSystem) {
-    // TODO: multithreading
     let mut screen = Screen::new(iosys.size());
 
     // get the state, optionally from running the intro cutscene
@@ -155,7 +154,6 @@ async fn run(iosys: &mut dyn IoSystem) {
             machine: Default::default(),
         }
     } else {
-        // TODO: figure out a better error handling mechanism
         cutscenes::intro(iosys, &mut screen).await.expect("aaa")
     };
 
@@ -263,8 +261,6 @@ async fn run(iosys: &mut dyn IoSystem) {
         }
 
         // wait for 25ms or the next input (whichever is sooner) before redrawing
-        // TODO: rewrite this to just handle inputs for 25ms instead, this varying tick speed will only cause trouble
-        // TODO: the structure of this probably massively changes with multithreading anyway
         tokio::select! {
             inp = iosys.input() => {
                 match inp.unwrap() {

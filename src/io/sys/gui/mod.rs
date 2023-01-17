@@ -149,14 +149,6 @@ fn key4vkc(vkc: Option<VirtualKeyCode>) -> Option<Key> {
         VirtualKeyCode::Semicolon => Some(Key::Char(';')),
         VirtualKeyCode::Slash => Some(Key::Char('/')),
         VirtualKeyCode::Tab => Some(Key::Tab),
-        // TODO: Figure out what the hell these are
-        // - VirtualKeyCode::Ax
-        // - VirtualKeyCode::Capital
-        // - VirtualKeyCode::Convert
-        // - VirtualKeyCode::NavigateForward
-        // - VirtualKeyCode::NavigateBackward
-        // - VirtualKeyCode::NoConvert
-        // - VirtualKeyCode::Unlabeled
         _ => None,
     }
 }
@@ -353,7 +345,6 @@ impl IoRunner for WindowRunner {
                 } => {
                     send!(Action::Closed);
                 }
-                // TODO: Enable and handle IME -- useful for folks with compose keys
                 // for now this is good enough
                 Event::WindowEvent {
                     event: WindowEvent::KeyboardInput { input, .. },

@@ -113,14 +113,6 @@ pub fn load() -> Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), HashMap<&'static
     #[cfg(feature = "__sys_gui")]
     {
         use crate::io::sys::gui::Gui;
-        #[cfg(feature = "sys_gui_vulkan")]
-        {
-            // TODO: Try to initialize Vulkan rendering
-        }
-        #[cfg(feature = "sys_gui_opengl")]
-        {
-            // TODO: Try to initialize OpenGL rendering
-        }
         #[cfg(feature = "sys_gui_softbuffer")]
         {
             use crate::io::sys::gui::softbuffer::SoftbufferBackend;

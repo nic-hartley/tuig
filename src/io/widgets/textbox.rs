@@ -8,7 +8,6 @@ use crate::{
 };
 
 fn breakable(ch: char) -> bool {
-    // TODO: There have to be better ways to decide breakability than just "nyehe whitespaec"
     ch.is_whitespace()
 }
 
