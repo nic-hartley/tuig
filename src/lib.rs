@@ -1,3 +1,5 @@
+#![cfg_attr(coverage, feature(no_coverage))]
+
 use app::App;
 use machine::Machine;
 

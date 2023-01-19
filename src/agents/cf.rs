@@ -1,3 +1,4 @@
+use core::fmt;
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -38,6 +39,11 @@ impl PartialEq for WaitHandle {
     }
 }
 impl Eq for WaitHandle {}
+impl fmt::Debug for WaitHandle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "WaitHandle(...)")
+    }
+}
 
 /// What should happen to an [`Agent`][super::Agent] after it finishes [react][super::Agent::react]ing to
 /// [`Event`][super::Event]s.
@@ -45,7 +51,7 @@ impl Eq for WaitHandle {}
 /// Note that this only defines when [`Agent::react`][super::Agent::react] can start being called again -- if there
 /// are no events availalbe, it may not actually be called! This should be rare in the actual game but it may happen
 /// in tests.
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub enum ControlFlow {
     /// Continue as normal and update next time.
     Continue,
