@@ -18,6 +18,7 @@ jobs:
       matrix:
         rust: [stable, 1.59, nightly]
         platform: [windows, macos, ubuntu]
+        coverage: [false]
     name: Basic tests on ${{ matrix.platform }} w/ Rust ${{ matrix.rust }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
@@ -42,12 +43,34 @@ jobs:
         cargo check --all-features
         cargo test --all-features
 
-    - if: ${{ matrix.rust == 'nightly' }}
-      run: |
+
+  coverage:
+    name: Coverage testing (Ubuntu, nightly)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/cache@v3
+      with:
+        path: ~/.rustup/
+        key: rustup-${{ matrix.platform }}-${{ matrix.rust }}
+    - uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: cargo-cache
+    - uses: actions/cache@v3
+      with:
+        path: ./target
+        key: target-dir-${{ matrix.platform }}-${{ matrix.rust }}
+
+    - uses: actions/checkout@v3
+    - run: |
+        rustup default ${{ matrix.rust }}
+        rustup component add rustfmt
+        cargo fmt --check
+        cargo check --all-features
         cargo install cargo-llvm-cov
         cargo llvm-cov test --all-features --fail-under-lines 90% --html
-    - if: ${{ matrix.rust == 'nightly' }}
-      uses: actions/upload-artifact@v3
+
+    - uses: actions/upload-artifact@v3
       with:
         name: plain-bin-${{ matrix.sys }}-${{ matrix.platform }}
         path: |
