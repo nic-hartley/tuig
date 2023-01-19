@@ -18,10 +18,6 @@ jobs:
       matrix:
         rust: [stable, 1.59, nightly]
         platform: [windows, macos, ubuntu]
-        include:
-        - coverage: false
-        - rust: nightly
-          coverage: true
     name: Basic tests on ${{ matrix.platform }} w/ Rust ${{ matrix.rust }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
@@ -50,7 +46,7 @@ jobs:
       run: |
         cargo install cargo-llvm-cov
         cargo llvm-cov test --all-features --fail-under-lines 90% --html
-    - if: ${{ matrix.coverage }}
+    - if: ${{ matrix.rust == 'nightly' }}
       uses: actions/upload-artifact@v3
       with:
         name: plain-bin-${{ matrix.sys }}-${{ matrix.platform }}
