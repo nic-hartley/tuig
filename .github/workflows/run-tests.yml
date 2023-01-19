@@ -65,7 +65,7 @@ jobs:
     - run: |
         rustup default nightly
         cargo install cargo-llvm-cov
-        cargo llvm-cov test --all-features --fail-under-lines 90 --html
+        ./run-coverage.sh
 
     - uses: actions/upload-artifact@v3
       with:
