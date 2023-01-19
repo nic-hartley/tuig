@@ -1,4 +1,4 @@
-name: Run tests
+name: Test
 run-name: Testing ${{github.ref_name}}
 # no permission for the token, this runs on pull requests
 permissions: {}
@@ -19,7 +19,7 @@ jobs:
         rust: [stable, 1.59, nightly]
         platform: [windows, macos, ubuntu]
         coverage: [false]
-    name: Basic tests on ${{ matrix.platform }} w/ Rust ${{ matrix.rust }}
+    name: ${{ matrix.platform }} / Rust ${{ matrix.rust }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
     - uses: actions/cache@v3
@@ -36,7 +36,8 @@ jobs:
         key: target-dir-${{ matrix.platform }}-${{ matrix.rust }}
 
     - uses: actions/checkout@v3
-    - run: |
+    - name: Run tests
+      run: |
         rustup default ${{ matrix.rust }}
         rustup component add rustfmt
         cargo fmt --check
@@ -45,13 +46,13 @@ jobs:
 
 
   coverage:
-    name: Coverage testing (Ubuntu, nightly)
+    name: Coverage
     runs-on: ubuntu-latest
     steps:
     - uses: actions/cache@v3
       with:
         path: ~/.rustup/
-        key: rustup-ubuntu-nightly
+        key: rustup-coverage
     - uses: actions/cache@v3
       with:
         path: ~/.cargo/registry
@@ -59,10 +60,11 @@ jobs:
     - uses: actions/cache@v3
       with:
         path: ./target
-        key: target-dir-ubuntu-nightly
+        key: target-dir-coverage
 
     - uses: actions/checkout@v3
-    - run: |
+    - name: Run coverage tests
+      run: |
         rustup default nightly
         cargo install cargo-llvm-cov
         ./run-coverage.sh
