@@ -11,17 +11,40 @@ on:
   - cron: '0 0 * * 0,3'
 jobs:
 
+
+  fmt-and-check:
+    name: Format check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/cache@v3
+      with:
+        path: ~/.rustup/
+        key: rustup-${{ matrix.platform }}-${{ matrix.rust }}
+    - uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: cargo-cache
+    - uses: actions/cache@v3
+      with:
+        path: ./target
+        key: target-dir-${{ matrix.platform }}-${{ matrix.rust }}
+
+    - uses: actions/checkout@v3
+    - run: |
+        rustup default ${{ matrix.rust }}
+        rustup component add rustfmt
+        cargo fmt --check
+        cargo check --all-features
+
+
   test:
+    needs: fmt-and-check
     strategy:
       fail-fast: false
       matrix:
-        rust: [stable, nightly, 1.59]
+        rust: [stable, 1.59]
         platform: [windows, macos, ubuntu]
-        include:
-        - fail_ok: false
-        - rust: nightly
-          fail_ok: true
-    name: On ${{ matrix.platform }} w/ Rust ${{ matrix.rust }}
+    name: Unit test on ${{ matrix.platform }} w/ Rust ${{ matrix.rust }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
     - uses: actions/cache@v3
@@ -38,11 +61,41 @@ jobs:
         key: target-dir-${{ matrix.platform }}-${{ matrix.rust }}
 
     - uses: actions/checkout@v3
-    - run: rustup default ${{ matrix.rust }}
-    - run: rustup component add rustfmt
-    - run: cargo fmt --check
-      continue-on-error: ${{ matrix.fail_ok }}
-    - run: cargo check --all-features
-      continue-on-error: ${{ matrix.fail_ok }}
-    - run: cargo test --all-features
-      continue-on-error: ${{ matrix.fail_ok }}
+    - run: |
+        rustup default ${{ matrix.rust }}
+        cargo test --all-features
+
+
+  coverage:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [windows, macos, ubuntu]
+    name: Coverage on ${{ matrix.platform }}
+    steps:
+    - uses: actions/cache@v3
+      with:
+        path: ~/.rustup/
+        key: rustup-${{ matrix.platform }}-${{ matrix.rust }}
+    - uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: cargo-cache
+    - uses: actions/cache@v3
+      with:
+        path: ./target
+        key: target-dir-${{ matrix.platform }}-${{ matrix.rust }}
+
+    - uses: actions/checkout@v3
+    - run: |
+        rustup default nightly
+        cargo install cargo-llvm-cov
+        cargo llvm-cov test --all-features --fail-under-lines 90% --html
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: plain-bin-${{ matrix.sys }}-${{ matrix.platform }}
+        path: |
+          target/llvm-cov/html
+        if-no-files-found: error
