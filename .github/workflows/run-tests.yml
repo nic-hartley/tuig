@@ -73,6 +73,7 @@ jobs:
       matrix:
         platform: [windows, macos, ubuntu]
     name: Coverage on ${{ matrix.platform }}
+    runs-on: ${{ matrix.platform }}-latest
     steps:
     - uses: actions/cache@v3
       with:
