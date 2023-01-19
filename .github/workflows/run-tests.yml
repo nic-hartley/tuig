@@ -46,7 +46,7 @@ jobs:
         cargo check --all-features
         cargo test --all-features
 
-    - if: ${{ matrix.rust == "nightly" }}
+    - if: ${{ matrix.rust == 'nightly' }}
       run: |
         cargo install cargo-llvm-cov
         cargo llvm-cov test --all-features --fail-under-lines 90% --html
