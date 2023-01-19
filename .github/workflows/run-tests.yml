@@ -13,8 +13,39 @@ jobs:
 
 
   fmt-and-check:
-    name: Format check
+    name: Format and Check
     runs-on: ubuntu-latest
+    steps:
+    - uses: actions/cache@v3
+      with:
+        path: ~/.rustup/
+        key: rustup-${{ matrix.platform }}-${{ matrix.rust }}
+    - uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: cargo-cache
+    - uses: actions/cache@v3
+      with:
+        path: ./target
+        key: target-dir-${{ matrix.platform }}-${{ matrix.rust }}
+
+    - uses: actions/checkout@v3
+    - run: |
+        rustup default ${{ matrix.rust }}
+
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [stable, 1.59, nightly]
+        platform: [windows, macos, ubuntu]
+        include:
+        - coverage: false
+        - rust: nightly
+          coverage: true
+    name: Basic tests on ${{ matrix.platform }} w/ Rust ${{ matrix.rust }}
+    runs-on: ${{ matrix.platform }}-latest
     steps:
     - uses: actions/cache@v3
       with:
@@ -35,66 +66,14 @@ jobs:
         rustup component add rustfmt
         cargo fmt --check
         cargo check --all-features
-
-
-  test:
-    needs: fmt-and-check
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [stable, 1.59]
-        platform: [windows, macos, ubuntu]
-    name: Unit test on ${{ matrix.platform }} w/ Rust ${{ matrix.rust }}
-    runs-on: ${{ matrix.platform }}-latest
-    steps:
-    - uses: actions/cache@v3
-      with:
-        path: ~/.rustup/
-        key: rustup-${{ matrix.platform }}-${{ matrix.rust }}
-    - uses: actions/cache@v3
-      with:
-        path: ~/.cargo/registry
-        key: cargo-cache
-    - uses: actions/cache@v3
-      with:
-        path: ./target
-        key: target-dir-${{ matrix.platform }}-${{ matrix.rust }}
-
-    - uses: actions/checkout@v3
-    - run: |
-        rustup default ${{ matrix.rust }}
         cargo test --all-features
 
-
-  coverage:
-    needs: test
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: [windows, macos, ubuntu]
-    name: Coverage on ${{ matrix.platform }}
-    runs-on: ${{ matrix.platform }}-latest
-    steps:
-    - uses: actions/cache@v3
-      with:
-        path: ~/.rustup/
-        key: rustup-${{ matrix.platform }}-${{ matrix.rust }}
-    - uses: actions/cache@v3
-      with:
-        path: ~/.cargo/registry
-        key: cargo-cache
-    - uses: actions/cache@v3
-      with:
-        path: ./target
-        key: target-dir-${{ matrix.platform }}-${{ matrix.rust }}
-
-    - uses: actions/checkout@v3
-    - run: |
-        rustup default nightly
+    - if: ${{ matrix.rust == "nightly" }}
+      run: |
         cargo install cargo-llvm-cov
         cargo llvm-cov test --all-features --fail-under-lines 90% --html
-
-    - uses: actions/upload-artifact@v3
+    - if: ${{ matrix.coverage }}
+      uses: actions/upload-artifact@v3
       with:
         name: plain-bin-${{ matrix.sys }}-${{ matrix.platform }}
         path: |
