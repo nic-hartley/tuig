@@ -12,28 +12,6 @@ on:
 jobs:
 
 
-  fmt-and-check:
-    name: Format and Check
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/cache@v3
-      with:
-        path: ~/.rustup/
-        key: rustup-${{ matrix.platform }}-${{ matrix.rust }}
-    - uses: actions/cache@v3
-      with:
-        path: ~/.cargo/registry
-        key: cargo-cache
-    - uses: actions/cache@v3
-      with:
-        path: ./target
-        key: target-dir-${{ matrix.platform }}-${{ matrix.rust }}
-
-    - uses: actions/checkout@v3
-    - run: |
-        rustup default ${{ matrix.rust }}
-
-
   test:
     strategy:
       fail-fast: false
