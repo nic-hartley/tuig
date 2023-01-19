@@ -51,7 +51,7 @@ jobs:
     - uses: actions/cache@v3
       with:
         path: ~/.rustup/
-        key: rustup-${{ matrix.platform }}-${{ matrix.rust }}
+        key: rustup-ubuntu-nightly
     - uses: actions/cache@v3
       with:
         path: ~/.cargo/registry
@@ -59,20 +59,17 @@ jobs:
     - uses: actions/cache@v3
       with:
         path: ./target
-        key: target-dir-${{ matrix.platform }}-${{ matrix.rust }}
+        key: target-dir-ubuntu-nightly
 
     - uses: actions/checkout@v3
     - run: |
-        rustup default ${{ matrix.rust }}
-        rustup component add rustfmt
-        cargo fmt --check
-        cargo check --all-features
+        rustup default nightly
         cargo install cargo-llvm-cov
-        cargo llvm-cov test --all-features --fail-under-lines 90% --html
+        cargo llvm-cov test --all-features --fail-under-lines 90 --html
 
     - uses: actions/upload-artifact@v3
       with:
-        name: plain-bin-${{ matrix.sys }}-${{ matrix.platform }}
+        name: coverage-report
         path: |
           target/llvm-cov/html
         if-no-files-found: error
