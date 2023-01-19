@@ -67,7 +67,8 @@ jobs:
         cargo install cargo-llvm-cov
         ./run-coverage.sh
 
-    - uses: actions/upload-artifact@v3
+    - if: ${{ always() }}
+      uses: actions/upload-artifact@v3
       with:
         name: coverage-report
         path: |
