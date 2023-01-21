@@ -242,11 +242,11 @@ impl Text {
 /// Create a single [`Text`]. Not recommended to be used directly.
 #[macro_export]
 macro_rules! text1 {
-    (
+    [
         $( $name:ident )*
         $text:literal
         $( ( $( $arg:expr ),* $(,)? ) )?
-    ) => {
+    ] => {
         {
             #[allow(unused_imports)]
             use $crate::io::clifmt::{FormattedExt as _};
@@ -260,11 +260,11 @@ macro_rules! text1 {
 /// Create a series of formatted [`Text`]s.
 #[macro_export]
 macro_rules! text {
-    ( $(
+    [ $(
         $( $name:ident )*
         $text:literal
         $( ( $( $arg:expr ),* $(,)? ) )?
-    ),* $(,)? ) => {
+    ),* $(,)? ] => {
         {
             #[allow(unused_imports)]
             use $crate::io::clifmt::{FormattedExt as _};
@@ -288,7 +288,7 @@ fmt_type! {
 /// Create a formatted [`Cell`].
 #[macro_export]
 macro_rules! cell {
-    ( $( $name:ident )* $( $char:literal )? ) => {
+    [ $( $name:ident )* $( $char:literal )? ] => {
         {
             #[allow(unused_imports)]
             use $crate::io::clifmt::{FormattedExt as _};

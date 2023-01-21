@@ -1,6 +1,6 @@
 //! Displays the chat window.
 
-use std::{collections::BTreeSet, mem};
+use std::mem;
 
 use crate::{
     agents::Event,
@@ -64,8 +64,6 @@ pub struct ChatApp {
     dms: Vec<DM>,
     /// Which DM they're currently looking at
     current_dm: usize,
-    /// The other people this one has blocked
-    blocked: BTreeSet<String>,
 }
 
 impl ChatApp {
@@ -79,28 +77,23 @@ impl ChatApp {
 }
 
 impl super::App for ChatApp {
+    #[cfg_attr(coverage, no_coverage)]
     fn name(&self) -> &'static str {
         "chat"
     }
 
     fn input(&mut self, a: Action, events: &mut Vec<Event>) -> bool {
+        if self.dms.is_empty() {
+            // nothing to do if there aren't any DMs
+            return false;
+        }
         let key = match a {
             Action::KeyPress { key, .. } => key,
-            Action::MouseMove { .. } => return false,
-            Action::MousePress { .. } => return false,
             _ => return false,
         };
         match key {
-            Key::Left if !self.dm().options.is_empty() => {
-                if self.dm().sel > 0 {
-                    self.dms[self.current_dm].sel -= 1
-                }
-            }
-            Key::Right if !self.dm().options.is_empty() => {
-                if self.dm().sel < self.dm().options.len() - 1 {
-                    self.dms[self.current_dm].sel += 1
-                }
-            }
+            Key::Left if self.dm().sel > 0 => self.dms[self.current_dm].sel -= 1,
+            Key::Right if self.dm().sel < self.dm().options.len() - 1 => self.dms[self.current_dm].sel += 1,
             Key::Enter if !self.dm().options.is_empty() => {
                 let dm = &mut self.dms[self.current_dm];
                 let mut options = mem::replace(&mut dm.options, vec![]);
@@ -114,7 +107,6 @@ impl super::App for ChatApp {
                 self.current_dm -= 1;
                 self.clear_current_unread();
             }
-            Key::Up => {}
             Key::Down if self.current_dm < self.dms.len() - 1 => {
                 self.current_dm += 1;
                 self.clear_current_unread();
@@ -133,9 +125,6 @@ impl super::App for ChatApp {
             } => (from, text, options),
             _ => return false,
         };
-        if self.blocked.contains(sender) {
-            return false;
-        }
         match self.dms.iter_mut().find(|d| &d.target == sender) {
             Some(dm) => {
                 dm.msgs.push(Message::from_npc(message.clone()));
@@ -250,7 +239,7 @@ impl super::App for ChatApp {
 
 #[cfg(test)]
 mod tests {
-    use crate::app::App;
+    use crate::{app::App, io::XY};
 
     #[allow(unused_imports)]
     use super::*;
@@ -260,7 +249,6 @@ mod tests {
         ChatApp {
             dms: vec![],
             current_dm: 0,
-            blocked: BTreeSet::new(),
         }
     }
 
@@ -287,70 +275,170 @@ mod tests {
         }
     }
 
+    #[allow(unused)]
     const ENTER: Action = Action::KeyPress { key: Key::Enter };
+    #[allow(unused)]
     const LEFT: Action = Action::KeyPress { key: Key::Left };
+    #[allow(unused)]
     const RIGHT: Action = Action::KeyPress { key: Key::Right };
+    #[allow(unused)]
+    const UP: Action = Action::KeyPress { key: Key::Up };
+    #[allow(unused)]
+    const DOWN: Action = Action::KeyPress { key: Key::Down };
 
     macro_rules! assert_input {
-        ($app:ident .input ( $($arg:expr),* $(,)? ) == $other:expr) => {
+        (
+            $app:ident .input ( $($arg:expr),* $(,)? )
+            $( clean $( @ $clean:ident )? )? $( taints $( @ $taint:ident )? )?,
+            $( $test:tt )*
+        ) => {
             {
                 let mut evs = vec![];
-                $app.input($( $arg ),* , &mut evs);
-                assert_eq!(evs, $other);
+                let taint = $app.input($( $arg ),* , &mut evs);
+                $( assert!(!taint, "app tainted unexpectedly"); $( $clean )? )?
+                $( assert!(taint, "app didn't taint when expected"); $( $taint )? )?
+                assert_input!(@cmp evs $( $test )*);
             }
         };
-        ($app:ident .input ( $($arg:expr),* $(,)? ) . $( $val:tt )*) => {
-            {
-                let mut evs = vec![];
-                $app.input($( $arg ),* , &mut evs);
-                assert!(evs.$($val)*);
-            }
-        };
+        (@cmp $evs:ident == $other:expr) => { assert_eq!($evs, $other) };
+        (@cmp $evs:ident != $other:expr) => { assert_ne!($evs, $other) };
+        (@cmp $test:expr) => { assert!($test) };
     }
 
     #[test]
     fn test_submit_reply() {
         let mut app = app_dm(&["hello"], 0);
-        assert_input!(app.input(ENTER) == &[Event::player_chat("targette", "hello")]);
+        assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "hello")]);
     }
 
     #[test]
     fn test_select_submit() {
         let mut app = app_dm(&["hello", "goodbye"], 0);
-        assert_input!(app.input(RIGHT).is_empty());
-        assert_input!(app.input(ENTER) == &[Event::player_chat("targette", "goodbye")]);
+        assert_input!(app.input(RIGHT) taints, .is_empty());
+        assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "goodbye")]);
     }
 
     #[test]
-    fn test_select_hit_right() {
+    fn test_select_return_submit() {
         let mut app = app_dm(&["hello", "goodbye"], 0);
-        assert_input!(app.input(RIGHT).is_empty());
-        assert_input!(app.input(RIGHT).is_empty());
-        assert_input!(app.input(RIGHT).is_empty());
-        assert_input!(app.input(ENTER) == &[Event::player_chat("targette", "goodbye")]);
+        assert_input!(app.input(RIGHT) taints, .is_empty());
+        assert_input!(app.input(LEFT) taints, .is_empty());
+        assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "hello")]);
     }
 
     #[test]
-    fn test_select_hit_left() {
+    fn test_select_max_right() {
+        let mut app = app_dm(&["hello", "goodbye"], 0);
+        assert_input!(app.input(RIGHT) taints, .is_empty());
+        assert_input!(app.input(RIGHT) clean, .is_empty());
+        assert_input!(app.input(RIGHT) clean, .is_empty());
+        assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "goodbye")]);
+    }
+
+    #[test]
+    fn test_select_max_left() {
         let mut app = app_dm(&["hello", "goodbye"], 1);
-        assert_input!(app.input(LEFT).is_empty());
-        assert_input!(app.input(LEFT).is_empty());
-        assert_input!(app.input(LEFT).is_empty());
-        assert_input!(app.input(ENTER) == &[Event::player_chat("targette", "hello")]);
+        assert_input!(app.input(LEFT) clean, .is_empty());
+        assert_input!(app.input(LEFT) clean, .is_empty());
+        assert_input!(app.input(LEFT) clean, .is_empty());
+        assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "hello")]);
     }
 
     #[test]
     fn test_receive_option() {
         let mut app = app_dm(&[], 0);
         app.on_event(&Event::npc_chat("targette", "hello there", &["hi", "no"]));
-        assert_input!(app.input(ENTER) == &[Event::player_chat("targette", "hi")]);
+        assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "hi")]);
     }
 
     #[test]
     fn test_receive_next_option() {
         let mut app = app_dm(&[], 0);
         app.on_event(&Event::npc_chat("targette", "hello there", &["hi", "no"]));
-        assert_input!(app.input(RIGHT).is_empty());
-        assert_input!(app.input(ENTER) == &[Event::player_chat("targette", "no")]);
+        assert_input!(app.input(RIGHT) taints, .is_empty());
+        assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "no")]);
+    }
+
+    #[test]
+    fn test_switch_dms() {
+        let mut app = app_dm(&["normal", "human", "words"], 0);
+        app.on_event(&Event::npc_chat("meowza", "nyehehe! i am a cat!", &["hi", "hello"]));
+        assert_input!(app.input(DOWN) taints, .is_empty());
+        assert_input!(app.input(ENTER) taints, == &[Event::player_chat("meowza", "hi")]);
+    }
+
+    #[test]
+    fn test_switch_dms_extra() {
+        let mut app = app_dm(&["normal", "human", "words"], 0);
+        app.on_event(&Event::npc_chat("meowza", "nyehehe! i am a cat!", &["hi", "hello"]));
+        assert_input!(app.input(DOWN) taints, .is_empty());
+        assert_input!(app.input(DOWN) clean, .is_empty());
+        assert_input!(app.input(DOWN) clean, .is_empty());
+        assert_input!(app.input(ENTER) taints, == &[Event::player_chat("meowza", "hi")]);
+    }
+
+    #[test]
+    fn test_switch_dms_back() {
+        let mut app = app_dm(&["normal", "human", "words"], 0);
+        app.on_event(&Event::npc_chat("meowza", "nyehehe! i am a cat!", &["hi", "hello"]));
+        assert_input!(app.input(DOWN) taints, .is_empty());
+        assert_input!(app.input(UP) taints, .is_empty());
+        assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "normal")]);
+    }
+
+    #[test]
+    fn test_switch_dms_back_extra() {
+        let mut app = app_dm(&["normal", "human", "words"], 0);
+        app.on_event(&Event::npc_chat("meowza", "nyehehe! i am a cat!", &["hi", "hello"]));
+        assert_input!(app.input(DOWN) taints, .is_empty());
+        assert_input!(app.input(UP) taints, .is_empty());
+        assert_input!(app.input(UP) clean, .is_empty());
+        assert_input!(app.input(UP) clean, .is_empty());
+        assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "normal")]);
+    }
+
+    #[test]
+    fn test_add_notifs() {
+        let mut app = app_dm(&[], 0);
+        app.on_event(&Event::npc_chat("targette", "hi", &[]));
+        app.on_event(&Event::npc_chat("targette", "hello", &[]));
+        app.on_event(&Event::npc_chat("targette", "wassup", &["hi", "no"]));
+        assert_eq!(app.notifs(), 3);
+    }
+
+    #[test]
+    fn test_clear_notifs() {
+        let mut app = app_dm(&[], 0);
+        app.on_event(&Event::npc_chat("targette", "hi", &[]));
+        app.on_event(&Event::npc_chat("targette", "hello", &[]));
+        app.on_event(&Event::npc_chat("targette", "wassup", &["hi", "no"]));
+        app.render(&GameState::default(), &mut Screen::new(XY(200, 200)));
+        assert_eq!(app.notifs(), 0);
+    }
+
+    #[test]
+    fn test_add_notifs_more_dms() {
+        let mut app = app_dm(&[], 0);
+        app.on_event(&Event::npc_chat("targette", "hi", &[]));
+        app.on_event(&Event::npc_chat("targette", "hello", &[]));
+        app.on_event(&Event::npc_chat("targette", "wassup", &["hi", "no"]));
+        app.on_event(&Event::npc_chat("meowza", "nyehehe! i am a cat!", &[]));
+        app.on_event(&Event::npc_chat("meowza", "i can haz cheezburgr?", &[]));
+        app.on_event(&Event::npc_chat("meowza", "i am in ur walls", &[]));
+        assert_eq!(app.notifs(), 6);
+    }
+
+    #[test]
+    fn test_clear_notifs_more_dms_other_side() {
+        let mut app = app_dm(&[], 0);
+        app.on_event(&Event::npc_chat("targette", "hi", &[]));
+        app.on_event(&Event::npc_chat("targette", "hello", &[]));
+        app.on_event(&Event::npc_chat("targette", "wassup", &["hi", "no"]));
+        app.on_event(&Event::npc_chat("meowza", "nyehehe! i am a cat!", &[]));
+        app.on_event(&Event::npc_chat("meowza", "i can haz cheezburgr?", &[]));
+        app.on_event(&Event::npc_chat("meowza", "i am in ur walls", &[]));
+        app.input(DOWN, &mut vec![]);
+        app.render(&GameState::default(), &mut Screen::new(XY(200, 200)));
+        assert_eq!(app.notifs(), 3);
     }
 }

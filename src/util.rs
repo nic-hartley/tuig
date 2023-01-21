@@ -6,6 +6,7 @@ macro_rules! setters {
         $name:ident $( ( $($pname:ident: $ptype:ty),* $(,)? ) )?  => $field:ident $( .$subfield:ident )* = $value:expr
     ),* $(,)? ) => {
         $(
+            #[cfg_attr(coverage, no_coverage)]
             pub fn $name(mut self $( , $( $pname: $ptype ),* )?) -> Self {
                 self.$field $( .$subfield )* = $value;
                 self
