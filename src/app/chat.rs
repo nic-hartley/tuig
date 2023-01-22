@@ -239,7 +239,7 @@ impl super::App for ChatApp {
 
 #[cfg(test)]
 mod tests {
-    use crate::{app::App, io::XY};
+    use crate::{app::{App, assert_input}, io::XY};
 
     #[allow(unused_imports)]
     use super::*;
@@ -285,25 +285,6 @@ mod tests {
     const UP: Action = Action::KeyPress { key: Key::Up };
     #[allow(unused)]
     const DOWN: Action = Action::KeyPress { key: Key::Down };
-
-    macro_rules! assert_input {
-        (
-            $app:ident .input ( $($arg:expr),* $(,)? )
-            $( clean $( @ $clean:ident )? )? $( taints $( @ $taint:ident )? )?,
-            $( $test:tt )*
-        ) => {
-            {
-                let mut evs = vec![];
-                let taint = $app.input($( $arg ),* , &mut evs);
-                $( assert!(!taint, "app tainted unexpectedly"); $( $clean )? )?
-                $( assert!(taint, "app didn't taint when expected"); $( $taint )? )?
-                assert_input!(@cmp evs $( $test )*);
-            }
-        };
-        (@cmp $evs:ident == $other:expr) => { assert_eq!($evs, $other) };
-        (@cmp $evs:ident != $other:expr) => { assert_ne!($evs, $other) };
-        (@cmp $test:expr) => { assert!($test) };
-    }
 
     #[test]
     fn test_submit_reply() {

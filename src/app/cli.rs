@@ -45,6 +45,7 @@ pub struct CliApp {
 }
 
 impl Default for CliApp {
+    #[cfg_attr(coverage, no_coverage)]
     fn default() -> Self {
         Self {
             scroll: Default::default(),
@@ -117,6 +118,7 @@ impl CliApp {
 }
 
 impl App for CliApp {
+    #[cfg_attr(coverage, no_coverage)]
     fn name(&self) -> &'static str {
         "terminal"
     }

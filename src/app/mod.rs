@@ -37,3 +37,27 @@ mod chat;
 pub use chat::ChatApp;
 mod cli;
 pub use cli::{CliApp, CliState};
+
+/// Assert things about the outcomes of an `App` receiving input
+#[allow(unused)]
+macro_rules! assert_input {
+    (
+        $app:ident .input ( $($arg:expr),* $(,)? )
+        $( clean $( @ $clean:ident )? )? $( taints $( @ $taint:ident )? )?,
+        $( $test:tt )*
+    ) => {
+        {
+            let mut evs = vec![];
+            let taint = $app.input($( $arg ),* , &mut evs);
+            $( assert!(!taint, "app tainted unexpectedly"); $( $clean )? )?
+            $( assert!(taint, "app didn't taint when expected"); $( $taint )? )?
+            assert_input!(@cmp evs $( $test )*);
+        }
+    };
+    (@cmp $evs:ident == $other:expr) => { assert_eq!($evs, $other) };
+    (@cmp $evs:ident != $other:expr) => { assert_ne!($evs, $other) };
+    (@cmp $test:expr) => { assert!($test) };
+}
+
+#[allow(unused)]
+pub(self) use assert_input;

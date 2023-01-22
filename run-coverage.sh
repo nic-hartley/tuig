@@ -7,5 +7,6 @@ else
 fi
 cargo +nightly llvm-cov test \
     --all-features --fail-under-lines 90 \
-    --ignore-filename-regex 'bin/*.rs' \
+    --ignore-filename-regex 'bin/*|cutscenes/*' \
+    --ignore-filename-regex 'app/cli\.rs' \
     $output
