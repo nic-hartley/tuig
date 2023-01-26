@@ -32,15 +32,19 @@ pub enum Key {
 }
 
 impl Key {
+    #[cfg_attr(coverage, no_coverage)]
     pub fn is_shift(&self) -> bool {
         matches!(self, Self::LeftShift | Self::RightShift)
     }
+    #[cfg_attr(coverage, no_coverage)]
     pub fn is_ctrl(&self) -> bool {
         matches!(self, Self::LeftCtrl | Self::RightCtrl)
     }
+    #[cfg_attr(coverage, no_coverage)]
     pub fn is_alt(&self) -> bool {
         matches!(self, Self::LeftAlt | Self::RightAlt)
     }
+    #[cfg_attr(coverage, no_coverage)]
     pub fn is_super(&self) -> bool {
         matches!(self, Self::LeftSuper | Self::RightSuper)
     }

@@ -34,12 +34,14 @@ impl WaitHandle {
 }
 
 impl PartialEq for WaitHandle {
+    #[cfg_attr(coverage, no_coverage)]
     fn eq(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.0, &other.0)
     }
 }
 impl Eq for WaitHandle {}
 impl fmt::Debug for WaitHandle {
+    #[cfg_attr(coverage, no_coverage)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "WaitHandle(...)")
     }
