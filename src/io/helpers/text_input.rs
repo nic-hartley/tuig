@@ -228,7 +228,10 @@ mod test {
             assert_eq!(ti.keypress(Key::Char(ch)), TextInputRequest::Nothing);
         }
         assert!(ti.tainted(), "not tainted after visually important changes");
-        assert_eq!(ti.render(), text!["> ", bright_white "abcdef", underline " "]);
+        assert_eq!(
+            ti.render(),
+            text!["> ", bright_white "abcdef", underline " "]
+        );
     }
 
     #[test]
@@ -236,7 +239,10 @@ mod test {
         let mut ti = TextInput::new("> ", 0);
         assert!(ti.tainted(), "not tainted to force initial draw");
         ti.set_complete("mlem".into());
-        assert_eq!(ti.render(), text!["> ", bright_white "", underline bright_black "m", bright_black "lem"]);
+        assert_eq!(
+            ti.render(),
+            text!["> ", bright_white "", underline bright_black "m", bright_black "lem"]
+        );
         assert!(!ti.tainted(), "render doesn't untaint");
     }
 
@@ -244,242 +250,812 @@ mod test {
     fn text_renders_to_prompt_with_autocomplete() {
         let mut ti = TextInput::new("> ", 0);
         for ch in "abcdef".chars() {
-            assert_eq!(ti.action(Action::KeyPress { key: Key::Char(ch) }), TextInputRequest::Nothing);
+            assert_eq!(
+                ti.action(Action::KeyPress { key: Key::Char(ch) }),
+                TextInputRequest::Nothing
+            );
         }
         ti.set_complete("mlem".into());
         assert!(ti.tainted(), "not tainted after visually important changes");
-        assert_eq!(ti.render(), text!["> ", bright_white "abcdef", bright_black underline "m", bright_black "lem"]);
+        assert_eq!(
+            ti.render(),
+            text!["> ", bright_white "abcdef", bright_black underline "m", bright_black "lem"]
+        );
     }
 
     #[test]
     fn text_renders_to_prompt_moved_cursor() {
         let mut ti = TextInput::new("> ", 0);
         for ch in "abcdef".chars() {
-            assert_eq!(ti.action(Action::KeyPress { key: Key::Char(ch) }), TextInputRequest::Nothing);
+            assert_eq!(
+                ti.action(Action::KeyPress { key: Key::Char(ch) }),
+                TextInputRequest::Nothing
+            );
         }
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Left }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Left }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Left }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Left }),
+            TextInputRequest::Nothing
+        );
         assert!(ti.tainted(), "not tainted after visually important changes");
-        assert_eq!(ti.render(), text!["> ", bright_white "abcd", underline bright_white "e", bright_white "f"]);
+        assert_eq!(
+            ti.render(),
+            text!["> ", bright_white "abcd", underline bright_white "e", bright_white "f"]
+        );
     }
 
     #[test]
     fn text_renders_to_prompt_with_autocomplete_moved_cursor() {
         let mut ti = TextInput::new("> ", 0);
         for ch in "abcdef".chars() {
-            assert_eq!(ti.action(Action::KeyPress { key: Key::Char(ch) }), TextInputRequest::Nothing);
+            assert_eq!(
+                ti.action(Action::KeyPress { key: Key::Char(ch) }),
+                TextInputRequest::Nothing
+            );
         }
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Left }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Left }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Left }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Right }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Left }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Left }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Left }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Right }),
+            TextInputRequest::Nothing
+        );
         ti.set_complete("mlem".into());
         assert!(ti.tainted(), "not tainted after visually important changes");
-        assert_eq!(ti.render(), text!["> ", bright_white "abcd", underline bright_black "m", bright_black "lem", bright_white "ef"]);
+        assert_eq!(
+            ti.render(),
+            text!["> ", bright_white "abcd", underline bright_black "m", bright_black "lem", bright_white "ef"]
+        );
     }
 
     #[test]
     fn typing_uppercase() {
         let mut ti = TextInput::new("> ", 0);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('a') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('b') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::LeftShift }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('c') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('d') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyRelease { key: Key::LeftShift }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('e') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('f') }), TextInputRequest::Nothing);
-        assert_eq!(ti.render(), text!["> ", bright_white "abCDef", underline " "]);
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('a')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('b')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::LeftShift
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('c')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('d')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyRelease {
+                key: Key::LeftShift
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('e')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('f')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.render(),
+            text!["> ", bright_white "abCDef", underline " "]
+        );
     }
 
     #[test]
     fn backspacing_chars() {
         let mut ti = TextInput::new("> ", 0);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('a') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('b') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('c') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('d') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Backspace }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Backspace }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('e') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('f') }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('a')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('b')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('c')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('d')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Backspace
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Backspace
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('e')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('f')
+            }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "abef", underline " "]);
     }
 
     #[test]
     fn deleting_chars() {
         let mut ti = TextInput::new("> ", 0);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('a') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('b') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('c') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('d') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Left }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Left }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Delete }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Delete }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('e') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('f') }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('a')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('b')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('c')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('d')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Left }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Left }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Delete }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Delete }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('e')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('f')
+            }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "abef", underline " "]);
     }
 
     #[test]
     fn tab_triggers_autocomplete() {
         let mut ti = TextInput::new("> ", 0);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('a') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('b') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('c') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Tab }), TextInputRequest::Autocomplete);
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('a')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('b')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('c')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Tab }),
+            TextInputRequest::Autocomplete
+        );
         assert_eq!(ti.completable(), "abc");
         ti.set_complete("mlem".into());
-        assert_eq!(ti.render(), text!["> ", bright_white "abc", underline bright_black "m", bright_black "lem"]);
+        assert_eq!(
+            ti.render(),
+            text!["> ", bright_white "abc", underline bright_black "m", bright_black "lem"]
+        );
     }
 
     #[test]
     fn tab_twice_finishes_autocomplete() {
         let mut ti = TextInput::new("> ", 0);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('a') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('b') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('c') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Tab }), TextInputRequest::Autocomplete);
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('a')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('b')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('c')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Tab }),
+            TextInputRequest::Autocomplete
+        );
         assert_eq!(ti.completable(), "abc");
         ti.set_complete("mlem".into());
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Tab }), TextInputRequest::Nothing);
-        assert_eq!(ti.render(), text!["> ", bright_white "abcmlem", underline " "]);
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Tab }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.render(),
+            text!["> ", bright_white "abcmlem", underline " "]
+        );
     }
 
     #[test]
     fn enter_sends_line() {
         let mut ti = TextInput::new("> ", 0);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('a') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('b') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('c') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("abc".into()));
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('a')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('b')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('c')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("abc".into())
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "", underline " "]);
     }
 
     #[test]
     fn history_scrolls_with_arrows() {
         let mut ti = TextInput::new("> ", 0);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('a') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('b') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('c') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("abc".into()));
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('d') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('e') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('f') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("def".into()));
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('g') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('h') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('i') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("ghi".into()));
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('a')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('b')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('c')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("abc".into())
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('d')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('e')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('f')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("def".into())
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('g')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('h')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('i')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("ghi".into())
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "", underline " "]);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Up }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Up }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Up }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Up }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Up }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Up }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "abc", underline " "]);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Down }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Down }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "def", underline " "]);
     }
 
     #[test]
     fn history_scroll_to_bottom_doesnt_reset_line() {
         let mut ti = TextInput::new("> ", 0);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('a') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('b') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('c') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("abc".into()));
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('d') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('e') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('f') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("def".into()));
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('g') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('h') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('i') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("ghi".into()));
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('j') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('k') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('l') }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('a')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('b')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('c')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("abc".into())
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('d')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('e')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('f')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("def".into())
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('g')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('h')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('i')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("ghi".into())
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('j')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('k')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('l')
+            }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "jkl", underline " "]);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Up }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Up }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "ghi", underline " "]);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Down }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Down }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "jkl", underline " "]);
     }
 
     #[test]
     fn history_selects_with_typing() {
         let mut ti = TextInput::new("> ", 0);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('a') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('b') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('c') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("abc".into()));
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('d') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('e') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('f') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("def".into()));
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('g') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('h') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('i') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("ghi".into()));
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Up }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('a')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('b')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('c')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("abc".into())
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('d')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('e')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('f')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("def".into())
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('g')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('h')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('i')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("ghi".into())
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Up }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "ghi", underline " "]);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('j') }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('j')
+            }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "ghij", underline " "]);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Up }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Up }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "ghi", underline " "]);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Up }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Up }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "def", underline " "]);
     }
 
     #[test]
     fn history_selects_with_backspace() {
         let mut ti = TextInput::new("> ", 0);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('a') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('b') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('c') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("abc".into()));
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('d') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('e') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('f') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("def".into()));
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('g') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('h') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('i') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("ghi".into()));
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Up }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('a')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('b')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('c')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("abc".into())
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('d')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('e')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('f')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("def".into())
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('g')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('h')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('i')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("ghi".into())
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Up }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "ghi", underline " "]);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Backspace }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Backspace
+            }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "gh", underline " "]);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Up }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Up }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "ghi", underline " "]);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Up }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Up }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "def", underline " "]);
     }
 
     #[test]
     fn history_selects_with_enter() {
         let mut ti = TextInput::new("> ", 0);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('a') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('b') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('c') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("abc".into()));
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('d') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('e') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('f') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("def".into()));
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('g') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('h') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Char('i') }), TextInputRequest::Nothing);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("ghi".into()));
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Up }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('a')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('b')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('c')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("abc".into())
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('d')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('e')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('f')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("def".into())
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('g')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('h')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress {
+                key: Key::Char('i')
+            }),
+            TextInputRequest::Nothing
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("ghi".into())
+        );
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Up }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "ghi", underline " "]);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Enter }), TextInputRequest::Line("ghi".into()));
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Enter }),
+            TextInputRequest::Line("ghi".into())
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "", underline " "]);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Up }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Up }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "ghi", underline " "]);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Up }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Up }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "ghi", underline " "]);
-        assert_eq!(ti.action(Action::KeyPress { key: Key::Up }), TextInputRequest::Nothing);
+        assert_eq!(
+            ti.action(Action::KeyPress { key: Key::Up }),
+            TextInputRequest::Nothing
+        );
         assert_eq!(ti.render(), text!["> ", bright_white "def", underline " "]);
     }
 }

@@ -93,7 +93,9 @@ impl super::App for ChatApp {
         };
         match key {
             Key::Left if self.dm().sel > 0 => self.dms[self.current_dm].sel -= 1,
-            Key::Right if self.dm().sel < self.dm().options.len() - 1 => self.dms[self.current_dm].sel += 1,
+            Key::Right if self.dm().sel < self.dm().options.len() - 1 => {
+                self.dms[self.current_dm].sel += 1
+            }
             Key::Enter if !self.dm().options.is_empty() => {
                 let dm = &mut self.dms[self.current_dm];
                 let mut options = mem::replace(&mut dm.options, vec![]);
@@ -239,7 +241,10 @@ impl super::App for ChatApp {
 
 #[cfg(test)]
 mod tests {
-    use crate::{app::{App, assert_input}, io::XY};
+    use crate::{
+        app::{assert_input, App},
+        io::XY,
+    };
 
     #[allow(unused_imports)]
     use super::*;
@@ -343,7 +348,11 @@ mod tests {
     #[test]
     fn test_switch_dms() {
         let mut app = app_dm(&["normal", "human", "words"], 0);
-        app.on_event(&Event::npc_chat("meowza", "nyehehe! i am a cat!", &["hi", "hello"]));
+        app.on_event(&Event::npc_chat(
+            "meowza",
+            "nyehehe! i am a cat!",
+            &["hi", "hello"],
+        ));
         assert_input!(app.input(DOWN) taints, .is_empty());
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("meowza", "hi")]);
     }
@@ -351,7 +360,11 @@ mod tests {
     #[test]
     fn test_switch_dms_extra() {
         let mut app = app_dm(&["normal", "human", "words"], 0);
-        app.on_event(&Event::npc_chat("meowza", "nyehehe! i am a cat!", &["hi", "hello"]));
+        app.on_event(&Event::npc_chat(
+            "meowza",
+            "nyehehe! i am a cat!",
+            &["hi", "hello"],
+        ));
         assert_input!(app.input(DOWN) taints, .is_empty());
         assert_input!(app.input(DOWN) clean, .is_empty());
         assert_input!(app.input(DOWN) clean, .is_empty());
@@ -361,7 +374,11 @@ mod tests {
     #[test]
     fn test_switch_dms_back() {
         let mut app = app_dm(&["normal", "human", "words"], 0);
-        app.on_event(&Event::npc_chat("meowza", "nyehehe! i am a cat!", &["hi", "hello"]));
+        app.on_event(&Event::npc_chat(
+            "meowza",
+            "nyehehe! i am a cat!",
+            &["hi", "hello"],
+        ));
         assert_input!(app.input(DOWN) taints, .is_empty());
         assert_input!(app.input(UP) taints, .is_empty());
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "normal")]);
@@ -370,7 +387,11 @@ mod tests {
     #[test]
     fn test_switch_dms_back_extra() {
         let mut app = app_dm(&["normal", "human", "words"], 0);
-        app.on_event(&Event::npc_chat("meowza", "nyehehe! i am a cat!", &["hi", "hello"]));
+        app.on_event(&Event::npc_chat(
+            "meowza",
+            "nyehehe! i am a cat!",
+            &["hi", "hello"],
+        ));
         assert_input!(app.input(DOWN) taints, .is_empty());
         assert_input!(app.input(UP) taints, .is_empty());
         assert_input!(app.input(UP) clean, .is_empty());
