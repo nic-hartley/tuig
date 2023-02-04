@@ -6,13 +6,12 @@ use std::{
 use rand::prelude::*;
 
 use crate::{
-    app::{ChatApp, CliApp},
     cell,
     io::{
-        clifmt::{FormattedExt, Text},
+        clifmt::{FormattedExt, Text, Formatted, Color},
         input::{Action, Key},
         output::{Cell, Screen},
-        sys::IoSystem,
+        sys::IoSystem, helpers::{TextInput, TextInputRequest},
     },
     text, text1, GameState,
 };
@@ -248,52 +247,32 @@ fn render_sleep(
 }
 
 fn name_input(io: &mut dyn IoSystem, screen: &mut Screen, text: &[Text]) -> io::Result<String> {
-    let prompt = text1!(white "(type now)");
-    let mut last_line = text!("         >  ");
-    last_line.push(prompt.clone());
-    let mut name = String::new();
-    let mut caps = false;
-    loop {
-        let cur_text: Vec<_> = text.iter().chain(last_line.iter()).cloned().collect();
-        render(io, screen, &cur_text)?;
+    let mut ti = TextInput::new("         >  ", 0);
+    ti.set_complete("(type now)".into());
 
-        loop {
-            let mut redraw = true;
-            match io.input()? {
-                Action::KeyPress { key: Key::Enter } if !name.is_empty() => return Ok(name),
-                Action::KeyPress { key: Key::Char(ch) } => {
-                    if caps {
-                        name.extend(ch.to_uppercase())
-                    } else {
-                        name.extend(ch.to_lowercase())
-                    }
-                }
-                Action::KeyPress {
-                    key: Key::Backspace,
-                } => {
-                    name.pop();
-                }
-                Action::KeyPress {
-                    key: Key::LeftShift | Key::RightShift,
-                } => caps = true,
-                Action::KeyRelease {
-                    key: Key::LeftShift | Key::RightShift,
-                } => caps = false,
-                // we want to redraw on resize but nothing else
-                Action::Redraw => (),
-                // other inputs can get ignored
-                _ => redraw = false,
+    let name = loop {
+        let redraw = match io.input()? {
+            // loop and redraw
+            Action::Redraw => true,
+            other => match ti.action(other) {
+                // ignore autocomplete
+                TextInputRequest::Autocomplete => false,
+                TextInputRequest::Nothing => ti.tainted(),
+                TextInputRequest::Line(name) => break name,
             }
-            if redraw {
-                break;
+        };
+        if redraw {
+            let mut last_line = ti.render();
+            for elem in &mut last_line {
+                if elem.get_fmt().fg == Color::BrightWhite {
+                    elem.get_fmt_mut().fg = Color::Cyan;
+                }
             }
+            let all_text: Vec<_> = text.iter().cloned().chain(last_line.into_iter()).collect();
+            render(io, screen, &all_text)?;
         }
-        if name.is_empty() {
-            last_line[1] = prompt.clone();
-        } else {
-            last_line[1] = text1!(blue "{}"(name));
-        }
-    }
+    };
+    Ok(name)
 }
 
 fn do_choice<'a>(
@@ -371,7 +350,7 @@ fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<String> {
     );
     render_sleep(0.5, io, screen, &text)?;
     let name = name_input(io, screen, &text)?;
-    text.extend(text!("         >  ", blue "{}"(name), "\n"));
+    text.extend(text!("         >  ", cyan "{}"(name), "\n"));
 
     macro_rules! choose {
         ( $( $option:literal => $then:expr $(,)? )* ) => {
@@ -379,7 +358,7 @@ fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<String> {
             match do_choice(io, screen, &text, &[$($option),*])? {
                 $( $option => {
                     text.extend(text!(
-                        blue "{:>10}: "(name),
+                        cyan "{:>10}: "(name),
                         bold bright_white $option,
                         "\n",
                     ));
@@ -391,7 +370,7 @@ fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<String> {
     }
 
     admin_say!(
-        1.0 => "you're ", blue "{}"(name), "?";
+        1.0 => "you're ", cyan "{}"(name), "?";
         1.5 => "good name";
         1.5 => "you ever used redshell?";
     );
@@ -431,7 +410,6 @@ pub fn run(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<GameState> 
 
     Ok(GameState {
         player_name: name,
-        apps: vec![Box::new(ChatApp::default()), Box::new(CliApp::default())],
         machine: Default::default(),
     })
 }

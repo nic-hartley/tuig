@@ -141,7 +141,7 @@ impl TextInput {
                 self.autocomplete = String::new();
                 let old_line = mem::replace(&mut self.line, String::new());
                 self.tainted = true;
-                if !old_line.trim().is_empty() {
+                if !old_line.trim().is_empty() && self.hist_cap > 0 {
                     if self.history.len() == self.hist_cap {
                         self.history.pop_front();
                     }

@@ -1,6 +1,5 @@
 #![cfg_attr(coverage, feature(no_coverage))]
 
-use app::App;
 use machine::Machine;
 
 pub mod agents;
@@ -17,8 +16,6 @@ mod util;
 pub struct GameState {
     /// The player's name, of course
     pub player_name: String,
-    /// The apps currently available (in order of tabs)
-    pub apps: Vec<Box<dyn App>>,
     /// The player's computer
     pub machine: Machine,
 }

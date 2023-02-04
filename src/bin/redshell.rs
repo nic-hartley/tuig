@@ -2,7 +2,7 @@ use std::{mem, thread, time::Duration};
 
 use redshell::{
     agents::{Agent, ControlFlow, Event},
-    app::{ChatApp, CliApp},
+    app::{ChatApp, CliApp, App},
     cutscenes,
     io::{
         input::{Action, Key},
@@ -145,17 +145,18 @@ fn run(iosys: &mut dyn IoSystem) {
     let mut screen = Screen::new(iosys.size());
 
     // get the state, optionally from running the intro cutscene
-    let mut state = if let Some(name) = std::env::args().skip(1).next() {
+    let state = if let Some(name) = std::env::args().skip(1).next() {
         GameState {
             player_name: name,
-            apps: vec![Box::new(ChatApp::default()), Box::new(CliApp::default())],
             machine: Default::default(),
         }
     } else {
         cutscenes::intro(iosys, &mut screen).expect("couldn't run intro cutscene")
     };
+    let mut apps: Vec<(Box<dyn App>, usize)> = vec![
+        (Box::new(ChatApp::default()), 0), (Box::new(CliApp::default()), 0)
+    ];
 
-    let mut prev_notifs = vec![0; state.apps.len()];
     let mut sel = 0;
     let mut events = vec![
         Event::install(tools::Ls),
@@ -222,12 +223,7 @@ fn run(iosys: &mut dyn IoSystem) {
         // delete agents who asked to die
         agents.retain(|(_, cf)| cf != &ControlFlow::Kill);
         // feed events to the apps, update notifications accordingly
-        for (i, (app, old_notifs)) in state
-            .apps
-            .iter_mut()
-            .zip(prev_notifs.iter_mut())
-            .enumerate()
-        {
+        for (i, (app, old_notifs)) in apps.iter_mut().enumerate() {
             for ev in &events {
                 let ev_taint = app.on_event(ev);
                 if i == sel {
@@ -235,8 +231,10 @@ fn run(iosys: &mut dyn IoSystem) {
                 }
             }
             let new_notifs = app.notifs();
-            tainted |= new_notifs != *old_notifs;
-            *old_notifs = new_notifs;
+            if new_notifs != *old_notifs {
+                tainted = true;
+                *old_notifs = new_notifs;
+            }
         }
         // handle system events
         for ev in &events {
@@ -252,7 +250,8 @@ fn run(iosys: &mut dyn IoSystem) {
                     let app = b
                         .take()
                         .expect("app bundle taken before sole consumer got it");
-                    state.apps.push(app);
+                    let notifs = app.notifs();
+                    apps.push((app, notifs));
                 }
                 _ => (),
             }
@@ -262,7 +261,7 @@ fn run(iosys: &mut dyn IoSystem) {
         if let Some(inp) = iosys.input_until(Duration::from_secs_f32(0.25)).unwrap() {
             match inp {
                 Action::KeyPress { key: Key::F(num) } => {
-                    if num <= state.apps.len() {
+                    if num <= apps.len() {
                         sel = num as usize - 1;
                         tainted = true;
                     }
@@ -270,7 +269,7 @@ fn run(iosys: &mut dyn IoSystem) {
                 Action::Closed => break,
                 Action::Redraw => tainted = true,
 
-                other => tainted |= state.apps[sel].input(other, &mut replies),
+                other => tainted |= apps[sel].0.input(other, &mut replies),
             }
         }
 
@@ -283,14 +282,14 @@ fn run(iosys: &mut dyn IoSystem) {
         // redraw, if necessary
         if tainted {
             screen.resize(new_size);
-            state.apps[sel].render(&Default::default(), &mut screen);
+            apps[sel].0.render(&state, &mut screen);
             {
                 let mut header = screen
                     .header()
                     .profile(&state.player_name)
                     .selected(sel)
                     .time("right now >:3");
-                for app in &state.apps {
+                for (app, _) in &apps {
                     header = header.tab(app.name(), app.notifs());
                 }
             }
