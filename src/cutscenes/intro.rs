@@ -1,4 +1,7 @@
-use std::{io, time::{Duration, Instant}};
+use std::{
+    io,
+    time::{Duration, Instant},
+};
 
 use rand::prelude::*;
 
@@ -244,11 +247,7 @@ fn render_sleep(
     Ok(())
 }
 
-fn name_input(
-    io: &mut dyn IoSystem,
-    screen: &mut Screen,
-    text: &[Text],
-) -> io::Result<String> {
+fn name_input(io: &mut dyn IoSystem, screen: &mut Screen, text: &[Text]) -> io::Result<String> {
     let prompt = text1!(white "(type now)");
     let mut last_line = text!("         >  ");
     last_line.push(prompt.clone());

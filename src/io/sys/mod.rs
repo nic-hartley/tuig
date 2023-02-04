@@ -6,7 +6,8 @@
 use std::collections::HashMap;
 use std::{
     io,
-    sync::{Arc, Barrier}, time::{Duration, Instant},
+    sync::{Arc, Barrier},
+    time::{Duration, Instant},
 };
 
 use super::{input::Action, output::Screen, XY};

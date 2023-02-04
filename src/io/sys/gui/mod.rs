@@ -2,7 +2,10 @@
 
 use std::{
     io,
-    sync::{Arc, Once, mpsc::{self, TryRecvError}},
+    sync::{
+        mpsc::{self, TryRecvError},
+        Arc, Once,
+    },
     time::{Duration, Instant},
 };
 
@@ -282,10 +285,12 @@ impl<B: GuiBackend> IoSystem for Gui<B> {
     }
 
     fn input(&mut self) -> io::Result<Action> {
-        self.inputs.recv().map_err(|_| io::Error::new(
-            io::ErrorKind::BrokenPipe,
-            "input loop has terminated unexpectedly",
-        ))
+        self.inputs.recv().map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::BrokenPipe,
+                "input loop has terminated unexpectedly",
+            )
+        })
     }
 
     fn poll_input(&mut self) -> io::Result<Option<Action>> {
@@ -295,7 +300,6 @@ impl<B: GuiBackend> IoSystem for Gui<B> {
             Err(TryRecvError::Empty) => Ok(None),
         }
     }
-
 
     fn stop(&mut self) {
         self.kill_el.call_once(|| {})

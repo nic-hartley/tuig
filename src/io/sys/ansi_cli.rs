@@ -1,5 +1,14 @@
 /// Implements the (crossterm-based) rendering to CLI.
-use std::{io::{self, Write}, mem, time::Duration, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, TryRecvError}, Arc}};
+use std::{
+    io::{self, Write},
+    mem,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::{self, TryRecvError},
+        Arc,
+    },
+    time::Duration,
+};
 
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn, Show},
@@ -66,7 +75,7 @@ impl IoRunner for CliRunner {
         loop {
             // check whether we've been told to stop
             if self.stop.load(Ordering::Relaxed) {
-                return
+                return;
             }
             // get an event from the terminal
             // (this has a timeout so we regularly check whether we should stop)

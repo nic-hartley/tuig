@@ -68,8 +68,7 @@ fn render_demo(io: &mut dyn IoSystem) {
 /// Run the intro cutscene
 fn intro_demo(io: &mut dyn IoSystem) {
     let size = io.size();
-    redshell::cutscenes::intro(io, &mut Screen::new(size))
-        .expect("Failed to run intro");
+    redshell::cutscenes::intro(io, &mut Screen::new(size)).expect("Failed to run intro");
 }
 
 /// Run the demo of the chat app
@@ -204,7 +203,8 @@ fn main() {
         Some("chat") => chat_demo,
         Some("mouse") => mouse_demo,
         _ => {
-            println!(r##"
+            println!(
+                r##"
 Show off some concept art, built on the actual UI toolkit of the game.
 Pass the name as the first parameter, i.e.:
     redshell-concept <name>
@@ -214,7 +214,8 @@ Available concept art is:
 - intro:    The game's actual intro, separated into its own thing
 - chat:     A self-playing demo of the chatroom
 - mouse:    Showing off mouse interaction
-"##);
+"##
+            );
             return;
         }
     };
