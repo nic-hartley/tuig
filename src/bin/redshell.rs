@@ -2,7 +2,7 @@ use std::{mem, thread, time::Duration};
 
 use redshell::{
     agents::{Agent, ControlFlow, Event},
-    app::{ChatApp, CliApp, App},
+    app::{App, ChatApp, CliApp},
     cutscenes,
     io::{
         input::{Action, Key},
@@ -154,7 +154,8 @@ fn run(iosys: &mut dyn IoSystem) {
         cutscenes::intro(iosys, &mut screen).expect("couldn't run intro cutscene")
     };
     let mut apps: Vec<(Box<dyn App>, usize)> = vec![
-        (Box::new(ChatApp::default()), 0), (Box::new(CliApp::default()), 0)
+        (Box::new(ChatApp::default()), 0),
+        (Box::new(CliApp::default()), 0),
     ];
 
     let mut sel = 0;

@@ -8,10 +8,11 @@ use rand::prelude::*;
 use crate::{
     cell,
     io::{
-        clifmt::{FormattedExt, Text, Formatted, Color},
+        clifmt::{Color, Formatted, FormattedExt, Text},
+        helpers::{TextInput, TextInputRequest},
         input::{Action, Key},
         output::{Cell, Screen},
-        sys::IoSystem, helpers::{TextInput, TextInputRequest},
+        sys::IoSystem,
     },
     text, text1, GameState,
 };
@@ -259,7 +260,7 @@ fn name_input(io: &mut dyn IoSystem, screen: &mut Screen, text: &[Text]) -> io::
                 TextInputRequest::Autocomplete => false,
                 TextInputRequest::Nothing => ti.tainted(),
                 TextInputRequest::Line(name) => break name,
-            }
+            },
         };
         if redraw {
             let mut last_line = ti.render();
