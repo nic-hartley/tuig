@@ -2,11 +2,10 @@
 
 use std::{
     io,
-    sync::{Arc, Once},
+    sync::{Arc, Once, mpsc::{self, TryRecvError}},
     time::{Duration, Instant},
 };
 
-use tokio::sync::mpsc;
 use winit::{
     dpi::LogicalSize,
     event::{ElementState, Event, VirtualKeyCode, WindowEvent},
@@ -173,7 +172,7 @@ fn char4pixel_pos(pos: XY, char_size: XY, win_size: XY) -> XY {
 
 struct WindowSpawnOutput {
     window: Window,
-    action_recv: mpsc::UnboundedReceiver<Action>,
+    action_recv: mpsc::Receiver<Action>,
     kill_send: Arc<Once>,
     runner: WindowRunner,
 }
@@ -185,7 +184,7 @@ fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
         .with_title("redshell")
         .build(&el)
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-    let (act_send, action_recv) = mpsc::unbounded_channel();
+    let (act_send, action_recv) = mpsc::channel();
 
     let killer = Arc::new(Once::new());
     let kill_recv = killer.clone();
@@ -211,7 +210,6 @@ fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
 /// This is deliberately not a trait object. Unlike most of the other interfaces in Redshell, we're only gonna have
 /// one GUI backend at a time and won't need to be able to swap them on the fly. If we *do*, that will happen at a
 /// higher level -- replacing the current [`IoSystem`] with another.
-#[async_trait::async_trait]
 pub trait GuiBackend: Send + Sync + Sized {
     /// Create a new rendering backend with the given font size. The font size is `fontdue`'s understanding of it: The
     /// (approximate) width of the `m` character. In Inconsolata, or really any monospace font, that should also be
@@ -233,7 +231,7 @@ pub trait GuiBackend: Send + Sync + Sized {
     /// Render a screen onto the window.
     ///
     /// This must only return when the rendering is as definitively complete as the backend can easily determine.
-    async fn render(&self, window: &Window, screen: &Screen) -> io::Result<()>;
+    fn render(&self, window: &Window, screen: &Screen) -> io::Result<()>;
 
     /// Return the bounding box dimensions of the characters being used in the font being used.
     fn char_size(&self) -> XY;
@@ -242,7 +240,7 @@ pub trait GuiBackend: Send + Sync + Sized {
 /// Provides the common (winit) functionality for a GUI, deferring the actual rendering to a [`GuiBackend`]
 pub struct Gui<B: GuiBackend> {
     window: Window,
-    inputs: mpsc::UnboundedReceiver<Action>,
+    inputs: mpsc::Receiver<Action>,
     kill_el: Arc<Once>,
     backend: B,
 }
@@ -270,11 +268,9 @@ impl<B: GuiBackend> Gui<B> {
     }
 }
 
-#[async_trait::async_trait]
 impl<B: GuiBackend> IoSystem for Gui<B> {
-    async fn draw(&mut self, screen: &Screen) -> io::Result<()> {
-        self.backend.render(&self.window, screen).await?;
-        Ok(())
+    fn draw(&mut self, screen: &Screen) -> io::Result<()> {
+        self.backend.render(&self.window, screen)
     }
 
     fn size(&self) -> XY {
@@ -285,12 +281,21 @@ impl<B: GuiBackend> IoSystem for Gui<B> {
         XY(width, height)
     }
 
-    async fn input(&mut self) -> io::Result<Action> {
-        self.inputs.recv().await.ok_or(io::Error::new(
+    fn input(&mut self) -> io::Result<Action> {
+        self.inputs.recv().map_err(|_| io::Error::new(
             io::ErrorKind::BrokenPipe,
             "input loop has terminated unexpectedly",
         ))
     }
+
+    fn poll_input(&mut self) -> io::Result<Option<Action>> {
+        match self.inputs.try_recv() {
+            Ok(res) => Ok(Some(res)),
+            Err(TryRecvError::Disconnected) => panic!("unexpected queue closure"),
+            Err(TryRecvError::Empty) => Ok(None),
+        }
+    }
+
 
     fn stop(&mut self) {
         self.kill_el.call_once(|| {})
@@ -300,7 +305,7 @@ impl<B: GuiBackend> IoSystem for Gui<B> {
 /// Runner for the main thread (as required by Windows windowing) to pull and convert events.
 pub struct WindowRunner {
     el: EventLoop<Action>,
-    act_send: mpsc::UnboundedSender<Action>,
+    act_send: mpsc::Sender<Action>,
     kill_recv: Arc<Once>,
     char_size: XY,
     win_size: XY,

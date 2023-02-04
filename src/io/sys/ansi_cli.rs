@@ -1,5 +1,5 @@
 /// Implements the (crossterm-based) rendering to CLI.
-use std::{io, mem, time::Duration};
+use std::{io::{self, Write}, mem, time::Duration, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, TryRecvError}, Arc}};
 
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn, Show},
@@ -13,10 +13,6 @@ use crossterm::{
         self, Clear, ClearType, DisableLineWrap, EnableLineWrap, EnterAlternateScreen,
         LeaveAlternateScreen,
     },
-};
-use tokio::{
-    io::AsyncWriteExt,
-    sync::{mpsc, oneshot},
 };
 
 use crate::io::{
@@ -38,8 +34,8 @@ fn io4ct_btn(ct: ct::MouseButton) -> MouseButton {
 }
 
 pub struct CliRunner {
-    actions: mpsc::UnboundedSender<Action>,
-    stop: oneshot::Receiver<()>,
+    actions: mpsc::Sender<Action>,
+    stop: Arc<AtomicBool>,
 }
 
 impl IoRunner for CliRunner {
@@ -69,9 +65,8 @@ impl IoRunner for CliRunner {
         }
         loop {
             // check whether we've been told to stop
-            match self.stop.try_recv() {
-                Err(oneshot::error::TryRecvError::Empty) => (),
-                _ => return,
+            if self.stop.load(Ordering::Relaxed) {
+                return
             }
             // get an event from the terminal
             // (this has a timeout so we regularly check whether we should stop)
@@ -199,10 +194,9 @@ fn ct4rs_color(rs: RedshellColor) -> CrosstermColor {
 }
 
 /// Render a single row of cells into a `Vec<u8>` that can be printed
-fn render_row(row: &[Cell]) -> Vec<u8> {
+fn render_row(row: &[Cell], out: &mut Vec<u8>) {
     // `unwrap` is sprinkled throughout this code, and is safe because we're queueing/writing into a `Vec`,
     // which is an infallible destination for bytes. (barring allocation failure but that's not handled rn anyway.)
-    let mut out = vec![];
 
     let mut ch_b = [0u8; 4];
 
@@ -218,7 +212,7 @@ fn render_row(row: &[Cell]) -> Vec<u8> {
         attrs[1] = Attribute::Underlined;
     }
     crossterm::queue!(
-        &mut out,
+        out,
         ResetColor,
         SetAttribute(Attribute::Reset),
         SetForegroundColor(ct4rs_color(fg)),
@@ -231,11 +225,11 @@ fn render_row(row: &[Cell]) -> Vec<u8> {
     for cell in &row[1..] {
         if cell.get_fmt().fg != fg {
             fg = cell.get_fmt().fg;
-            crossterm::execute!(&mut out, SetForegroundColor(ct4rs_color(fg))).unwrap();
+            crossterm::execute!(out, SetForegroundColor(ct4rs_color(fg))).unwrap();
         }
         if cell.get_fmt().bg != bg {
             bg = cell.get_fmt().bg;
-            crossterm::execute!(&mut out, SetBackgroundColor(ct4rs_color(bg))).unwrap();
+            crossterm::execute!(out, SetBackgroundColor(ct4rs_color(bg))).unwrap();
         }
         if cell.get_fmt().bold != bold {
             bold = cell.get_fmt().bold;
@@ -244,7 +238,7 @@ fn render_row(row: &[Cell]) -> Vec<u8> {
             } else {
                 Attribute::NormalIntensity
             };
-            crossterm::execute!(&mut out, SetAttribute(attr)).unwrap();
+            crossterm::execute!(out, SetAttribute(attr)).unwrap();
         }
         if cell.get_fmt().underline != underline {
             underline = cell.get_fmt().underline;
@@ -253,18 +247,16 @@ fn render_row(row: &[Cell]) -> Vec<u8> {
             } else {
                 Attribute::NoUnderline
             };
-            crossterm::execute!(&mut out, SetAttribute(attr)).unwrap();
+            crossterm::execute!(out, SetAttribute(attr)).unwrap();
         }
         out.extend_from_slice(cell.ch.encode_utf8(&mut ch_b).as_bytes());
     }
-    crossterm::execute!(&mut out, MoveDown(1), MoveToColumn(0)).unwrap();
-
-    out
+    crossterm::execute!(out, MoveDown(1), MoveToColumn(0)).unwrap();
 }
 
 pub struct AnsiIo {
-    queue: mpsc::UnboundedReceiver<Action>,
-    stop: Option<oneshot::Sender<()>>,
+    queue: mpsc::Receiver<Action>,
+    stop: Option<Arc<AtomicBool>>,
 }
 
 impl AnsiIo {
@@ -301,53 +293,57 @@ impl AnsiIo {
             println!("{}", i);
             let _ = Self::init_term();
         }));
-        let (queue_s, queue_r) = mpsc::unbounded_channel();
-        let (stop_s, stop_r) = oneshot::channel();
+        let (queue_s, queue_r) = mpsc::channel();
+        let stop = Arc::new(AtomicBool::new(false));
         let runner = CliRunner {
             actions: queue_s,
-            stop: stop_r,
+            stop: stop.clone(),
         };
         Ok((
             Self {
                 queue: queue_r,
-                stop: Some(stop_s),
+                stop: Some(stop.clone()),
             },
             runner,
         ))
     }
 }
 
-#[async_trait::async_trait]
 impl IoSystem for AnsiIo {
     fn size(&self) -> XY {
         let (x, y) = terminal::size().unwrap();
         XY(x as usize, y as usize)
     }
 
-    async fn draw(&mut self, screen: &Screen) -> io::Result<()> {
-        let out = tokio::task::block_in_place(|| -> io::Result<Vec<u8>> {
-            let mut out = vec![];
-            crossterm::queue!(&mut out, MoveTo(0, 0))?;
-            for row in screen.rows() {
-                out.extend(render_row(row));
-            }
-            Ok(out)
-        })?;
-        let mut stdout = tokio::io::stdout();
-        stdout.write_all(&out).await?;
-        stdout.flush().await
+    fn draw(&mut self, screen: &Screen) -> io::Result<()> {
+        let mut out = vec![];
+        crossterm::queue!(&mut out, MoveTo(0, 0), Clear(ClearType::All)).unwrap();
+        for row in screen.rows() {
+            render_row(row, &mut out);
+        }
+        let mut stdout = std::io::stdout().lock();
+        stdout.write_all(&out)?;
+        stdout.flush()
     }
 
-    async fn input(&mut self) -> io::Result<crate::io::input::Action> {
-        Ok(self.queue.recv().await.expect("unexpected queue closure"))
+    fn input(&mut self) -> io::Result<crate::io::input::Action> {
+        Ok(self.queue.recv().expect("unexpected queue closure"))
+    }
+
+    fn poll_input(&mut self) -> io::Result<Option<crate::io::input::Action>> {
+        match self.queue.try_recv() {
+            Ok(res) => Ok(Some(res)),
+            Err(TryRecvError::Disconnected) => panic!("unexpected queue closure"),
+            Err(TryRecvError::Empty) => Ok(None),
+        }
     }
 
     fn stop(&mut self) {
         let stop = mem::replace(&mut self.stop, None).expect("already dropped");
         // if the receiver is dead, that's fine; that means the queue won't have anything
         // else put in it. (and it can happen if e.g. there's an IO error)
-        let _ = stop.send(());
-        while self.queue.try_recv() != Err(mpsc::error::TryRecvError::Disconnected) {
+        let _ = stop.store(true, Ordering::Relaxed);
+        while self.queue.try_recv().is_ok() {
             // flushing the queue and waiting for it to disconnect in the condition itself
         }
         Self::clean_term().expect("failed to clean up terminal");

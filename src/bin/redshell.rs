@@ -11,7 +11,6 @@ use redshell::{
     },
     tools, GameState,
 };
-use tokio::time::sleep;
 
 /// A single step in the conversation tree of an [`NPC`]
 struct ChatState {
@@ -142,8 +141,7 @@ macro_rules! npc {
 }
 
 /// Main game loop
-#[tokio::main]
-async fn run(iosys: &mut dyn IoSystem) {
+fn run(iosys: &mut dyn IoSystem) {
     let mut screen = Screen::new(iosys.size());
 
     // get the state, optionally from running the intro cutscene
@@ -154,7 +152,7 @@ async fn run(iosys: &mut dyn IoSystem) {
             machine: Default::default(),
         }
     } else {
-        cutscenes::intro(iosys, &mut screen).await.expect("aaa")
+        cutscenes::intro(iosys, &mut screen).expect("couldn't run intro cutscene")
     };
 
     let mut prev_notifs = vec![0; state.apps.len()];
@@ -261,23 +259,18 @@ async fn run(iosys: &mut dyn IoSystem) {
         }
 
         // wait for 25ms or the next input (whichever is sooner) before redrawing
-        tokio::select! {
-            inp = iosys.input() => {
-                match inp.unwrap() {
-                    Action::KeyPress { key: Key::F(num) } => {
-                        if num <= state.apps.len() {
-                            sel = num as usize - 1;
-                            tainted = true;
-                        }
+        if let Some(inp) = iosys.input_until(Duration::from_secs_f32(0.25)).unwrap() {
+            match inp {
+                Action::KeyPress { key: Key::F(num) } => {
+                    if num <= state.apps.len() {
+                        sel = num as usize - 1;
+                        tainted = true;
                     }
-                    Action::Closed => break,
-                    Action::Redraw => tainted = true,
-
-                    other => tainted |= state.apps[sel].input(other, &mut replies),
                 }
-            }
-            _ = sleep(Duration::from_millis(25)) => {
-                // nothing to do here, we just want to make sure it loops every so often
+                Action::Closed => break,
+                Action::Redraw => tainted = true,
+
+                other => tainted |= state.apps[sel].input(other, &mut replies),
             }
         }
 
@@ -301,7 +294,7 @@ async fn run(iosys: &mut dyn IoSystem) {
                     header = header.tab(app.name(), app.notifs());
                 }
             }
-            iosys.draw(&screen).await.unwrap();
+            iosys.draw(&screen).unwrap();
             tainted = false;
         }
 

@@ -106,7 +106,6 @@ pub struct SoftbufferBackend {
     underline_top: usize,
 }
 
-#[async_trait::async_trait]
 impl GuiBackend for SoftbufferBackend {
     fn new(scale: f32) -> io::Result<Self> {
         let regular = Font::from_bytes(
@@ -153,7 +152,7 @@ impl GuiBackend for SoftbufferBackend {
         self.ch_sz
     }
 
-    async fn render(&self, window: &Window, screen: &Screen) -> io::Result<()> {
+    fn render(&self, window: &Window, screen: &Screen) -> io::Result<()> {
         let window_sz = XY(
             window.inner_size().width as usize,
             window.inner_size().height as usize,

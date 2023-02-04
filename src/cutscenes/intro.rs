@@ -1,7 +1,6 @@
-use std::{io, time::Duration};
+use std::{io, time::{Duration, Instant}};
 
 use rand::prelude::*;
-use tokio::time::{sleep_until, Instant};
 
 use crate::{
     app::{ChatApp, CliApp},
@@ -15,8 +14,8 @@ use crate::{
     text, text1, GameState,
 };
 
-async fn sleep(s: f32) {
-    tokio::time::sleep(Duration::from_secs_f32(s)).await
+fn sleep(s: f32) {
+    std::thread::sleep(Duration::from_secs_f32(s))
 }
 
 fn rngat(seed: u64, x: usize, y: usize, xor: u64) -> SmallRng {
@@ -53,7 +52,7 @@ fn leaveat(seed: u64, x: usize, y: usize) -> bool {
 }
 
 /// Play the wave, then return the seed of the last shift (which produces the leftovers)
-pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<u64> {
+fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<u64> {
     // the unit of width here is fractions of the screen width; time is in seconds
 
     // the width of one shift
@@ -115,10 +114,10 @@ pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::R
                 }
             }
         }
-        io.draw(&screen).await?;
+        io.draw(&screen)?;
 
         // wait until either the screen is resized, or a brief (randomized) period passes
-        sleep(0.01).await;
+        sleep(0.01);
     }
 
     Ok(seeds[SHIFT_COUNT - 1])
@@ -166,7 +165,7 @@ fn gen_lines() -> Vec<Text> {
         .collect()
 }
 
-pub async fn loading_text(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64) -> io::Result<()> {
+fn loading_text(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64) -> io::Result<()> {
     const MIN_DELAY: f32 = 0.25;
     const MAX_DELAY: f32 = 0.75;
 
@@ -197,28 +196,26 @@ pub async fn loading_text(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64)
                 }
             }
         }
-        io.draw(&screen).await?;
+        io.draw(&screen)?;
 
-        tokio::select! {
-            _ = sleep(0.01) => (),
-            _ = sleep_until(show_next_time) => {
-                scroll += 1;
-                let delay = if scroll < lines.len() {
-                    // while we're still doing lines, pause a bit between each
-                    thread_rng().gen_range(MIN_DELAY..MAX_DELAY)
-                } else {
-                    // once that's done, pause long enough to scroll the screen off pretty fast
-                    0.5 / screen.size().y() as f32
-                };
-                show_next_time = Instant::now() + Duration::from_secs_f32(delay);
-            }
+        sleep(0.01);
+        if Instant::now() > show_next_time {
+            scroll += 1;
+            let delay = if scroll < lines.len() {
+                // while we're still doing lines, pause a bit between each
+                thread_rng().gen_range(MIN_DELAY..MAX_DELAY)
+            } else {
+                // once that's done, pause long enough to scroll the screen off pretty fast
+                0.5 / screen.size().y() as f32
+            };
+            show_next_time = Instant::now() + Duration::from_secs_f32(delay);
         }
     }
 
     Ok(())
 }
 
-async fn render(io: &mut dyn IoSystem, screen: &mut Screen, text: &[Text]) -> io::Result<()> {
+fn render(io: &mut dyn IoSystem, screen: &mut Screen, text: &[Text]) -> io::Result<()> {
     screen.resize(io.size());
     let mut text_v: Vec<_> = text.iter().cloned().collect();
     if let Some(last) = text_v.last_mut() {
@@ -230,29 +227,24 @@ async fn render(io: &mut dyn IoSystem, screen: &mut Screen, text: &[Text]) -> io
         .scroll_bottom(true)
         .indent(10 + 2)
         .first_indent(0);
-    io.draw(screen).await
+    io.draw(screen)
 }
 
-async fn render_sleep(
+fn render_sleep(
     delay: f32,
     io: &mut dyn IoSystem,
     screen: &mut Screen,
     text: &[Text],
 ) -> io::Result<()> {
-    let timer = sleep(delay);
-    tokio::pin!(timer);
-    loop {
-        render(io, screen, &text).await?;
-
-        tokio::select! {
-            _ = &mut timer => break,
-            _ = io.input() => { io.flush().await?; }
-        }
+    let end = Instant::now() + Duration::from_secs_f32(delay);
+    while Instant::now() < end {
+        render(io, screen, &text)?;
+        sleep(0.01);
     }
     Ok(())
 }
 
-async fn name_input(
+fn name_input(
     io: &mut dyn IoSystem,
     screen: &mut Screen,
     text: &[Text],
@@ -264,11 +256,11 @@ async fn name_input(
     let mut caps = false;
     loop {
         let cur_text: Vec<_> = text.iter().chain(last_line.iter()).cloned().collect();
-        render(io, screen, &cur_text).await?;
+        render(io, screen, &cur_text)?;
 
         loop {
             let mut redraw = true;
-            match io.input().await? {
+            match io.input()? {
                 Action::KeyPress { key: Key::Enter } if !name.is_empty() => return Ok(name),
                 Action::KeyPress { key: Key::Char(ch) } => {
                     if caps {
@@ -305,7 +297,7 @@ async fn name_input(
     }
 }
 
-async fn do_choice<'a>(
+fn do_choice<'a>(
     io: &mut dyn IoSystem,
     screen: &mut Screen,
     text: &[Text],
@@ -328,11 +320,11 @@ async fn do_choice<'a>(
         }
         let text: Vec<_> = text.iter().cloned().chain(last_line).collect();
 
-        render(io, screen, &text).await?;
+        render(io, screen, &text)?;
 
         loop {
             let mut redraw = true;
-            match io.input().await? {
+            match io.input()? {
                 Action::KeyPress { key: Key::Enter } => return Ok(opts[selected]),
                 Action::KeyPress { key: Key::Left } => {
                     if selected > 0 {
@@ -355,7 +347,7 @@ async fn do_choice<'a>(
     }
 }
 
-async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<String> {
+fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<String> {
     let mut text: Vec<Text> = vec![];
     macro_rules! admin_say {
         ( $( $delay:expr =>
@@ -363,13 +355,13 @@ async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<Stri
                 $( $_name:ident )* $_fmt:literal $( ( $($arg:expr),* $(,)? ) )?
             ),* $(,)?
         );* $(;)? ) => { $(
-            render_sleep($delay, io, screen, &text).await?;
+            render_sleep($delay, io, screen, &text)?;
             text.extend(text!(
                 "     admin: ",
                 $( bold bright_white $($_name)* $_fmt $(($($arg),*))? ),*,
                 "\n"
             ));
-            render(io, screen, &text).await?;
+            render(io, screen, &text)?;
         )* };
     }
 
@@ -378,14 +370,14 @@ async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<Stri
         1.5 => "what can I call you?";
         0.75 => "not your real name.";
     );
-    render_sleep(0.5, io, screen, &text).await?;
-    let name = name_input(io, screen, &text).await?;
+    render_sleep(0.5, io, screen, &text)?;
+    let name = name_input(io, screen, &text)?;
     text.extend(text!("         >  ", blue "{}"(name), "\n"));
 
     macro_rules! choose {
         ( $( $option:literal => $then:expr $(,)? )* ) => {
-            render_sleep(0.25, io, screen, &text).await?;
-            match do_choice(io, screen, &text, &[$($option),*]).await? {
+            render_sleep(0.25, io, screen, &text)?;
+            match do_choice(io, screen, &text, &[$($option),*])? {
                 $( $option => {
                     text.extend(text!(
                         blue "{:>10}: "(name),
@@ -431,12 +423,12 @@ async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<Stri
 }
 
 /// Run the intro cutscene
-pub async fn run(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<GameState> {
-    let seed = sprinkler_wave(io, screen).await?;
-    loading_text(io, screen, seed).await?;
+pub fn run(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<GameState> {
+    let seed = sprinkler_wave(io, screen)?;
+    loading_text(io, screen, seed)?;
 
     // screen should now be blank so we can start on the actual intro
-    let name = tutorial(io, screen).await?;
+    let name = tutorial(io, screen)?;
 
     Ok(GameState {
         player_name: name,
