@@ -589,7 +589,7 @@ mod test {
 
     #[test]
     fn history_scrolls_with_arrows() {
-        let mut ti = TextInput::new("> ", 0);
+        let mut ti = TextInput::new("> ", 10);
         assert_eq!(
             ti.action(Action::KeyPress {
                 key: Key::Char('a')
@@ -679,7 +679,7 @@ mod test {
 
     #[test]
     fn history_scroll_to_bottom_doesnt_reset_line() {
-        let mut ti = TextInput::new("> ", 0);
+        let mut ti = TextInput::new("> ", 10);
         assert_eq!(
             ti.action(Action::KeyPress {
                 key: Key::Char('a')
@@ -779,7 +779,7 @@ mod test {
 
     #[test]
     fn history_selects_with_typing() {
-        let mut ti = TextInput::new("> ", 0);
+        let mut ti = TextInput::new("> ", 10);
         assert_eq!(
             ti.action(Action::KeyPress {
                 key: Key::Char('a')
@@ -872,7 +872,7 @@ mod test {
 
     #[test]
     fn history_selects_with_backspace() {
-        let mut ti = TextInput::new("> ", 0);
+        let mut ti = TextInput::new("> ", 10);
         assert_eq!(
             ti.action(Action::KeyPress {
                 key: Key::Char('a')
@@ -965,7 +965,7 @@ mod test {
 
     #[test]
     fn history_selects_with_enter() {
-        let mut ti = TextInput::new("> ", 0);
+        let mut ti = TextInput::new("> ", 10);
         assert_eq!(
             ti.action(Action::KeyPress {
                 key: Key::Char('a')
