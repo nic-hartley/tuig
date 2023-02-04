@@ -330,7 +330,8 @@ impl IoSystem for AnsiIo {
         for row in screen.rows() {
             render_row(row, &mut out);
         }
-        let mut stdout = std::io::stdout().lock();
+        let stdout = std::io::stdout();
+        let mut stdout = stdout.lock();
         stdout.write_all(&out)?;
         stdout.flush()
     }
