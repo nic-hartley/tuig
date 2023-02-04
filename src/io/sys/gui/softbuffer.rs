@@ -20,75 +20,77 @@ fn ioe4fe(e: &'static str) -> io::Error {
     io::Error::new(io::ErrorKind::Other, e)
 }
 
-fn color_u32(c: Color) -> u32 {
-    fn hsv(h: f32, s: f32, v: f32) -> u32 {
-        // taken from https://en.wikipedia.org/wiki/HSL_and_HSV#HSV_to_RGB
-        assert!(0.0 <= h && h <= 360.0);
-        assert!(0.0 <= s && s <= 1.0);
-        assert!(0.0 <= v && v <= 1.0);
-        let c = s * v;
-        let h_ = h / 60.0;
-        let x = c * (1.0 - (h_ % 2.0 - 1.0).abs());
-        let (r1, g1, b1) = match h_ as usize {
-            0 => (c, x, 0.0),
-            1 => (x, c, 0.0),
-            2 => (0.0, c, x),
-            3 => (0.0, x, c),
-            4 => (x, 0.0, c),
-            5 => (c, 0.0, x),
-            _ => unreachable!(),
-        };
-        let m = v - c;
-        let r = r1 + m;
-        let g = g1 + m;
-        let b = b1 + m;
-        let rb = (r * 255.0).round() as u32;
-        let gb = (g * 255.0).round() as u32;
-        let bb = (b * 255.0).round() as u32;
-        rb << 16 | gb << 8 | bb
-    }
+fn color_f32(c: Color) -> (f32, f32, f32) {
+    let (h, s, v): (f32, f32, f32) = match c {
+        Color::Black => (000.0, 0.0, 0.05),
+        Color::Red => (000.0, 1.0, 0.75),
+        Color::Green => (120.0, 1.0, 0.75),
+        Color::Yellow => (060.0, 1.0, 0.75),
+        Color::Blue => (240.0, 0.7, 0.75),
+        Color::Magenta => (300.0, 1.0, 0.75),
+        Color::Cyan => (180.0, 1.0, 0.75),
+        Color::White => (000.0, 0.0, 0.75),
+        Color::BrightBlack => (000.0, 0.0, 0.5),
+        Color::BrightRed => (000.0, 1.0, 1.0),
+        Color::BrightGreen => (120.0, 1.0, 1.0),
+        Color::BrightYellow => (060.0, 1.0, 1.0),
+        Color::BrightBlue => (240.0, 1.0, 1.0),
+        Color::BrightMagenta => (300.0, 1.0, 1.0),
+        Color::BrightCyan => (180.0, 1.0, 1.0),
+        Color::BrightWhite => (000.0, 0.0, 1.0),
+    };
 
-    match c {
-        Color::Black => hsv(000.0, 0.0, 0.05),
-        Color::Red => hsv(000.0, 1.0, 0.75),
-        Color::Green => hsv(120.0, 1.0, 0.75),
-        Color::Yellow => hsv(060.0, 1.0, 0.75),
-        Color::Blue => hsv(240.0, 0.7, 0.75),
-        Color::Magenta => hsv(300.0, 1.0, 0.75),
-        Color::Cyan => hsv(180.0, 1.0, 0.75),
-        Color::White => hsv(000.0, 0.0, 0.75),
+    // make sure we didn't fuck this up
+    assert!(0.0 <= h && h <= 360.0);
+    assert!(0.0 <= s && s <= 1.0);
+    assert!(0.0 <= v && v <= 1.0);
 
-        Color::BrightBlack => hsv(000.0, 0.0, 0.5),
-        Color::BrightRed => hsv(000.0, 1.0, 1.0),
-        Color::BrightGreen => hsv(120.0, 1.0, 1.0),
-        Color::BrightYellow => hsv(060.0, 1.0, 1.0),
-        Color::BrightBlue => hsv(240.0, 1.0, 1.0),
-        Color::BrightMagenta => hsv(300.0, 1.0, 1.0),
-        Color::BrightCyan => hsv(180.0, 1.0, 1.0),
-        Color::BrightWhite => hsv(000.0, 0.0, 1.0),
-    }
+    // taken from https://en.wikipedia.org/wiki/HSL_and_HSV#HSV_to_RGB
+    let c = s * v;
+    let h_ = h / 60.0;
+    let x = c * (1.0 - (h_ % 2.0 - 1.0).abs());
+    let (r1, g1, b1) = match h_ as usize {
+        0 => (c, x, 0.0),
+        1 => (x, c, 0.0),
+        2 => (0.0, c, x),
+        3 => (0.0, x, c),
+        4 => (x, 0.0, c),
+        5 => (c, 0.0, x),
+        _ => unreachable!(),
+    };
+    let m = v - c;
+    let r = r1 + m;
+    let g = g1 + m;
+    let b = b1 + m;
+
+    (r, g, b)
 }
 
-fn lerp(from: u32, to: u32, amt: f32) -> u32 {
-    fn lerp_u8(from: u8, to: u8, amt: f32) -> u8 {
-        let big = from.max(to);
-        let lil = from.min(to);
-        let amt = if lil == from { amt } else { 1.0 - amt };
-        lil + ((big - lil) as f32 * amt).round() as u8
-    }
+fn color_u32(c: Color) -> u32 {
+    let (r_f, g_f, b_f) = color_f32(c);
+    let r_b = (r_f * 255.0).round() as u32;
+    let g_b = (g_f * 255.0).round() as u32;
+    let b_b = (b_f * 255.0).round() as u32;
+    (r_b << 16) | (g_b << 8) | (b_b << 0)
+}
 
-    let fr = (from >> 16 & 0xFF) as u8;
-    let fg = (from >> 8 & 0xFF) as u8;
-    let fb = (from >> 0 & 0xFF) as u8;
-    let tr = (to >> 16 & 0xFF) as u8;
-    let tg = (to >> 8 & 0xFF) as u8;
-    let tb = (to >> 0 & 0xFF) as u8;
+fn lerp(from: f32, to: f32, amt: f32) -> f32 {
+    let big = from.max(to);
+    let lil = from.min(to);
+    let amt = if lil == from { amt } else { 1.0 - amt };
+    lil + ((big - lil) * amt)
+}
 
-    let r = lerp_u8(fr, tr, amt);
-    let g = lerp_u8(fg, tg, amt);
-    let b = lerp_u8(fb, tb, amt);
-
-    (r as u32) << 16 | (g as u32) << 8 | (b as u32) << 0
+fn color_of(fg: Color, bg: Color, opacity: f32) -> u32 {
+    let (fg_r, fg_g, fg_b) = color_f32(fg);
+    let (bg_r, bg_g, bg_b) = color_f32(bg);
+    let r_f = lerp(bg_r, fg_r, opacity);
+    let g_f = lerp(bg_g, fg_g, opacity);
+    let b_f = lerp(bg_b, fg_b, opacity);
+    let r_b = (r_f * 255.0).round() as u32;
+    let g_b = (g_f * 255.0).round() as u32;
+    let b_b = (b_f * 255.0).round() as u32;
+    (r_b << 16) | (g_b << 8) | (b_b << 0)
 }
 
 pub struct SoftbufferBackend {
@@ -164,7 +166,6 @@ impl GuiBackend for SoftbufferBackend {
         };
         let buffer_sz = (window_sz % self.ch_sz) / 2;
 
-        // let mut screen_buf = vec![color_u32(Color::Black); window_sz.x() * window_sz.y()];
         let char_rows = (0..bounded_sz.y()).into_par_iter().flat_map(|y| {
             // how many pixels down from the top this starts
             let mut row_buf = vec![color_u32(Color::Black); window_sz.x() * self.ch_sz.y()];
@@ -205,9 +206,6 @@ impl GuiBackend for SoftbufferBackend {
                     x_cutoff = -metrics.xmin as usize;
                 }
 
-                let fg = color_u32(fmt.fg);
-                let bg = color_u32(fmt.bg);
-
                 // now we can actually move the rasterized character onto the screen!
                 for line_row in 0..self.ch_sz.y() {
                     let dest_row = line_row - y_cutoff;
@@ -216,18 +214,18 @@ impl GuiBackend for SoftbufferBackend {
                     let dest = &mut row_buf[dest_start..dest_end];
 
                     if fmt.underline && line_row > self.underline_top {
-                        dest.fill(fg);
+                        dest.fill(color_u32(fmt.fg));
                         continue;
                     }
 
                     if line_row < y_offset || line_row >= metrics.height + y_offset - y_cutoff {
-                        dest.fill(bg);
+                        dest.fill(color_u32(fmt.bg));
                         continue;
                     }
 
                     for line_col in 0..self.ch_sz.x() {
                         if line_col < x_offset || line_col >= metrics.width + x_offset - x_cutoff {
-                            dest[line_col] = bg;
+                            dest[line_col] = color_u32(fmt.bg);
                             continue;
                         }
 
@@ -235,7 +233,7 @@ impl GuiBackend for SoftbufferBackend {
                         let char_col = line_col - x_offset + x_cutoff;
                         let val = char_buf[char_row * metrics.width + char_col];
                         let pct = val as f32 / 255.0;
-                        let color = lerp(bg, fg, pct);
+                        let color = color_of(fmt.fg, fmt.bg, pct);
                         dest[line_col] = color;
                     }
                 }
