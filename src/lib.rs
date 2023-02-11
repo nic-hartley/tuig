@@ -6,6 +6,7 @@ pub mod agents;
 pub mod app;
 pub mod constants;
 pub mod cutscenes;
+pub mod game;
 pub mod io;
 pub mod machine;
 pub mod tools;

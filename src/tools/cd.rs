@@ -30,7 +30,7 @@ impl Tool for Cd {
         AutocompleteType::LocalFile.complete(line, state)
     }
 
-    fn run(&self, line: &str, state: &CliState) -> Box<dyn crate::agents::Agent> {
+    fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent + Send + Sync> {
         let line = line.trim();
         let mut target_comps = if line.starts_with('/') {
             vec![]

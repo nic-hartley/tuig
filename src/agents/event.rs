@@ -21,7 +21,7 @@ impl<T> Bundle<T> {
 impl<T> fmt::Debug for Bundle<T> {
     #[cfg_attr(coverage, no_coverage)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Bundle(..)")
+        write!(f, "Bundle<{}>(..)", std::any::type_name::<T>())
     }
 }
 
@@ -44,16 +44,16 @@ macro_rules! trait_bundle {
         $fn:ident($trait:ident) => $enum:ident
     ),* $(,)? ) => { $(
         paste::paste! {
-            pub type [< Bundled $trait >] = Bundle<Box<dyn $trait>>;
+            pub type [< Bundled $trait >] = Bundle<Box<dyn $trait + Send + Sync>>;
             impl [< Bundled $trait >] {
                 #[cfg_attr(coverage, no_coverage)]
-                pub fn new(contents: impl $trait + 'static) -> Self {
+                pub fn new(contents: impl $trait + Send + Sync + 'static) -> Self {
                     Bundle::of(Box::new(contents))
                 }
             }
             impl Event {
                 #[cfg_attr(coverage, no_coverage)]
-                pub fn $fn(item: impl $trait + 'static) -> Self {
+                pub fn $fn(item: impl $trait + Send + Sync + 'static) -> Self {
                     Self::$enum([< Bundled $trait >]::new(item))
                 }
             }

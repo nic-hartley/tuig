@@ -106,7 +106,9 @@ impl CliApp {
             }
         } else {
             /// Tiny adapter so `AsRef` will get the key instead of the value
-            struct Adapter<'a>(dashmap::mapref::multiple::RefMulti<'a, String, Arc<dyn Tool>>);
+            struct Adapter<'a>(
+                dashmap::mapref::multiple::RefMulti<'a, String, Arc<dyn Tool + Send + Sync>>,
+            );
             impl<'a> AsRef<str> for Adapter<'a> {
                 fn as_ref(&self) -> &str {
                     self.0.key().as_ref()

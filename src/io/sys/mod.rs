@@ -41,6 +41,7 @@ pub trait IoSystem: Send {
             if let Some(input) = self.poll_input()? {
                 return Ok(Some(input));
             }
+            std::thread::sleep(time / 20);
         }
         Ok(None)
     }

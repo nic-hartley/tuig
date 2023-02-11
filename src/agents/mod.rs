@@ -30,7 +30,7 @@ pub trait Agent: Send + Sync {
     /// By default, does nothing and returns [`ControlFlow::Kill`], under the assumption that you'd have implemented
     /// `react` if you wanted your agent to stay alive and do things.
     #[cfg_attr(coverage, no_coverage)]
-    fn react(&mut self, _events: &[Event], _replies: &mut Vec<Event>) -> ControlFlow {
+    fn react(&mut self, _event: &Event, _replies: &mut Vec<Event>) -> ControlFlow {
         ControlFlow::Kill
     }
 }
@@ -43,7 +43,7 @@ impl Agent for NopAgent {
     fn start(&mut self, _replies: &mut Vec<Event>) -> ControlFlow {
         ControlFlow::Kill
     }
-    fn react(&mut self, _events: &[Event], _replies: &mut Vec<Event>) -> ControlFlow {
+    fn react(&mut self, _event: &Event, _replies: &mut Vec<Event>) -> ControlFlow {
         ControlFlow::Kill
     }
 }
@@ -62,7 +62,10 @@ mod test {
     #[test]
     fn nop_agent_doesnt_react() {
         let mut replies = vec![];
-        assert_eq!(NopAgent.react(&[], &mut replies), ControlFlow::Kill);
+        assert_eq!(
+            NopAgent.react(&Event::CommandDone, &mut replies),
+            ControlFlow::Kill
+        );
         assert_eq!(replies, vec![]);
     }
 }

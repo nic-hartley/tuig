@@ -29,7 +29,7 @@ pub trait Tool {
     /// Attempt to perform autocompletion, given the line up to the cursor location.
     fn autocomplete(&self, prefix: &str, state: &CliState) -> String;
     /// Create an agent to make this command have effects
-    fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent>;
+    fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent + Send + Sync>;
 }
 
 /// [`Agent`] implementation that outputs some pre-given text, signals the CLI it's done, and dies.

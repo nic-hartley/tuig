@@ -31,6 +31,15 @@ impl WaitHandle {
     fn is_woken(&self) -> bool {
         self.0.load(Ordering::Acquire)
     }
+
+    /// How many threads, right at the moment of calling this, have a handle.
+    /// 
+    /// See [Arc::strong_count][1] for important caveats about its use.
+    /// 
+    ///  [1]: https://doc.rust-lang.org/std/sync/struct.Arc.html#method.strong_count
+    pub fn references(&self) -> usize {
+        Arc::strong_count(&self.0)
+    }
 }
 
 impl PartialEq for WaitHandle {
