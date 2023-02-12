@@ -1,14 +1,12 @@
-use std::{mem, thread, time::Duration};
+use std::time::Duration;
 
 use redshell::{
     agents::{Agent, ControlFlow, Event},
     app::{App, ChatApp, CliApp},
-    cutscenes,
     game::{Game, Runner},
     io::{
         input::{Action, Key},
         output::Screen,
-        sys::{self, IoSystem},
     },
     tools, GameState,
 };
@@ -199,9 +197,6 @@ impl Game for Redshell {
     }
 
     fn render(&mut self, onto: &mut Screen) {
-        if self.apps.is_empty() {
-            return;
-        }
         self.apps[self.sel_app].0.render(&self.state, onto);
         let mut header = onto
             .header()
@@ -212,92 +207,6 @@ impl Game for Redshell {
             header = header.tab(app.name(), *notifs);
         }
     }
-}
-
-/// Main game loop
-fn run(iosys: &mut dyn IoSystem) {
-    let mut screen = Screen::new(iosys.size());
-
-    // get the state, optionally from running the intro cutscene
-    let state = if let Some(name) = std::env::args().skip(1).next() {
-        GameState {
-            player_name: name,
-            machine: Default::default(),
-        }
-    } else {
-        cutscenes::intro(iosys, &mut screen).expect("couldn't run intro cutscene")
-    };
-    let mut apps: Vec<(Box<dyn App>, usize)> = vec![
-        (Box::new(ChatApp::default()), 0),
-        (Box::new(CliApp::default()), 0),
-    ];
-
-    let mut sel = 0;
-    let mut events = vec![];
-    let mut agents: Vec<(Box<dyn Agent>, ControlFlow)> = vec![];
-
-    let mut replies = vec![];
-    // Whether or not the screen needs to be redrawn since it was last rendered
-    let mut tainted = true;
-    loop {
-        // feed all the agents this round of events
-        for (agent, cf) in &mut agents {
-            for event in &events {
-                if !cf.is_ready() {
-                    break;
-                }
-                *cf = agent.react(event, &mut replies);
-            }
-        }
-        // delete agents who asked to die
-        agents.retain(|(_, cf)| cf != &ControlFlow::Kill);
-
-
-        // wait for 25ms or the next input (whichever is sooner) before redrawing
-        if let Some(inp) = iosys.input_until(Duration::from_secs_f32(0.25)).unwrap() {
-            match inp {
-                Action::KeyPress { key: Key::F(num) } => {
-                    if num <= apps.len() {
-                        sel = num as usize - 1;
-                        tainted = true;
-                    }
-                }
-                Action::Closed => break,
-                Action::Redraw => tainted = true,
-
-                other => tainted |= apps[sel].0.input(other, &mut replies),
-            }
-        }
-
-        // ensure the screen size is up to date
-        let new_size = iosys.size();
-        if new_size != screen.size() {
-            tainted = true;
-        }
-
-        // redraw, if necessary
-        if tainted {
-            screen.resize(new_size);
-            apps[sel].0.render(&state, &mut screen);
-            {
-                let mut header = screen
-                    .header()
-                    .profile(&state.player_name)
-                    .selected(sel)
-                    .time("right now >:3");
-                for (app, _) in &apps {
-                    header = header.tab(app.name(), app.notifs());
-                }
-            }
-            iosys.draw(&screen).unwrap();
-            tainted = false;
-        }
-
-        // and get ready for the next round of event processing
-        mem::swap(&mut events, &mut replies);
-        replies.clear();
-    }
-    iosys.stop();
 }
 
 fn main() {
