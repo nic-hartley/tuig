@@ -1,21 +1,24 @@
-use std::{io, time::Duration};
+use std::{
+    io,
+    time::{Duration, Instant},
+};
 
 use rand::prelude::*;
-use tokio::time::{sleep_until, Instant};
 
 use crate::{
     cell,
     io::{
-        clifmt::{FormattedExt, Text},
+        clifmt::{Color, Formatted, FormattedExt, Text},
+        helpers::{TextInput, TextInputRequest},
         input::{Action, Key},
         output::{Cell, Screen},
         sys::IoSystem,
     },
-    text, text1,
+    text, text1, GameState,
 };
 
-async fn sleep(s: f32) {
-    tokio::time::sleep(Duration::from_secs_f32(s)).await
+fn sleep(s: f32) {
+    std::thread::sleep(Duration::from_secs_f32(s))
 }
 
 fn rngat(seed: u64, x: usize, y: usize, xor: u64) -> SmallRng {
@@ -52,7 +55,7 @@ fn leaveat(seed: u64, x: usize, y: usize) -> bool {
 }
 
 /// Play the wave, then return the seed of the last shift (which produces the leftovers)
-pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<u64> {
+fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<u64> {
     // the unit of width here is fractions of the screen width; time is in seconds
 
     // the width of one shift
@@ -114,10 +117,10 @@ pub async fn sprinkler_wave(io: &mut dyn IoSystem, screen: &mut Screen) -> io::R
                 }
             }
         }
-        io.draw(&screen).await?;
+        io.draw(&screen)?;
 
         // wait until either the screen is resized, or a brief (randomized) period passes
-        sleep(0.01).await;
+        sleep(0.01);
     }
 
     Ok(seeds[SHIFT_COUNT - 1])
@@ -165,7 +168,7 @@ fn gen_lines() -> Vec<Text> {
         .collect()
 }
 
-pub async fn loading_text(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64) -> io::Result<()> {
+fn loading_text(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64) -> io::Result<()> {
     const MIN_DELAY: f32 = 0.25;
     const MAX_DELAY: f32 = 0.75;
 
@@ -196,111 +199,84 @@ pub async fn loading_text(io: &mut dyn IoSystem, screen: &mut Screen, seed: u64)
                 }
             }
         }
-        io.draw(&screen).await?;
+        io.draw(&screen)?;
 
-        tokio::select! {
-            _ = sleep(0.01) => (),
-            _ = sleep_until(show_next_time) => {
-                scroll += 1;
-                let delay = if scroll < lines.len() {
-                    // while we're still doing lines, pause a bit between each
-                    thread_rng().gen_range(MIN_DELAY..MAX_DELAY)
-                } else {
-                    // once that's done, pause long enough to scroll the screen off pretty fast
-                    0.5 / screen.size().y() as f32
-                };
-                show_next_time = Instant::now() + Duration::from_secs_f32(delay);
-            }
+        sleep(0.01);
+        if Instant::now() > show_next_time {
+            scroll += 1;
+            let delay = if scroll < lines.len() {
+                // while we're still doing lines, pause a bit between each
+                thread_rng().gen_range(MIN_DELAY..MAX_DELAY)
+            } else {
+                // once that's done, pause long enough to scroll the screen off pretty fast
+                0.5 / screen.size().y() as f32
+            };
+            show_next_time = Instant::now() + Duration::from_secs_f32(delay);
         }
     }
 
     Ok(())
 }
 
-async fn render(io: &mut dyn IoSystem, screen: &mut Screen, text: &[Text]) -> io::Result<()> {
+fn render(io: &mut dyn IoSystem, screen: &mut Screen, text: &[Text]) -> io::Result<()> {
     screen.resize(io.size());
     let mut text_v: Vec<_> = text.iter().cloned().collect();
     if let Some(last) = text_v.last_mut() {
         // trim trailing newline
         last.text = last.text.trim_end().into();
     }
-    screen.textbox(text_v).scroll_bottom(true);
-    io.draw(screen).await
+    screen
+        .textbox(text_v)
+        .scroll_bottom(true)
+        .indent(10 + 2)
+        .first_indent(0);
+    io.draw(screen)
 }
 
-async fn render_sleep(
+fn render_sleep(
     delay: f32,
     io: &mut dyn IoSystem,
     screen: &mut Screen,
     text: &[Text],
 ) -> io::Result<()> {
-    let timer = sleep(delay);
-    tokio::pin!(timer);
-    loop {
-        render(io, screen, &text).await?;
-
-        tokio::select! {
-            _ = &mut timer => break,
-            _ = io.input() => { io.flush().await?; }
-        }
+    let end = Instant::now() + Duration::from_secs_f32(delay);
+    while Instant::now() < end {
+        render(io, screen, &text)?;
+        sleep(0.01);
     }
     Ok(())
 }
 
-async fn name_input(
-    io: &mut dyn IoSystem,
-    screen: &mut Screen,
-    text: &[Text],
-) -> io::Result<String> {
-    let prompt = text1!(white "(type now)");
-    let mut last_line = text!("         >  ");
-    last_line.push(prompt.clone());
-    let mut name = String::new();
-    let mut caps = false;
-    loop {
-        let cur_text: Vec<_> = text.iter().chain(last_line.iter()).cloned().collect();
-        render(io, screen, &cur_text).await?;
+fn name_input(io: &mut dyn IoSystem, screen: &mut Screen, text: &[Text]) -> io::Result<String> {
+    let mut ti = TextInput::new("         >  ", 0);
+    ti.set_complete("(type now)".into());
 
-        loop {
-            let mut redraw = true;
-            match io.input().await? {
-                Action::KeyPress { key: Key::Enter } if !name.is_empty() => return Ok(name),
-                Action::KeyPress { key: Key::Char(ch) } => {
-                    if caps {
-                        name.extend(ch.to_uppercase())
-                    } else {
-                        name.extend(ch.to_lowercase())
-                    }
+    let name = loop {
+        let redraw = match io.input()? {
+            // loop and redraw
+            Action::Redraw => true,
+            other => match ti.action(other) {
+                // ignore autocomplete
+                TextInputRequest::Autocomplete => false,
+                TextInputRequest::Nothing => ti.tainted(),
+                TextInputRequest::Line(name) => break name,
+            },
+        };
+        if redraw {
+            let mut last_line = ti.render();
+            for elem in &mut last_line {
+                if elem.get_fmt().fg == Color::BrightWhite {
+                    elem.get_fmt_mut().fg = Color::Cyan;
                 }
-                Action::KeyPress {
-                    key: Key::Backspace,
-                } => {
-                    name.pop();
-                }
-                Action::KeyPress {
-                    key: Key::LeftShift | Key::RightShift,
-                } => caps = true,
-                Action::KeyRelease {
-                    key: Key::LeftShift | Key::RightShift,
-                } => caps = false,
-                // we want to redraw on resize but nothing else
-                Action::Resized => (),
-                // other inputs can get ignored
-                _ => redraw = false,
             }
-            if redraw {
-                break;
-            }
+            let all_text: Vec<_> = text.iter().cloned().chain(last_line.into_iter()).collect();
+            render(io, screen, &all_text)?;
         }
-        if name.is_empty() {
-            last_line[1] = prompt.clone();
-        } else {
-            last_line[1] = text1!(blue "{}"(name));
-        }
-    }
+    };
+    Ok(name)
 }
 
-async fn do_choice<'a>(
+fn do_choice<'a>(
     io: &mut dyn IoSystem,
     screen: &mut Screen,
     text: &[Text],
@@ -323,11 +299,11 @@ async fn do_choice<'a>(
         }
         let text: Vec<_> = text.iter().cloned().chain(last_line).collect();
 
-        render(io, screen, &text).await?;
+        render(io, screen, &text)?;
 
         loop {
             let mut redraw = true;
-            match io.input().await? {
+            match io.input()? {
                 Action::KeyPress { key: Key::Enter } => return Ok(opts[selected]),
                 Action::KeyPress { key: Key::Left } => {
                     if selected > 0 {
@@ -340,7 +316,7 @@ async fn do_choice<'a>(
                     }
                 }
                 // we want to redraw on resize but nothing else
-                Action::Resized => (),
+                Action::Redraw => (),
                 _ => redraw = false,
             }
             if redraw {
@@ -350,7 +326,7 @@ async fn do_choice<'a>(
     }
 }
 
-async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<String> {
+fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<String> {
     let mut text: Vec<Text> = vec![];
     macro_rules! admin_say {
         ( $( $delay:expr =>
@@ -358,13 +334,13 @@ async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<Stri
                 $( $_name:ident )* $_fmt:literal $( ( $($arg:expr),* $(,)? ) )?
             ),* $(,)?
         );* $(;)? ) => { $(
-            render_sleep($delay, io, screen, &text).await?;
+            render_sleep($delay, io, screen, &text)?;
             text.extend(text!(
                 "     admin: ",
                 $( bold bright_white $($_name)* $_fmt $(($($arg),*))? ),*,
                 "\n"
             ));
-            render(io, screen, &text).await?;
+            render(io, screen, &text)?;
         )* };
     }
 
@@ -373,17 +349,17 @@ async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<Stri
         1.5 => "what can I call you?";
         0.75 => "not your real name.";
     );
-    render_sleep(0.5, io, screen, &text).await?;
-    let name = name_input(io, screen, &text).await?;
-    text.extend(text!("         >  ", blue "{}"(name), "\n"));
+    render_sleep(0.5, io, screen, &text)?;
+    let name = name_input(io, screen, &text)?;
+    text.extend(text!("         >  ", cyan "{}"(name), "\n"));
 
     macro_rules! choose {
         ( $( $option:literal => $then:expr $(,)? )* ) => {
-            render_sleep(0.25, io, screen, &text).await?;
-            match do_choice(io, screen, &text, &[$($option),*]).await? {
+            render_sleep(0.25, io, screen, &text)?;
+            match do_choice(io, screen, &text, &[$($option),*])? {
                 $( $option => {
                     text.extend(text!(
-                        blue "{:>10}: "(name),
+                        cyan "{:>10}: "(name),
                         bold bright_white $option,
                         "\n",
                     ));
@@ -395,7 +371,7 @@ async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<Stri
     }
 
     admin_say!(
-        1.0 => "you're ", blue "{}"(name), "?";
+        1.0 => "you're ", cyan "{}"(name), "?";
         1.5 => "good name";
         1.5 => "you ever used redshell?";
     );
@@ -409,19 +385,32 @@ async fn tutorial(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<Stri
         }
         "no" => (), // continues below
     }
-    admin_say!(2.0 => "ok goodbye");
+    admin_say!(
+        0.25 => "...";
+        0.25 => "ok, look";
+        0.25 => "I haven't written the tutorial yet, so.";
+        0.25 => "Press F1 to open the first tab, F2 for the second, etc.";
+        0.25 => "Tab #1 is chat. There's only two people to chat with and neither is a great conversationalist.";
+        0.25 => "Tab #2 is your CLI. There's only, like, four commands, and none of them do anything cool.";
+        0.25 => "And that's it for now!";
+        0.25 => "But please do try them and let me know what you think.";
+        0.25 => "Thanks!";
+        5.0 => "ok good luck";
+    );
 
     Ok(name)
 }
 
-pub async fn run(io: &mut dyn IoSystem) -> io::Result<String> {
-    let mut screen = Screen::new(io.size());
-
-    let seed = sprinkler_wave(io, &mut screen).await?;
-    loading_text(io, &mut screen, seed).await?;
+/// Run the intro cutscene
+pub fn run(io: &mut dyn IoSystem, screen: &mut Screen) -> io::Result<GameState> {
+    let seed = sprinkler_wave(io, screen)?;
+    loading_text(io, screen, seed)?;
 
     // screen should now be blank so we can start on the actual intro
-    let name = tutorial(io, &mut screen).await?;
+    let name = tutorial(io, screen)?;
 
-    Ok(name)
+    Ok(GameState {
+        player_name: name,
+        machine: Default::default(),
+    })
 }

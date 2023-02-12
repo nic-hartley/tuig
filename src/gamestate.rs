@@ -8,7 +8,6 @@ pub struct GameState {
     /// The player's name, of course
     pub player_name: String,
     /// The apps currently available (in order of tabs)
-    // TODO: Something friendly to parallelization?
     pub apps: Vec<Box<dyn App>>,
     /// The player's computer
     pub machine: Arc<Machine>,

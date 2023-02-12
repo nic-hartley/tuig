@@ -1,3 +1,5 @@
+//! Common structural code for apps.
+
 use crate::{
     agents::Event,
     io::{input::Action, output::Screen},
@@ -9,17 +11,17 @@ use crate::{
 ///
 /// Apps are only given input and rendered when they're on-screen, but they receive all events. Note, though, that
 /// events may be batched when the app is offscreen, so that systems and the onscreen app can be updated on time.
-pub trait App {
+pub trait App: Send + Sync + 'static {
     /// The name of this app's tab in the header. (should be constant, hence &'static)
     fn name(&self) -> &'static str;
 
     /// Take a single input action, returning any new events generated as a result.
     ///
-    /// Returns `true` if it will need to be redrawn, or `false` otherwise.
+    /// Returns whether this item was tainted, i.e. true if it needs to be redrawn.
     fn input(&mut self, a: Action, events: &mut Vec<Event>) -> bool;
     /// Receive an event, in case the app needs to care to render it.
     ///
-    /// Returns `true` if it will need to be redrawn, or `false` otherwise.
+    /// Returns whether this item was tainted, i.e. true if it needs to be redrawn.
     fn on_event(&mut self, ev: &Event) -> bool;
 
     /// The number of notifications this app has.
@@ -35,3 +37,27 @@ mod chat;
 pub use chat::ChatApp;
 mod cli;
 pub use cli::{CliApp, CliState};
+
+/// Assert things about the outcomes of an `App` receiving input
+#[allow(unused)]
+macro_rules! assert_input {
+    (
+        $app:ident .input ( $($arg:expr),* $(,)? )
+        $( clean $( @ $clean:ident )? )? $( taints $( @ $taint:ident )? )?,
+        $( $test:tt )*
+    ) => {
+        {
+            let mut evs = vec![];
+            let taint = $app.input($( $arg ),* , &mut evs);
+            $( assert!(!taint, "app tainted unexpectedly"); $( $clean )? )?
+            $( assert!(taint, "app didn't taint when expected"); $( $taint )? )?
+            assert_input!(@cmp evs $( $test )*);
+        }
+    };
+    (@cmp $evs:ident == $other:expr) => { assert_eq!($evs, $other) };
+    (@cmp $evs:ident != $other:expr) => { assert_ne!($evs, $other) };
+    (@cmp $test:expr) => { assert!($test) };
+}
+
+#[allow(unused)]
+pub(self) use assert_input;

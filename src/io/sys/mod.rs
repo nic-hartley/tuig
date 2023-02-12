@@ -7,10 +7,8 @@ use std::collections::HashMap;
 use std::{
     io,
     sync::{Arc, Barrier},
-    task::Poll,
+    time::{Duration, Instant},
 };
-
-use futures::poll;
 
 use super::{input::Action, output::Screen, XY};
 
@@ -25,33 +23,35 @@ pub mod gui;
 /// The output is called a "display" to distinguish it from the [`Screen`].
 ///
 /// This object is meant to be associated with a [`IoRunner`], which will run infinitely on the main thread while this
-/// is called from within the async context.
-#[async_trait::async_trait]
+/// is called from within the event system.
 pub trait IoSystem: Send {
     /// Actually render a [`Screen`] to the display.
-    async fn draw(&mut self, screen: &Screen) -> io::Result<()>;
+    fn draw(&mut self, screen: &Screen) -> io::Result<()>;
     /// Get the size of the display, in characters.
     fn size(&self) -> XY;
-    /// Asyncly wait for the next user input.
-    async fn input(&mut self) -> io::Result<Action>;
+
+    /// Wait for the next user input.
+    fn input(&mut self) -> io::Result<Action>;
+    /// If the next user input is available, return it.
+    fn poll_input(&mut self) -> io::Result<Option<Action>>;
+    /// Wait for the next user input, up to a timeout.
+    fn input_until(&mut self, time: Duration) -> io::Result<Option<Action>> {
+        let end = Instant::now() + time;
+        while Instant::now() < end {
+            if let Some(input) = self.poll_input()? {
+                return Ok(Some(input));
+            }
+            std::thread::sleep(time / 20);
+        }
+        Ok(None)
+    }
+
     /// Tells the associated [`IoRunner`] to stop and return control of the main thread, and tell the [`IoSystem`] to
     /// dispose of any resources it's handling.
     ///
     /// This will always be the last method called on this object (unless you count `Drop::drop`) so feel free to
     /// panic in the others if they're called after this one, especially `draw`.
     fn stop(&mut self);
-
-    /// Clear out queued events without processing them at all. Returns the last action found, or the first error.
-    /// Returns `None` if there was nothing queued.
-    async fn flush(&mut self) -> io::Result<Option<Action>> {
-        let mut last = None;
-        while let Poll::Ready(act) = poll!(self.input()) {
-            // raise up errors if they occur
-            last = Some(act?);
-            // otherwise nothing else needs to be done
-        }
-        Ok(last)
-    }
 }
 
 /// The other half of an [`IoSystem`].
@@ -113,14 +113,6 @@ pub fn load() -> Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), HashMap<&'static
     #[cfg(feature = "__sys_gui")]
     {
         use crate::io::sys::gui::Gui;
-        #[cfg(feature = "sys_gui_vulkan")]
-        {
-            // TODO: Try to initialize Vulkan rendering
-        }
-        #[cfg(feature = "sys_gui_opengl")]
-        {
-            // TODO: Try to initialize OpenGL rendering
-        }
         #[cfg(feature = "sys_gui_softbuffer")]
         {
             use crate::io::sys::gui::softbuffer::SoftbufferBackend;

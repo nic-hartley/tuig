@@ -1,4 +1,4 @@
-name: Run tests
+name: Test
 run-name: Testing ${{github.ref_name}}
 # no permission for the token, this runs on pull requests
 permissions: {}
@@ -11,17 +11,15 @@ on:
   - cron: '0 0 * * 0,3'
 jobs:
 
+
   test:
     strategy:
       fail-fast: false
       matrix:
-        rust: [stable, nightly, 1.59]
+        rust: [stable, 1.59, nightly]
         platform: [windows, macos, ubuntu]
-        include:
-        - fail_ok: false
-        - rust: nightly
-          fail_ok: true
-    name: On ${{ matrix.platform }} w/ Rust ${{ matrix.rust }}
+        coverage: [false]
+    name: ${{ matrix.platform }} / Rust ${{ matrix.rust }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
     - uses: actions/cache@v3
@@ -36,13 +34,50 @@ jobs:
       with:
         path: ./target
         key: target-dir-${{ matrix.platform }}-${{ matrix.rust }}
+    - name: Set up Rust
+      run: |
+        rustup default ${{ matrix.rust }}
+        rustup component add rustfmt
 
     - uses: actions/checkout@v3
-    - run: rustup default ${{ matrix.rust }}
-    - run: rustup component add rustfmt
-    - run: cargo fmt --check
-      continue-on-error: ${{ matrix.fail_ok }}
-    - run: cargo check --all-features
-      continue-on-error: ${{ matrix.fail_ok }}
-    - run: cargo test --all-features
-      continue-on-error: ${{ matrix.fail_ok }}
+    - name: Run tests
+      run: |
+        cargo fmt --check
+        cargo check --all-features
+        cargo test --all-features
+
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/cache@v3
+      with:
+        path: ~/.rustup/
+        key: rustup-coverage
+    - uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: cargo-cache
+    - uses: actions/cache@v3
+      with:
+        path: ./target
+        key: target-dir-coverage
+    - name: Set up Rust
+      run: |
+        rustup default nightly
+        rustup component add rustfmt
+        cargo install cargo-llvm-cov
+
+    - uses: actions/checkout@v3
+    - name: Run coverage tests
+      run: |
+        ./run-coverage.sh
+
+    - if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: |
+          target/llvm-cov/html
+        if-no-files-found: error

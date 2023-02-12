@@ -1,3 +1,4 @@
+use core::fmt;
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -16,6 +17,7 @@ use std::time::Instant;
 pub struct WaitHandle(Arc<AtomicBool>);
 
 impl WaitHandle {
+    /// Create a new waiting handle
     fn new() -> Self {
         WaitHandle(Arc::new(AtomicBool::new(false)))
     }
@@ -25,23 +27,42 @@ impl WaitHandle {
         self.0.store(true, Ordering::Release);
     }
 
+    /// Check whether [`Self::wake`] has been called on this handle yet
     fn is_woken(&self) -> bool {
         self.0.load(Ordering::Acquire)
+    }
+
+    /// How many threads, right at the moment of calling this, have a handle.
+    ///
+    /// See [Arc::strong_count][1] for important caveats about its use.
+    ///
+    ///  [1]: https://doc.rust-lang.org/std/sync/struct.Arc.html#method.strong_count
+    pub fn references(&self) -> usize {
+        Arc::strong_count(&self.0)
     }
 }
 
 impl PartialEq for WaitHandle {
+    #[cfg_attr(coverage, no_coverage)]
     fn eq(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.0, &other.0)
     }
 }
 impl Eq for WaitHandle {}
+impl fmt::Debug for WaitHandle {
+    #[cfg_attr(coverage, no_coverage)]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "WaitHandle(...)")
+    }
+}
 
-/// What should happen to an [`Agent`] after it finishes [react][Agent::react]ing to [`Event`]s.
+/// What should happen to an [`Agent`][super::Agent] after it finishes [react][super::Agent::react]ing to
+/// [`Event`][super::Event]s.
 ///
-/// Note that this only defines when [`Agent::react`] can start being called again -- if there are no events
-/// availalbe, it may not actually be called! This should be rare in the actual game but it may happen in tests.
-#[derive(PartialEq, Eq, Clone)]
+/// Note that this only defines when [`Agent::react`][super::Agent::react] can start being called again -- if there
+/// are no events availalbe, it may not actually be called! This should be rare in the actual game but it may happen
+/// in tests.
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub enum ControlFlow {
     /// Continue as normal and update next time.
     Continue,
@@ -89,17 +110,17 @@ mod cf_test {
 
     use super::{ControlFlow, Instant};
 
-    #[test]
+    #[coverage_helper::test]
     fn continue_ready() {
         assert!(ControlFlow::Continue.is_ready())
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn kill_unready() {
         assert!(!ControlFlow::Kill.is_ready());
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn wait_handle_readies_after_touch() {
         let (cf, wh) = ControlFlow::wait();
         assert!(!cf.is_ready());
@@ -107,7 +128,7 @@ mod cf_test {
         assert!(cf.is_ready());
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn sleep_until_readies_after_time() {
         let cf = ControlFlow::sleep_until(Instant::now() + Duration::from_millis(100));
         assert!(!cf.is_ready());
@@ -117,7 +138,7 @@ mod cf_test {
         assert!(cf.is_ready());
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn sleep_for_readies_after_time() {
         let cf = ControlFlow::sleep_for(Duration::from_millis(100));
         assert!(!cf.is_ready());

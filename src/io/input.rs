@@ -1,5 +1,8 @@
+//! The various data types representing different player to the game.
+
 use crate::io::XY;
 
+/// A key which can be pressed or released
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Key {
     Char(char),
@@ -29,20 +32,25 @@ pub enum Key {
 }
 
 impl Key {
+    #[cfg_attr(coverage, no_coverage)]
     pub fn is_shift(&self) -> bool {
         matches!(self, Self::LeftShift | Self::RightShift)
     }
+    #[cfg_attr(coverage, no_coverage)]
     pub fn is_ctrl(&self) -> bool {
         matches!(self, Self::LeftCtrl | Self::RightCtrl)
     }
+    #[cfg_attr(coverage, no_coverage)]
     pub fn is_alt(&self) -> bool {
         matches!(self, Self::LeftAlt | Self::RightAlt)
     }
+    #[cfg_attr(coverage, no_coverage)]
     pub fn is_super(&self) -> bool {
         matches!(self, Self::LeftSuper | Self::RightSuper)
     }
 }
 
+/// A mouse button which can be pressed or released
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum MouseButton {
     Left,
@@ -52,6 +60,7 @@ pub enum MouseButton {
     ScrollDown,
 }
 
+/// An action the player has taken in the window.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Action {
     /// A key was pressed. Note this theoretically handles modifiers by sending them when they're pressed, but
@@ -67,7 +76,7 @@ pub enum Action {
     /// The mouse has moved to a new location, possibly while holding a button
     MouseMove { pos: XY },
     /// Allows pushing redraw notifications, rather than having to update constantly and risk missing it
-    Resized,
+    Redraw,
     /// User requested the program end externally, e.g. clicking the X button in the window
     Closed,
     /// User requested that the program pause temporarily

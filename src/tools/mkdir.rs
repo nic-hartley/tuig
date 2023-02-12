@@ -1,12 +1,13 @@
-use crate::{app::CliState, text};
+use crate::{agents::Agent, app::CliState, text};
 
-use super::{AutocompleteType, BsdCompleter, FixedOutput, NoOutput, Tool};
+use super::{AutocompleteType, BsdArgs, FixedOutput, NoOutput, Tool};
 
 lazy_static::lazy_static! {
-    static ref COMPLETER: BsdCompleter = BsdCompleter::new()
+    static ref COMPLETER: BsdArgs = BsdArgs::new()
         .flag('p').argument('d', AutocompleteType::LocalFile);
 }
 
+/// Implementation of [`Tool`] for the `mkdir` command, to create an empty directory.
 pub struct Mkdir;
 
 impl Tool for Mkdir {
@@ -18,7 +19,7 @@ impl Tool for Mkdir {
         COMPLETER.complete(line, state)
     }
 
-    fn run(&self, line: &str, state: &CliState) -> Box<dyn crate::agents::Agent> {
+    fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent + Send + Sync> {
         let args = match COMPLETER.parse(line) {
             Ok(v) => v,
             Err(msg) => {

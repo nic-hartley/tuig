@@ -1,5 +1,3 @@
-pub mod tools;
-
 mod cf;
 pub use cf::{ControlFlow, WaitHandle};
 
@@ -14,8 +12,11 @@ pub use event::{Bundle, BundledAgent, BundledApp, BundledTool, Event};
 /// As that implies, events are inherently ephemeral -- none persist more than one round.
 pub trait Agent: Send + Sync {
     /// Called once on (re)start, to queue any starting events/ControlFlow as necessary. This will always be called
-    /// before `react` is ever called. By default, does nothing and returns [`ControlFlow::Continue`], so that
-    /// [`Self::react`] will be called on the next tick.
+    /// before `react`.
+    ///
+    /// By default, does nothing and returns [`ControlFlow::Continue`] to allow [`Self::react`] to be called, under
+    /// the assumption that your interesting code sits there.
+    #[cfg_attr(coverage, no_coverage)]
     fn start(&mut self, _replies: &mut Vec<Event>) -> ControlFlow {
         ControlFlow::Continue
     }
@@ -25,18 +26,46 @@ pub trait Agent: Send + Sync {
     ///
     /// Limitations on the [`Extend`] trait mean we just use the concrete type `Vec`. **Do not** do anything except
     /// pushing/extending/otherwise adding elements.
-    fn react(&mut self, events: &[Event], replies: &mut Vec<Event>) -> ControlFlow;
+    ///
+    /// By default, does nothing and returns [`ControlFlow::Kill`], under the assumption that you'd have implemented
+    /// `react` if you wanted your agent to stay alive and do things.
+    #[cfg_attr(coverage, no_coverage)]
+    fn react(&mut self, _event: &Event, _replies: &mut Vec<Event>) -> ControlFlow {
+        ControlFlow::Kill
+    }
 }
 
 /// An agent which does nothing and immediately dies.
 // Big mood, buddy.
 pub struct NopAgent;
 impl Agent for NopAgent {
+    // explicit impls to make sure that Nop keeps Nopping even if I decide to change the defaults
     fn start(&mut self, _replies: &mut Vec<Event>) -> ControlFlow {
         ControlFlow::Kill
     }
-
-    fn react(&mut self, _events: &[Event], _replies: &mut Vec<Event>) -> ControlFlow {
+    fn react(&mut self, _event: &Event, _replies: &mut Vec<Event>) -> ControlFlow {
         ControlFlow::Kill
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[coverage_helper::test]
+    fn nop_agent_dies_on_start() {
+        let mut replies = vec![];
+        assert_eq!(NopAgent.start(&mut replies), ControlFlow::Kill);
+        assert_eq!(replies, vec![]);
+    }
+
+    #[coverage_helper::test]
+    fn nop_agent_doesnt_react() {
+        let mut replies = vec![];
+        assert_eq!(
+            NopAgent.react(&Event::CommandDone, &mut replies),
+            ControlFlow::Kill
+        );
+        assert_eq!(replies, vec![]);
     }
 }

@@ -4,35 +4,48 @@ use crate::app::CliState;
 
 use super::AutocompleteType;
 
-/// Allows for easy completion of BSD-style commands, e.g.:
+/// Allows for easy completion and parsing of BSD-style command options, e.g.:
 ///
-/// - `tar |` -> tries to complete x, f, etc. (the various option characters)
-/// - `tar x|` -> the same thing
-/// - `tar x |` -> doesn't try to complete anything; as far as it cares the optoins are done
-/// - `tar xf |` -> tries to autocomplete a filename
-/// - `tar xf abc|` -> tries to autocomplete a filename starting with `abc`
-pub struct BsdCompleter {
+/// ## Completion
+///
+/// - `tar |`: tries to complete x, f, etc. (the various option characters)
+/// - `tar x|`: the same thing
+/// - `tar x |`: doesn't try to complete anything; as far as it cares the options are done
+/// - `tar xf |`: tries to autocomplete a filename
+/// - `tar xf abc|`: tries to autocomplete a filename starting with `abc`
+///
+/// ## Parsing
+///
+/// - `tar`: `{}`
+/// - `tar x`: `{ 'x': None }`
+/// - `tar xf filename`: `{ 'x': None, f: Some("filename") }`
+/// - `tar f abc`: `{ 'f': Some("abc") }`
+pub struct BsdArgs {
     /// The options this completer can complete
     options: HashMap<char, Option<AutocompleteType>>,
 }
 
-impl BsdCompleter {
+impl BsdArgs {
+    /// Create a new BsdCompleter with no options
     pub fn new() -> Self {
         Self {
             options: Default::default(),
         }
     }
 
+    /// Add a valueless option. This will appear in the option string
     pub fn flag(mut self, ch: char) -> Self {
         self.options.insert(ch, None);
         self
     }
 
+    /// Add an option which takes a value
     pub fn argument(mut self, ch: char, kind: AutocompleteType) -> Self {
         self.options.insert(ch, Some(kind));
         self
     }
 
+    /// Perform autocompletion
     pub fn complete(&self, line: &str, state: &CliState) -> String {
         if let Some((opts, rest)) = line.split_once(' ') {
             // autocomplete arguments
@@ -74,6 +87,7 @@ impl BsdCompleter {
         }
     }
 
+    /// Parse a line for options
     pub fn parse<'l>(&self, line: &'l str) -> Result<HashMap<char, Option<&'l str>>, String> {
         let (opts, rest) = line.split_once(' ').unwrap_or((line, ""));
         let mut args = rest.split_whitespace();
@@ -107,9 +121,9 @@ mod test {
 
     use super::*;
 
-    #[test]
+    #[coverage_helper::test]
     fn empty_completer_doesnt_complete_no_options() {
-        let completer = BsdCompleter::new();
+        let completer = BsdArgs::new();
         let machine = Machine::default();
         machine
             .write("/moo", "".into())
@@ -133,9 +147,9 @@ mod test {
         assert_eq!(completer.complete("vzf", &clis), "");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn bsd_completer_completes_options() {
-        let completer = BsdCompleter::new()
+        let completer = BsdArgs::new()
             .flag('v')
             .flag('q')
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
@@ -162,9 +176,9 @@ mod test {
         assert_eq!(completer.complete("qvz", &clis), "f");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn bsd_completer_completes_values() {
-        let completer = BsdCompleter::new()
+        let completer = BsdArgs::new()
             .flag('v')
             .flag('q')
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
@@ -194,9 +208,9 @@ mod test {
         assert_eq!(completer.complete("z comp", &clis), "ress");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn bsd_completer_skips_flag_values() {
-        let completer = BsdCompleter::new()
+        let completer = BsdArgs::new()
             .flag('v')
             .flag('q')
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))
@@ -224,9 +238,9 @@ mod test {
         assert_eq!(completer.complete("qvz comp", &clis), "ress");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn bsd_completer_respects_cwd() {
-        let completer = BsdCompleter::new()
+        let completer = BsdArgs::new()
             .flag('v')
             .flag('q')
             .argument('z', AutocompleteType::choices(["compress", "decompress"]))

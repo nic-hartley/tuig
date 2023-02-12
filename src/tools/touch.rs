@@ -1,7 +1,8 @@
-use crate::{app::CliState, text};
+use crate::{agents::Agent, app::CliState, text};
 
 use super::{AutocompleteType, FixedOutput, Tool};
 
+/// Implementation of [`Tool`] for the `touch` command, to create an empty file.
 pub struct Touch;
 
 impl Tool for Touch {
@@ -19,7 +20,7 @@ impl Tool for Touch {
         }
     }
 
-    fn run(&self, line: &str, state: &CliState) -> Box<dyn crate::agents::Agent> {
+    fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent + Send + Sync> {
         let mut lines = vec![];
         for file in line.split_whitespace() {
             let path = if file.starts_with('/') {

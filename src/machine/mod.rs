@@ -1,14 +1,19 @@
+//! Representations of the various bits of "physical" computers in-game, at a high enough level to be convenient while
+//! still offering the space for exciting and interesting tools.
+
 use std::sync::Arc;
 
 use dashmap::{mapref::entry::Entry as DMEntry, DashMap};
 
-use crate::agents::tools::Tool;
+use crate::tools::Tool;
 
+/// Represents a file on an in-game machine
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
     pub contents: String,
 }
 
+/// Represents a directory entry on an in-game machine
 #[derive(Clone, Debug)]
 pub enum Entry {
     File(File),
@@ -16,6 +21,7 @@ pub enum Entry {
 }
 
 impl Entry {
+    /// Convert this to a `File`, or return `None`
     pub fn file(self) -> Option<File> {
         match self {
             Self::File(f) => Some(f),
@@ -23,6 +29,7 @@ impl Entry {
         }
     }
 
+    /// Check whether this is a file
     pub fn is_file(&self) -> bool {
         match self {
             Self::File(_) => true,
@@ -30,17 +37,19 @@ impl Entry {
         }
     }
 
-    pub fn is_dir(&self) -> bool {
-        match self {
-            Self::Directory(_) => true,
-            _ => false,
-        }
-    }
-
+    /// Convert this to a [`Entry::Directory`]'s contents, or return `None`
     pub fn dir(self) -> Option<Arc<DashMap<String, Entry>>> {
         match self {
             Self::Directory(d) => Some(d),
             _ => None,
+        }
+    }
+
+    /// Check whether this is a directory
+    pub fn is_dir(&self) -> bool {
+        match self {
+            Self::Directory(_) => true,
+            _ => false,
         }
     }
 }
@@ -79,13 +88,13 @@ impl PartialEq for Entry {
 #[cfg(test)]
 impl Eq for Entry {}
 
-/// A single machine, somewhere in cyberspace. Possibly even the player's own.
+/// A single machine in-game, somewhere in the CyberZone. Possibly even the player's own.
 #[derive(Default, Clone)]
 pub struct Machine {
     /// The files on this machine
     pub root: Arc<DashMap<String, Entry>>,
     /// the tools available at the command line
-    pub tools: DashMap<String, Arc<dyn Tool>>,
+    pub tools: DashMap<String, Arc<dyn Tool + Send + Sync>>,
 }
 
 impl Machine {
@@ -239,13 +248,13 @@ impl Machine {
 mod test {
     use super::*;
 
-    #[test]
+    #[coverage_helper::test]
     fn default_machine_fs_empty() {
         let mach = Machine::default();
         assert!(mach.root.is_empty());
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_writes_file_to_root() {
         let mach = Machine::default();
         mach.write("/spooky", "ghost".into())
@@ -257,7 +266,7 @@ mod test {
         assert_eq!(f.contents, "ghost");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_overwrites_file_to_root() {
         let mach = Machine::default();
         mach.write("/spooky", "ghost".into())
@@ -271,14 +280,14 @@ mod test {
         assert_eq!(f.contents, "zombie");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_file_wont_write_with_dir() {
         let mach = Machine::default();
         mach.write("/dir/file", "".into())
             .expect_err("successfully wrote to nonexistent subdirectory");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_writes_file_in_subdir() {
         let mach = Machine::default();
         mach.mkdir("/things/", true)
@@ -292,7 +301,7 @@ mod test {
         assert_eq!(f.contents, "ghost");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_overwrites_file_in_subdir() {
         let mach = Machine::default();
         mach.mkdir("/things/", true)
@@ -311,7 +320,7 @@ mod test {
         assert_eq!(f.contents, "zombie");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_wont_overwrite_file_with_dir() {
         let mach = Machine::default();
         mach.write("/things", "many".into())
@@ -325,7 +334,7 @@ mod test {
         assert_eq!(f.contents, "many");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_wont_overwrite_dir_with_file() {
         let mach = Machine::default();
         mach.mkdir("/things/", true)
@@ -341,7 +350,7 @@ mod test {
         assert_eq!(f.contents, "ghost");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_entry_reads_file() {
         let mach = Machine::default();
         mach.write("/spooky", "ghost".into())
@@ -358,7 +367,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_entry_reads_dir() {
         let mach = Machine::default();
         mach.mkdir("/things/", true)
@@ -372,7 +381,7 @@ mod test {
         assert!(matches!(e, Entry::Directory(_)));
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_readdir_reads_dir() {
         let mach = Machine::default();
         mach.mkdir("/things/", true)

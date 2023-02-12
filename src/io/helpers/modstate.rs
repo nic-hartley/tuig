@@ -1,7 +1,7 @@
 use crate::io::input::{Action, Key};
 
 /// Tracks and presents the current state of the keyboard's modifiers (Shift/Ctrl/Alt/Super).
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct ModState {
     /// Whether either Shift key is currently being held
     pub shift: bool,
@@ -15,6 +15,7 @@ pub struct ModState {
 
 impl ModState {
     /// Create a new key state tracker
+    #[cfg_attr(coverage, no_coverage)]
     pub fn new() -> Self {
         Default::default()
     }
@@ -56,5 +57,85 @@ impl ModState {
     /// typing or a hotkey.
     pub fn hotkeying(&self) -> bool {
         self.ctrl || self.alt || self.super_
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    macro_rules! testset {
+        ( $( $side:ident $enum:ident => $field:ident, $hotkey:literal );* $(;)?) => { paste::paste! { $(
+            #[coverage_helper::test]
+            #[allow(non_snake_case)]
+            fn [< press_ $side _ $enum >]() {
+                let mut ms = ModState::default();
+                assert!(!ms.hotkeying(), "hotkeying on by default");
+                assert!(ms.press(&Key::[<$side $enum>]), "key should be handled");
+                assert!(ms.$field, "{} not set after key press", ms.$field);
+                assert_eq!(ms.hotkeying(), $hotkey, "hotkeying in wrong state afterwards")
+            }
+            #[coverage_helper::test]
+            #[allow(non_snake_case)]
+            fn [< release_ $side _ $enum >]() {
+                let mut ms = ModState {
+                    $field: true,
+                    ..Default::default()
+                };
+                assert!(ms.release(&Key::[<$side $enum>]), "key should be handled");
+                assert!(!ms.$field, "{} set after key release", ms.$field);
+            }
+
+            #[coverage_helper::test]
+            #[allow(non_snake_case)]
+            fn [< press_ $side _ $enum _action >]() {
+                let mut ms = ModState::default();
+                assert!(!ms.hotkeying(), "hotkeying on by default");
+                assert!(ms.action(&Action::KeyPress { key: Key::[<$side $enum>] }), "key should be handled");
+                assert!(ms.$field, "{} not set after key press", ms.$field);
+                assert_eq!(ms.hotkeying(), $hotkey, "hotkeying in wrong state afterwards")
+            }
+            #[coverage_helper::test]
+            #[allow(non_snake_case)]
+            fn [< release_ $side _ $enum _action >]() {
+                let mut ms = ModState {
+                    $field: true,
+                    ..Default::default()
+                };
+                assert!(ms.action(&Action::KeyRelease { key: Key::[<$side $enum>] }), "key should be handled");
+                assert!(!ms.$field, "{} set after key release", ms.$field);
+            }
+        )* } };
+        ( $($enum:ident => $field:ident, $hotkey:literal);* $(;)?) => { $(
+            testset! {
+                Left $enum => $field, $hotkey;
+                Right $enum => $field, $hotkey;
+            }
+        )* };
+    }
+
+    testset! {
+        Shift => shift, false;
+        Ctrl => ctrl, true;
+        Alt => alt, true;
+        Super => super_, true;
+    }
+
+    macro_rules! testignored {
+        ( $( $name:ident: $func:ident($( $arg:expr ),* $(,)?) ),* $(,)? ) => { $(
+            #[coverage_helper::test]
+            fn $name() {
+                let mut ms = ModState::default();
+                assert!(!ms.$func($($arg),*), "unrelated input had an effect");
+                assert_eq!(ms, Default::default());
+            }
+        )* }
+    }
+    testignored! {
+        other_press_ignored: press(&Key::Char('f')),
+        other_release_ignored: release(&Key::Char('f')),
+        other_press_action_ignored: action(&Action::KeyPress { key: Key::Char('f') }),
+        other_release_action_ignored: action(&Action::KeyRelease { key: Key::Char('f') }),
+        other_action_ignored: action(&Action::Redraw),
     }
 }

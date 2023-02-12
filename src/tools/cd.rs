@@ -8,6 +8,7 @@ use crate::{
 
 use super::{AutocompleteType, FixedOutput, Tool};
 
+/// The agent which actually does the changing of directories
 struct CdAgent(String);
 impl Agent for CdAgent {
     fn start(&mut self, replies: &mut Vec<crate::agents::Event>) -> ControlFlow {
@@ -15,11 +16,9 @@ impl Agent for CdAgent {
         replies.push(Event::CommandDone);
         ControlFlow::Kill
     }
-    fn react(&mut self, _events: &[Event], _replies: &mut Vec<Event>) -> ControlFlow {
-        ControlFlow::Kill
-    }
 }
 
+/// Implementation of [`Tool`] for the `cd` command, to change the current working directory
 pub struct Cd;
 
 impl Tool for Cd {
@@ -31,7 +30,7 @@ impl Tool for Cd {
         AutocompleteType::LocalFile.complete(line, state)
     }
 
-    fn run(&self, line: &str, state: &CliState) -> Box<dyn crate::agents::Agent> {
+    fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent + Send + Sync> {
         let line = line.trim();
         let mut target_comps = if line.starts_with('/') {
             vec![]

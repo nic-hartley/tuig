@@ -3,7 +3,9 @@
 //! - [`Format`], which contains various common formatting options (i.e. the common ANSI ones)
 //! - [`Text`] and [`Cell`], which apply a `Format` to anything `impl AsRef<str>`, and `char` respectively
 //!     - They use a common subtype `Formatted` and `Deref` internally to ensure a common set of methods
-//! - [`text!`], which constructs a `Text` or `Cell` based on the parameter
+//! - [`text!`][crate::text], which constructs a `Vec<Text>` for use in passing to other things
+//! - [`text1!`][crate::text1], which constructs a single formatted `Text`
+//! - [`cell!`][crate::cell], which constructs a `Cell`
 //!
 //! `Text` and `Cell` are then used in the various UI widgets.
 
@@ -32,7 +34,7 @@ pub enum Color {
 }
 
 impl Color {
-    /// All of the colors supported, not including [`Color::Default`] (because that's to reset, not a real color
+    /// All of the colors supported
     pub fn all() -> [Color; 16] {
         [
             Color::Black,
@@ -88,15 +90,21 @@ impl Distribution<Color> for Standard {
     }
 }
 
+/// The format of a single formatted item.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Format {
+    /// The foreground color of the item
     pub fg: Color,
+    /// The background color of the item
     pub bg: Color,
+    /// Whether it's bolded or not
     pub bold: bool,
+    /// Whether it's underlined or not
     pub underline: bool,
 }
 
 impl Format {
+    /// The default formatting Redshell uses
     pub const NONE: Self = Format {
         fg: Color::White,
         bg: Color::Black,
@@ -127,17 +135,24 @@ macro_rules! fmt_fn {
     )* };
 }
 
+/// Trait implemented by all formattable items (`Text` and `Cell`).
 pub trait Formatted {
     fn get_fmt(&self) -> &Format;
     fn get_fmt_mut(&mut self) -> &mut Format;
 }
 
+/// Provides common formatting operations on anything implementing [`Formatted`].
 pub trait FormattedExt: Formatted + Sized {
+    /// Directly set the formatting of this item to some [`Format`]
     #[must_use]
     fn fmt(mut self, fmt: Format) -> Self {
         *self.get_fmt_mut() = fmt;
         self
     }
+
+    /// Copy another item's formatting into this one.
+    ///
+    /// The two objects don't need to be the same type, e.g. you can copy a [`Text`]'s formatting to a [`Cell`].
     #[must_use]
     fn fmt_of(mut self, rhs: &dyn Formatted) -> Self {
         *self.get_fmt_mut() = rhs.get_fmt().clone();
@@ -205,7 +220,7 @@ macro_rules! fmt_type {
 
 fmt_type!(
     /// A single bit of formatted text. Note this isn't really meant to be used on its own, though it can be; the API
-    /// is designed to be used through `text!`. To discourage direct use, the internals aren't documented.
+    /// is designed to be used through `text!`, i.e. as a `Vec<Text>`.
     #[derive(Clone, Debug, PartialEq, Eq)]
     pub struct Text {
         pub text: String,
@@ -224,13 +239,14 @@ impl Text {
     }
 }
 
+/// Create a single [`Text`]. Not recommended to be used directly.
 #[macro_export]
 macro_rules! text1 {
-    (
+    [
         $( $name:ident )*
         $text:literal
         $( ( $( $arg:expr ),* $(,)? ) )?
-    ) => {
+    ] => {
         {
             #[allow(unused_imports)]
             use $crate::io::clifmt::{FormattedExt as _};
@@ -241,13 +257,14 @@ macro_rules! text1 {
     };
 }
 
+/// Create a series of formatted [`Text`]s.
 #[macro_export]
 macro_rules! text {
-    ( $(
+    [ $(
         $( $name:ident )*
         $text:literal
         $( ( $( $arg:expr ),* $(,)? ) )?
-    ),* $(,)? ) => {
+    ),* $(,)? ] => {
         {
             #[allow(unused_imports)]
             use $crate::io::clifmt::{FormattedExt as _};
@@ -268,9 +285,10 @@ fmt_type! {
     pub struct Cell { pub ch: char }
 }
 
+/// Create a formatted [`Cell`].
 #[macro_export]
 macro_rules! cell {
-    ( $( $name:ident )* $( $char:literal )? ) => {
+    [ $( $name:ident )* $( $char:literal )? ] => {
         {
             #[allow(unused_imports)]
             use $crate::io::clifmt::{FormattedExt as _};
@@ -280,5 +298,6 @@ macro_rules! cell {
 }
 
 impl Cell {
+    /// A blank cell with default formatting.
     pub const BLANK: Cell = cell!(' ');
 }

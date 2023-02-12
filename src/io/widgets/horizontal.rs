@@ -6,6 +6,7 @@ use crate::{
     },
 };
 
+/// A horizontal line across all or part of the screen
 pub struct Horizontal<'a> {
     pub(in super::super) screen: &'a mut Screen,
     pub(in super::super) row: usize,

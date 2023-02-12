@@ -1,9 +1,9 @@
 use core::fmt;
 use std::sync::{Arc, Mutex};
 
-use crate::{app::App, io::clifmt::Text};
+use crate::{app::App, io::clifmt::Text, tools::Tool};
 
-use super::{tools::Tool, Agent};
+use super::Agent;
 
 /// Convenience for the things that pass trait objects around, but only one of them.
 pub struct Bundle<T>(Arc<Mutex<Option<T>>>);
@@ -19,8 +19,9 @@ impl<T> Bundle<T> {
 }
 
 impl<T> fmt::Debug for Bundle<T> {
+    #[cfg_attr(coverage, no_coverage)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Bundle(..)")
+        write!(f, "Bundle<{}>(..)", std::any::type_name::<T>())
     }
 }
 
@@ -40,17 +41,19 @@ impl<T> Clone for Bundle<T> {
 
 macro_rules! trait_bundle {
     ( $(
-        $fn:ident => $enum:ident($trait:ident)
+        $fn:ident($trait:ident) => $enum:ident
     ),* $(,)? ) => { $(
         paste::paste! {
-            pub type [< Bundled $trait >] = Bundle<Box<dyn $trait>>;
+            pub type [< Bundled $trait >] = Bundle<Box<dyn $trait + Send + Sync>>;
             impl [< Bundled $trait >] {
-                pub fn new(contents: impl $trait + 'static) -> Self {
+                #[cfg_attr(coverage, no_coverage)]
+                pub fn new(contents: impl $trait + Send + Sync + 'static) -> Self {
                     Bundle::of(Box::new(contents))
                 }
             }
             impl Event {
-                pub fn $fn(item: impl $trait + 'static) -> Self {
+                #[cfg_attr(coverage, no_coverage)]
+                pub fn $fn(item: impl $trait + Send + Sync + 'static) -> Self {
                     Self::$enum([< Bundled $trait >]::new(item))
                 }
             }
@@ -58,11 +61,12 @@ macro_rules! trait_bundle {
     )* };
 }
 trait_bundle! {
-    spawn => SpawnAgent(Agent),
-    install => InstallTool(Tool),
-    add_tab => AddTab(App),
+    spawn(Agent) => SpawnAgent,
+    install(Tool) => InstallTool,
+    add_tab(App) => AddTab,
 }
 
+/// A single thing which has happened, which an [`Agent`] may or may not want to respond to.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Event {
@@ -94,10 +98,12 @@ pub enum Event {
 }
 
 impl Event {
+    #[cfg_attr(coverage, no_coverage)]
     pub fn output(line: Vec<Text>) -> Self {
         Self::CommandOutput(line)
     }
 
+    #[cfg_attr(coverage, no_coverage)]
     pub fn player_chat(to: &str, text: &str) -> Event {
         Event::PlayerChatMessage {
             to: to.into(),
@@ -105,6 +111,7 @@ impl Event {
         }
     }
 
+    #[cfg_attr(coverage, no_coverage)]
     pub fn npc_chat(from: &str, text: &str, options: &[&str]) -> Event {
         Event::NPCChatMessage {
             from: from.into(),
@@ -113,7 +120,34 @@ impl Event {
         }
     }
 
+    #[cfg_attr(coverage, no_coverage)]
     pub fn cd(to: &str) -> Event {
         Event::ChangeDir(to.into())
+    }
+}
+
+#[cfg(test)]
+mod bundle_test {
+    use super::*;
+
+    #[coverage_helper::test]
+    fn item_taken_once() {
+        let bundle = Bundle::of(1);
+        assert_eq!(bundle.take(), Some(1));
+        assert_eq!(bundle.take(), None);
+    }
+
+    #[coverage_helper::test]
+    fn bundle_eq_compares_ptrs() {
+        let b1 = Bundle::of(1);
+        let b2 = b1.clone();
+        assert_eq!(b1, b2);
+    }
+
+    #[coverage_helper::test]
+    fn bundle_eq_doesnt_compare_contents() {
+        let b1 = Bundle::of(1);
+        let b2 = Bundle::of(1);
+        assert_ne!(b1, b2);
     }
 }
