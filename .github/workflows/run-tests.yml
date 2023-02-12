@@ -34,12 +34,14 @@ jobs:
       with:
         path: ./target
         key: target-dir-${{ matrix.platform }}-${{ matrix.rust }}
+    - name: Set up Rust
+      run: |
+        rustup default ${{ matrix.rust }}
+        rustup component add rustfmt
 
     - uses: actions/checkout@v3
     - name: Run tests
       run: |
-        rustup default ${{ matrix.rust }}
-        rustup component add rustfmt
         cargo fmt --check
         cargo check --all-features
         cargo test --all-features
@@ -61,12 +63,15 @@ jobs:
       with:
         path: ./target
         key: target-dir-coverage
+    - name: Set up Rust
+      run: |
+        rustup default nightly
+        rustup component add rustfmt
+        cargo install cargo-llvm-cov
 
     - uses: actions/checkout@v3
     - name: Run coverage tests
       run: |
-        rustup default nightly
-        cargo install cargo-llvm-cov
         ./run-coverage.sh
 
     - if: ${{ always() }}

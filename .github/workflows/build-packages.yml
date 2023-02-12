@@ -14,6 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: [ubuntu, windows, macos]
+        # TODO: Replace with `plat_` eventually
         sys: [cli, gui_softbuffer]
         include:
         - ext: ''
@@ -34,11 +35,14 @@ jobs:
       with:
         path: ./target
         key: target-dir-${{matrix.platform}}-stable
+    - name: Set up Rust
+      run: |
+        rustup default stable
 
     - uses: actions/checkout@v3
-    - run: rustup default stable
-    # TODO: Replace with `plat_` eventually
-    - run: cargo build --release --features sys_${{ matrix.sys }} --bins
+    - name: Generate artifact
+      run: |
+        cargo build --release --features sys_${{ matrix.sys }} --bins
 
     - uses: actions/upload-artifact@v3
       with:
