@@ -365,7 +365,7 @@ mod test {
 
     #[coverage_helper::test]
     fn tab_triggers_autocomplete() {
-        let mut ti = TextInput::new("> ", 0); 
+        let mut ti = TextInput::new("> ", 0);
         feed!(ti: String("abc"));
         assert_eq!(
             ti.action(Action::KeyPress { key: Key::Tab }),
