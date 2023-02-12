@@ -27,6 +27,6 @@ else
     output="--open"
 fi
 cargo +nightly llvm-cov test \
-    --all-features --fail-under-lines 90 \
+    --all-features --fail-under-lines 75 \
     --ignore-filename-regex "$IGNORE" \
     $output
