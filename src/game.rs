@@ -2,15 +2,16 @@
 //!
 //! This is also the primary split between the "engine" and "game" halves.
 
-use std::{thread, time::Duration, mem};
+use std::{mem, thread, time::Duration};
 
 use crate::{
-    agents::{Agent, Event, ControlFlow},
+    agents::{Agent, ControlFlow, Event},
     io::{
         input::Action,
         output::Screen,
         sys::{self, IoSystem},
-    }, util,
+    },
+    util,
 };
 
 /// Represents a game which can be run in the main loop.

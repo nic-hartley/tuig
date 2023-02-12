@@ -192,7 +192,7 @@ impl Game for Redshell {
                     }
                 }
                 tainted
-            },
+            }
         }
     }
 
