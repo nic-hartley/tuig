@@ -110,17 +110,17 @@ mod cf_test {
 
     use super::{ControlFlow, Instant};
 
-    #[test]
+    #[coverage_helper::test]
     fn continue_ready() {
         assert!(ControlFlow::Continue.is_ready())
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn kill_unready() {
         assert!(!ControlFlow::Kill.is_ready());
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn wait_handle_readies_after_touch() {
         let (cf, wh) = ControlFlow::wait();
         assert!(!cf.is_ready());
@@ -128,7 +128,7 @@ mod cf_test {
         assert!(cf.is_ready());
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn sleep_until_readies_after_time() {
         let cf = ControlFlow::sleep_until(Instant::now() + Duration::from_millis(100));
         assert!(!cf.is_ready());
@@ -138,7 +138,7 @@ mod cf_test {
         assert!(cf.is_ready());
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn sleep_for_readies_after_time() {
         let cf = ControlFlow::sleep_for(Duration::from_millis(100));
         assert!(!cf.is_ready());

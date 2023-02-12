@@ -66,7 +66,7 @@ mod test {
 
     macro_rules! testset {
         ( $( $side:ident $enum:ident => $field:ident, $hotkey:literal );* $(;)?) => { paste::paste! { $(
-            #[test]
+            #[coverage_helper::test]
             #[allow(non_snake_case)]
             fn [< press_ $side _ $enum >]() {
                 let mut ms = ModState::default();
@@ -75,7 +75,7 @@ mod test {
                 assert!(ms.$field, "{} not set after key press", ms.$field);
                 assert_eq!(ms.hotkeying(), $hotkey, "hotkeying in wrong state afterwards")
             }
-            #[test]
+            #[coverage_helper::test]
             #[allow(non_snake_case)]
             fn [< release_ $side _ $enum >]() {
                 let mut ms = ModState {
@@ -86,7 +86,7 @@ mod test {
                 assert!(!ms.$field, "{} set after key release", ms.$field);
             }
 
-            #[test]
+            #[coverage_helper::test]
             #[allow(non_snake_case)]
             fn [< press_ $side _ $enum _action >]() {
                 let mut ms = ModState::default();
@@ -95,7 +95,7 @@ mod test {
                 assert!(ms.$field, "{} not set after key press", ms.$field);
                 assert_eq!(ms.hotkeying(), $hotkey, "hotkeying in wrong state afterwards")
             }
-            #[test]
+            #[coverage_helper::test]
             #[allow(non_snake_case)]
             fn [< release_ $side _ $enum _action >]() {
                 let mut ms = ModState {
@@ -123,7 +123,7 @@ mod test {
 
     macro_rules! testignored {
         ( $( $name:ident: $func:ident($( $arg:expr ),* $(,)?) ),* $(,)? ) => { $(
-            #[test]
+            #[coverage_helper::test]
             fn $name() {
                 let mut ms = ModState::default();
                 assert!(!ms.$func($($arg),*), "unrelated input had an effect");

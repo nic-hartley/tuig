@@ -144,7 +144,7 @@ impl PartialOrd for XY {
 mod test {
     use super::*;
 
-    #[test]
+    #[coverage_helper::test]
     fn xy_clamps_elementwise() {
         let tl = XY(2, 3);
         let br = XY(8, 7);

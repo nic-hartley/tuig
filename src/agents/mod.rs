@@ -52,14 +52,14 @@ impl Agent for NopAgent {
 mod test {
     use super::*;
 
-    #[test]
+    #[coverage_helper::test]
     fn nop_agent_dies_on_start() {
         let mut replies = vec![];
         assert_eq!(NopAgent.start(&mut replies), ControlFlow::Kill);
         assert_eq!(replies, vec![]);
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn nop_agent_doesnt_react() {
         let mut replies = vec![];
         assert_eq!(

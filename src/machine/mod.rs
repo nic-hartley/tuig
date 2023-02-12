@@ -248,13 +248,13 @@ impl Machine {
 mod test {
     use super::*;
 
-    #[test]
+    #[coverage_helper::test]
     fn default_machine_fs_empty() {
         let mach = Machine::default();
         assert!(mach.root.is_empty());
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_writes_file_to_root() {
         let mach = Machine::default();
         mach.write("/spooky", "ghost".into())
@@ -266,7 +266,7 @@ mod test {
         assert_eq!(f.contents, "ghost");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_overwrites_file_to_root() {
         let mach = Machine::default();
         mach.write("/spooky", "ghost".into())
@@ -280,14 +280,14 @@ mod test {
         assert_eq!(f.contents, "zombie");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_file_wont_write_with_dir() {
         let mach = Machine::default();
         mach.write("/dir/file", "".into())
             .expect_err("successfully wrote to nonexistent subdirectory");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_writes_file_in_subdir() {
         let mach = Machine::default();
         mach.mkdir("/things/", true)
@@ -301,7 +301,7 @@ mod test {
         assert_eq!(f.contents, "ghost");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_overwrites_file_in_subdir() {
         let mach = Machine::default();
         mach.mkdir("/things/", true)
@@ -320,7 +320,7 @@ mod test {
         assert_eq!(f.contents, "zombie");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_wont_overwrite_file_with_dir() {
         let mach = Machine::default();
         mach.write("/things", "many".into())
@@ -334,7 +334,7 @@ mod test {
         assert_eq!(f.contents, "many");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_wont_overwrite_dir_with_file() {
         let mach = Machine::default();
         mach.mkdir("/things/", true)
@@ -350,7 +350,7 @@ mod test {
         assert_eq!(f.contents, "ghost");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_entry_reads_file() {
         let mach = Machine::default();
         mach.write("/spooky", "ghost".into())
@@ -367,7 +367,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_entry_reads_dir() {
         let mach = Machine::default();
         mach.mkdir("/things/", true)
@@ -381,7 +381,7 @@ mod test {
         assert!(matches!(e, Entry::Directory(_)));
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn machine_readdir_reads_dir() {
         let mach = Machine::default();
         mach.mkdir("/things/", true)

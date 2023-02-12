@@ -121,7 +121,7 @@ mod test {
 
     use super::*;
 
-    #[test]
+    #[coverage_helper::test]
     fn empty_completer_doesnt_complete_no_options() {
         let completer = BsdArgs::new();
         let machine = Machine::default();
@@ -147,7 +147,7 @@ mod test {
         assert_eq!(completer.complete("vzf", &clis), "");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn bsd_completer_completes_options() {
         let completer = BsdArgs::new()
             .flag('v')
@@ -176,7 +176,7 @@ mod test {
         assert_eq!(completer.complete("qvz", &clis), "f");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn bsd_completer_completes_values() {
         let completer = BsdArgs::new()
             .flag('v')
@@ -208,7 +208,7 @@ mod test {
         assert_eq!(completer.complete("z comp", &clis), "ress");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn bsd_completer_skips_flag_values() {
         let completer = BsdArgs::new()
             .flag('v')
@@ -238,7 +238,7 @@ mod test {
         assert_eq!(completer.complete("qvz comp", &clis), "ress");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn bsd_completer_respects_cwd() {
         let completer = BsdArgs::new()
             .flag('v')

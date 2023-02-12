@@ -55,4 +55,5 @@ lazy_static = "1.4.0"
 dashmap = "5.4.0"
 
 [dev-dependencies]
+coverage-helper = "0.1.0"
 mock_instant = "0.2.1"

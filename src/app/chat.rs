@@ -291,20 +291,20 @@ mod tests {
     #[allow(unused)]
     const DOWN: Action = Action::KeyPress { key: Key::Down };
 
-    #[test]
+    #[coverage_helper::test]
     fn test_submit_reply() {
         let mut app = app_dm(&["hello"], 0);
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "hello")]);
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn test_select_submit() {
         let mut app = app_dm(&["hello", "goodbye"], 0);
         assert_input!(app.input(RIGHT) taints, .is_empty());
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "goodbye")]);
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn test_select_return_submit() {
         let mut app = app_dm(&["hello", "goodbye"], 0);
         assert_input!(app.input(RIGHT) taints, .is_empty());
@@ -312,7 +312,7 @@ mod tests {
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "hello")]);
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn test_select_max_right() {
         let mut app = app_dm(&["hello", "goodbye"], 0);
         assert_input!(app.input(RIGHT) taints, .is_empty());
@@ -321,7 +321,7 @@ mod tests {
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "goodbye")]);
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn test_select_max_left() {
         let mut app = app_dm(&["hello", "goodbye"], 1);
         assert_input!(app.input(LEFT) clean, .is_empty());
@@ -330,14 +330,14 @@ mod tests {
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "hello")]);
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn test_receive_option() {
         let mut app = app_dm(&[], 0);
         app.on_event(&Event::npc_chat("targette", "hello there", &["hi", "no"]));
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "hi")]);
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn test_receive_next_option() {
         let mut app = app_dm(&[], 0);
         app.on_event(&Event::npc_chat("targette", "hello there", &["hi", "no"]));
@@ -345,7 +345,7 @@ mod tests {
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "no")]);
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn test_switch_dms() {
         let mut app = app_dm(&["normal", "human", "words"], 0);
         app.on_event(&Event::npc_chat(
@@ -357,7 +357,7 @@ mod tests {
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("meowza", "hi")]);
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn test_switch_dms_extra() {
         let mut app = app_dm(&["normal", "human", "words"], 0);
         app.on_event(&Event::npc_chat(
@@ -371,7 +371,7 @@ mod tests {
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("meowza", "hi")]);
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn test_switch_dms_back() {
         let mut app = app_dm(&["normal", "human", "words"], 0);
         app.on_event(&Event::npc_chat(
@@ -384,7 +384,7 @@ mod tests {
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "normal")]);
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn test_switch_dms_back_extra() {
         let mut app = app_dm(&["normal", "human", "words"], 0);
         app.on_event(&Event::npc_chat(
@@ -399,7 +399,7 @@ mod tests {
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "normal")]);
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn test_add_notifs() {
         let mut app = app_dm(&[], 0);
         app.on_event(&Event::npc_chat("targette", "hi", &[]));
@@ -408,7 +408,7 @@ mod tests {
         assert_eq!(app.notifs(), 3);
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn test_clear_notifs() {
         let mut app = app_dm(&[], 0);
         app.on_event(&Event::npc_chat("targette", "hi", &[]));
@@ -418,7 +418,7 @@ mod tests {
         assert_eq!(app.notifs(), 0);
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn test_add_notifs_more_dms() {
         let mut app = app_dm(&[], 0);
         app.on_event(&Event::npc_chat("targette", "hi", &[]));
@@ -430,7 +430,7 @@ mod tests {
         assert_eq!(app.notifs(), 6);
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn test_clear_notifs_more_dms_other_side() {
         let mut app = app_dm(&[], 0);
         app.on_event(&Event::npc_chat("targette", "hi", &[]));

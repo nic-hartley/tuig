@@ -109,14 +109,14 @@ mod test {
 
     use super::*;
 
-    #[test]
+    #[coverage_helper::test]
     fn find_autocomplete_empty_for_empty_iter() {
         let opts: &[&str] = &[];
         assert_eq!(autocomplete("", opts), "");
         assert_eq!(autocomplete("a", opts), "");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn find_autocomplete_presents_option() {
         let opts: &[&str] = &["abyss"];
         assert_eq!(autocomplete("", opts), "abyss");
@@ -125,7 +125,7 @@ mod test {
         assert_eq!(autocomplete("abyss", opts), "");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn find_autocomplete_presents_conflicting_options() {
         let opts: &[&str] = &["abyss", "absolute", "gorgonzola"];
         assert_eq!(autocomplete("", opts), "");
@@ -136,7 +136,7 @@ mod test {
         assert_eq!(autocomplete("g", opts), "orgonzola");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn none_doesnt_autocomplete() {
         let machine = Machine::default();
         machine
@@ -156,7 +156,7 @@ mod test {
         assert_eq!(ac.complete("mo", &clis), "");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn choices_autocompletes_choices() {
         let machine = Machine::default();
         machine
@@ -179,7 +179,7 @@ mod test {
         assert_eq!(ac.complete("g", &clis), "orgonzola");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn local_file_autocompletes_local_files() {
         let machine = Machine::default();
         machine
@@ -201,7 +201,7 @@ mod test {
         assert_eq!(ac.complete("abyss", &clis), "");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn local_file_autocompletes_local_files_in_cwd() {
         let machine = Machine::default();
         machine
@@ -236,7 +236,7 @@ mod test {
         assert_eq!(ac.complete("neil_baum", &clis), "");
     }
 
-    #[test]
+    #[coverage_helper::test]
     fn local_file_autocompletes_directories_nicely() {
         let machine = Machine::default();
         machine
