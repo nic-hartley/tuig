@@ -11,6 +11,26 @@ pub use super::widgets::*;
 
 use super::XY;
 
+/// Iterate over the rows in a [`Screen`].
+pub struct RowIter<'s> {
+    s: &'s Screen,
+    i: usize,
+}
+
+impl<'s> Iterator for RowIter<'s> {
+    type Item = &'s [Cell];
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.i == self.s.size.y() {
+            None
+        } else {
+            let start = self.i * self.s.size.x();
+            let end = start + self.s.size.x();
+            self.i += 1;
+            Some(&self.s.cells[start..end])
+        }
+    }
+}
+
 /// A text framebuffer.
 ///
 /// Allows you to render things onto it, then can be rendered onto the screen. This strategy avoids flickering,
@@ -51,12 +71,8 @@ impl Screen {
     }
 
     /// The rows of cells of this `Screen`.
-    pub fn rows(&self) -> Vec<&[Cell]> {
-        let mut res = Vec::with_capacity(self.size.y());
-        for y in 0..self.size.y() {
-            res.push(&self[y]);
-        }
-        res
+    pub fn rows(&self) -> impl Iterator<Item=&[Cell]> {
+        RowIter { s: self, i: 0 }
     }
 
     /// Clear this screen's contents, resetting it to the default and filling it with blank cells.
