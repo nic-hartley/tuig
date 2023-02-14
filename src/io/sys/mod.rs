@@ -6,7 +6,6 @@
 use std::collections::HashMap;
 use std::{
     io,
-    sync::{Arc, Barrier},
     time::{Duration, Instant},
 };
 
@@ -17,6 +16,9 @@ pub mod ansi_cli;
 
 #[cfg(feature = "__sys_gui")]
 pub mod gui;
+
+#[cfg(feature = "sys_nop")]
+pub mod nop;
 
 /// An input/output system.
 ///
@@ -61,35 +63,9 @@ pub trait IoRunner {
     /// Run until the paired [`IoSystem`] tells you to stop.
     fn run(&mut self);
 }
-
-/// An implementation of [`IoRunner`] for backends which don't actually require anything in particular be done on the
-/// main thread.
-///
-/// The intended use of this is creating one, returning its clone, and telling your copy to stop when the [`IoSystem`]
-/// method is called.
-#[derive(Clone)]
-pub struct NopIoRunner(Arc<Barrier>);
-
-impl NopIoRunner {
-    /// Create a [`NopIoRunner`].
-    pub fn new() -> Self {
-        Self(Arc::new(Barrier::new(2)))
-    }
-
-    /// Tell the [`NopIoRunner`] to stop.
-    pub fn stop(&mut self) {
-        self.0.wait();
-    }
-}
-
-impl IoRunner for NopIoRunner {
-    fn run(&mut self) {
-        self.0.wait();
-    }
-}
-
 /// Based on IO system features enabled, attempt to initialize an IO system; in order:
 ///
+/// - NOP (`nop`), for benchmarks
 /// - Vulkan GUI (`gui_vulkan`)
 /// - OpenGL GUI (`gui_opengl`)
 /// - CPU-rendered GUI (`gui_cpu`)
@@ -109,6 +85,10 @@ pub fn load() -> Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), HashMap<&'static
                 Err(e) => errors.insert(stringify!($name), e),
             };
         }
+    }
+    #[cfg(feature = "sys_nop")]
+    {
+        try_init! { nop: nop::NopSystem::new() }
     }
     #[cfg(feature = "__sys_gui")]
     {

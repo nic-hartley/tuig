@@ -102,6 +102,7 @@ impl Screen {
         &self.cells
     }
 
+    /// Returns an iterator over the rows in a screen.
     pub fn rows(&self) -> ScreenRows {
         ScreenRows::new(self)
     }
