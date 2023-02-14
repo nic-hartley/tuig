@@ -4,12 +4,64 @@
 //! - Add the relevant implementation of `Screen`, in a new submodule
 //! - Modify `Screen::get` to properly detect and handle the new screen type, with `cfg!` or runtime checks
 
-use std::ops;
+use std::{ops::{self, Range}, iter::FusedIterator};
 
 pub use super::clifmt::*;
 pub use super::widgets::*;
 
 use super::XY;
+
+/// An iterator over the rows of cells in a [`Screen`].
+pub struct ScreenRows<'s> {
+    screen: &'s Screen,
+    rem: Range<usize>,
+}
+
+impl<'s> ScreenRows<'s> {
+    fn new(screen: &'s Screen) -> Self {
+        Self {
+            screen,
+            rem: 0..screen.size.y(),
+        }
+    }
+    fn abs_row(&self, row: usize) -> &'s [Cell] {
+        let start = row * self.screen.size.x();
+        let end = start + self.screen.size.x();
+        &self.screen.cells[start..end]
+    }
+}
+macro_rules! fn_from_range {
+    ( $( $fn:ident(
+        $(& $(@@$ref:ident)?)? $(mut $(@@$mut:ident)?)? self
+        $(, $args:ident: $type:ty)* $(,)?)
+    ),* $(,)? ) => { $(
+        fn $fn(
+            $(& $($ref)?)? $(mut $($mut)?)? self
+            $(, $args: $type)*
+        ) -> Option<Self::Item> {
+            let screen = self.screen;
+            let row = self.rem.$fn($($args),*)?;
+            Some(&screen[row])
+        }
+    )* }
+}
+impl<'s> Iterator for ScreenRows<'s> {
+    type Item = &'s [Cell];
+    fn_from_range! {
+        next(&mut self), nth(&mut self, n: usize), last(self),
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.rem.size_hint()
+    }
+}
+impl<'s> DoubleEndedIterator for ScreenRows<'s> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let row = self.rem.next_back()?;
+        Some(self.abs_row(row))
+    }
+}
+impl<'s> ExactSizeIterator for ScreenRows<'s> {}
+impl<'s> FusedIterator for ScreenRows<'s> {}
 
 /// A text framebuffer.
 ///
@@ -50,13 +102,8 @@ impl Screen {
         &self.cells
     }
 
-    /// The rows of cells of this `Screen`.
-    pub fn rows(&self) -> Vec<&[Cell]> {
-        let mut res = Vec::with_capacity(self.size.y());
-        for y in 0..self.size.y() {
-            res.push(&self[y]);
-        }
-        res
+    pub fn rows(&self) -> ScreenRows {
+        ScreenRows::new(self)
     }
 
     /// Clear this screen's contents, resetting it to the default and filling it with blank cells.
