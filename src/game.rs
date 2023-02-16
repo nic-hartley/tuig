@@ -24,6 +24,20 @@ pub struct Replies<M: Message> {
     messages: Vec<M>,
 }
 
+impl<M: Message> Replies<M> {
+    #[cfg(test)]
+    /// A **test-only** function, so you can ensure your code queues the correct messages.
+    pub fn messages(&self) -> &[M] {
+        &self.messages
+    }
+
+    #[cfg(test)]
+    /// A **test-only** function, so you can ensure your code spawns the correct agents.
+    pub fn agents(&self) -> &[Box<dyn Agent<M>>] {
+        &self.agents
+    }
+}
+
 impl<M: Message> Default for Replies<M> {
     fn default() -> Self {
         Self {

@@ -51,7 +51,7 @@ macro_rules! assert_input {
             let taint = $app.input($( $arg ),* , &mut evs);
             $( assert!(!taint, "app tainted unexpectedly"); $( $clean )? )?
             $( assert!(taint, "app didn't taint when expected"); $( $taint )? )?
-            assert_input!(@cmp evs $( $test )*);
+            assert_input!(@cmp evs.messages() $( $test )*);
         }
     };
     (@cmp $evs:ident == $other:expr) => { assert_eq!($evs, $other) };

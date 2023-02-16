@@ -439,7 +439,7 @@ mod tests {
         app.on_event(&Event::npc_chat("meowza", "nyehehe! i am a cat!", &[]));
         app.on_event(&Event::npc_chat("meowza", "i can haz cheezburgr?", &[]));
         app.on_event(&Event::npc_chat("meowza", "i am in ur walls", &[]));
-        app.input(DOWN, &mut vec![]);
+        app.input(DOWN, &mut Replies::default());
         app.render(&GameState::default(), &mut Screen::new(XY(200, 200)));
         assert_eq!(app.notifs(), 3);
     }
