@@ -45,39 +45,3 @@ jobs:
         cargo fmt --check
         cargo check --all-features
         cargo test --all-features
-
-
-  coverage:
-    name: Coverage
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/cache@v3
-      with:
-        path: ~/.rustup/
-        key: rustup-coverage
-    - uses: actions/cache@v3
-      with:
-        path: ~/.cargo/registry
-        key: cargo-cache
-    - uses: actions/cache@v3
-      with:
-        path: ./target
-        key: target-dir-coverage
-    - name: Set up Rust
-      run: |
-        rustup default nightly
-        rustup component add rustfmt
-        cargo install cargo-llvm-cov
-
-    - uses: actions/checkout@v3
-    - name: Run coverage tests
-      run: |
-        ./run-coverage.sh
-
-    - if: ${{ always() }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: coverage-report
-        path: |
-          target/llvm-cov/html
-        if-no-files-found: error
