@@ -1,4 +1,8 @@
-use crate::{agents::{Agent, Event}, app::CliState, text};
+use crate::{
+    agents::{Agent, Event},
+    app::CliState,
+    text,
+};
 
 use super::{AutocompleteType, BsdArgs, FixedOutput, NoOutput, Tool};
 

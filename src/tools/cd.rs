@@ -3,7 +3,8 @@ use std::mem;
 use crate::{
     agents::{Agent, ControlFlow, Event},
     app::CliState,
-    text, game::Replies,
+    game::Replies,
+    text,
 };
 
 use super::{AutocompleteType, FixedOutput, Tool};

@@ -3,7 +3,7 @@
 //! This is also the primary split between the "engine" and "game" halves.
 
 use core::fmt;
-use std::{thread, time::Duration, fmt::Debug, mem};
+use std::{fmt::Debug, mem, thread, time::Duration};
 
 use crate::{
     agents::{Agent, ControlFlow},
@@ -69,7 +69,7 @@ impl<M: Message> Replies<M> {
         self.messages.push(msg);
         self
     }
-    pub fn queue_all(&mut self, msgs: impl IntoIterator<Item=M>) -> &mut Self {
+    pub fn queue_all(&mut self, msgs: impl IntoIterator<Item = M>) -> &mut Self {
         self.messages.extend(msgs);
         self
     }

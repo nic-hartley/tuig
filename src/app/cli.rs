@@ -2,6 +2,7 @@ use std::{collections::VecDeque, sync::Arc};
 
 use crate::{
     agents::{Bundle, Event},
+    game::Replies,
     io::{
         clifmt::Text,
         helpers::{TextInput, TextInputRequest},
@@ -10,7 +11,7 @@ use crate::{
     },
     text,
     tools::{autocomplete, Tool},
-    GameState, Machine, game::Replies,
+    GameState, Machine,
 };
 
 use super::App;
@@ -106,9 +107,7 @@ impl CliApp {
             }
         } else {
             /// Tiny adapter so `AsRef` will get the key instead of the value
-            struct Adapter<'a>(
-                dashmap::mapref::multiple::RefMulti<'a, String, Arc<dyn Tool>>,
-            );
+            struct Adapter<'a>(dashmap::mapref::multiple::RefMulti<'a, String, Arc<dyn Tool>>);
             impl<'a> AsRef<str> for Adapter<'a> {
                 fn as_ref(&self) -> &str {
                     self.0.key().as_ref()

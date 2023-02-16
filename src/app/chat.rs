@@ -5,12 +5,13 @@ use std::mem;
 use crate::{
     agents::Event,
     constants::{gameplay::MAX_USERNAME, graphics::HEADER_HEIGHT},
+    game::Replies,
     io::{
         clifmt::FormattedExt,
         input::{Action, Key},
         output::{Screen, Text},
     },
-    text1, GameState, game::Replies,
+    text1, GameState,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]

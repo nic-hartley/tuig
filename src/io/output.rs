@@ -4,7 +4,10 @@
 //! - Add the relevant implementation of `Screen`, in a new submodule
 //! - Modify `Screen::get` to properly detect and handle the new screen type, with `cfg!` or runtime checks
 
-use std::{ops::{self, Range}, iter::FusedIterator};
+use std::{
+    iter::FusedIterator,
+    ops::{self, Range},
+};
 
 pub use super::clifmt::*;
 pub use super::widgets::*;

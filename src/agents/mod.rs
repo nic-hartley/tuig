@@ -4,7 +4,7 @@ pub use cf::{ControlFlow, WaitHandle};
 mod event;
 pub use event::{Bundle, BundledAgent, BundledApp, BundledTool, Event};
 
-use crate::game::{Replies, Message};
+use crate::game::{Message, Replies};
 
 /// An agent in the system, which can react to events.
 ///

@@ -5,7 +5,8 @@ use std::mem;
 use crate::{
     agents::{Agent, ControlFlow, Event},
     app::CliState,
-    io::clifmt::Text, game::Replies,
+    game::Replies,
+    io::clifmt::Text,
 };
 
 mod args;

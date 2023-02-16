@@ -3,13 +3,14 @@ use std::{env, thread, time::Duration};
 use redshell::{
     agents::Event,
     app::{App, ChatApp},
+    game::Replies,
     io::{
         input::{Action, Key},
         output::{Color, FormattedExt, Screen, Text},
         sys::{self, IoRunner, IoSystem},
         XY,
     },
-    text, GameState, game::Replies,
+    text, GameState,
 };
 
 /// Attempt to load a system, or explode and die somewhat cleanly

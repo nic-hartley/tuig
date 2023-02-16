@@ -1,6 +1,10 @@
-use std::{sync::{Arc, Barrier}, io, time::Duration};
+use std::{
+    io,
+    sync::{Arc, Barrier},
+    time::Duration,
+};
 
-use crate::io::{output::Screen, input::Action, XY};
+use crate::io::{input::Action, output::Screen, XY};
 
 use super::{IoRunner, IoSystem};
 
