@@ -9,7 +9,7 @@ use redshell::{
         sys::{self, IoRunner, IoSystem},
         XY,
     },
-    text, GameState,
+    text, GameState, game::Replies,
 };
 
 /// Attempt to load a system, or explode and die somewhat cleanly
@@ -127,8 +127,7 @@ fn chat_demo(io: &mut dyn IoSystem) {
             app.on_event(&chat);
         }
         for input in inputs.into_iter() {
-            let mut _events = vec![];
-            app.input(input.clone(), &mut _events);
+            app.input(input.clone(), &mut Replies::default());
         }
         app.render(&state, &mut s);
         s.textbox(text!(

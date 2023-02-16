@@ -1,5 +1,5 @@
 use crate::{
-    agents::Agent,
+    agents::{Agent, Event},
     app::CliState,
     io::clifmt::{FormattedExt, Text},
     machine::Entry,
@@ -93,7 +93,7 @@ impl Tool for Ls {
         COMPLETER.complete(line, state)
     }
 
-    fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent + Send + Sync> {
+    fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent<Event>> {
         let args = match COMPLETER.parse(line) {
             Ok(v) => v,
             Err(msg) => {

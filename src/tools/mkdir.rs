@@ -1,4 +1,4 @@
-use crate::{agents::Agent, app::CliState, text};
+use crate::{agents::{Agent, Event}, app::CliState, text};
 
 use super::{AutocompleteType, BsdArgs, FixedOutput, NoOutput, Tool};
 
@@ -19,7 +19,7 @@ impl Tool for Mkdir {
         COMPLETER.complete(line, state)
     }
 
-    fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent + Send + Sync> {
+    fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent<Event>> {
         let args = match COMPLETER.parse(line) {
             Ok(v) => v,
             Err(msg) => {

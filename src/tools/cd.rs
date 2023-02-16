@@ -3,17 +3,17 @@ use std::mem;
 use crate::{
     agents::{Agent, ControlFlow, Event},
     app::CliState,
-    text,
+    text, game::Replies,
 };
 
 use super::{AutocompleteType, FixedOutput, Tool};
 
 /// The agent which actually does the changing of directories
 struct CdAgent(String);
-impl Agent for CdAgent {
-    fn start(&mut self, replies: &mut Vec<crate::agents::Event>) -> ControlFlow {
-        replies.push(Event::ChangeDir(mem::take(&mut self.0)));
-        replies.push(Event::CommandDone);
+impl Agent<Event> for CdAgent {
+    fn start(&mut self, replies: &mut Replies<Event>) -> ControlFlow {
+        replies.queue(Event::ChangeDir(mem::take(&mut self.0)));
+        replies.queue(Event::CommandDone);
         ControlFlow::Kill
     }
 }
@@ -30,7 +30,7 @@ impl Tool for Cd {
         AutocompleteType::LocalFile.complete(line, state)
     }
 
-    fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent + Send + Sync> {
+    fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent<Event>> {
         let line = line.trim();
         let mut target_comps = if line.starts_with('/') {
             vec![]

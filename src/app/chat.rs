@@ -10,7 +10,7 @@ use crate::{
         input::{Action, Key},
         output::{Screen, Text},
     },
-    text1, GameState,
+    text1, GameState, game::Replies,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -82,7 +82,7 @@ impl super::App for ChatApp {
         "chat"
     }
 
-    fn input(&mut self, a: Action, events: &mut Vec<Event>) -> bool {
+    fn input(&mut self, a: Action, replies: &mut Replies<Event>) -> bool {
         if self.dms.is_empty() {
             // nothing to do if there aren't any DMs
             return false;
@@ -103,7 +103,7 @@ impl super::App for ChatApp {
                 let ev = Event::player_chat(&dm.target, &selected);
                 dm.msgs.push(Message::from_player(selected));
                 dm.sel = 0;
-                events.push(ev);
+                replies.queue(ev);
             }
             Key::Up if self.current_dm > 0 => {
                 self.current_dm -= 1;

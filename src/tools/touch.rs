@@ -1,4 +1,4 @@
-use crate::{agents::Agent, app::CliState, text};
+use crate::{agents::{Agent, Event}, app::CliState, text};
 
 use super::{AutocompleteType, FixedOutput, Tool};
 
@@ -20,7 +20,7 @@ impl Tool for Touch {
         }
     }
 
-    fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent + Send + Sync> {
+    fn run(&self, line: &str, state: &CliState) -> Box<dyn Agent<Event>> {
         let mut lines = vec![];
         for file in line.split_whitespace() {
             let path = if file.starts_with('/') {

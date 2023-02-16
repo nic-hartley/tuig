@@ -2,10 +2,11 @@
 //!
 //! This is also the primary split between the "engine" and "game" halves.
 
-use std::{mem, thread, time::Duration};
+use core::fmt;
+use std::{thread, time::Duration, fmt::Debug, mem};
 
 use crate::{
-    agents::{Agent, ControlFlow, Event},
+    agents::{Agent, ControlFlow},
     io::{
         input::Action,
         output::Screen,
@@ -13,6 +14,59 @@ use crate::{
     },
     util,
 };
+
+pub trait Message: Clone + Send + Sync {}
+impl<T: Clone + Send + Sync> Message for T {}
+
+/// Allows a [`Game`] to make things happen in the engine in response to user input.
+pub struct Replies<M: Message> {
+    agents: Vec<Box<dyn Agent<M>>>,
+    messages: Vec<M>,
+}
+
+impl<M: Message> Default for Replies<M> {
+    fn default() -> Self {
+        Self {
+            agents: Default::default(),
+            messages: Default::default(),
+        }
+    }
+}
+
+impl<M: Message> Debug for Replies<M> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct(std::any::type_name::<Self>())
+            .field("agents", &self.agents.len())
+            .field("messages", &self.messages.len())
+            .finish()
+    }
+}
+
+impl<M: Message> Replies<M> {
+    pub fn spawn(&mut self, agent: impl Agent<M> + 'static) -> &mut Self {
+        self.agents.push(Box::new(agent));
+        self
+    }
+    pub fn spawn_boxed(&mut self, agent: Box<dyn Agent<M>>) -> &mut Self {
+        self.agents.push(agent);
+        self
+    }
+    pub fn queue(&mut self, msg: M) -> &mut Self {
+        self.messages.push(msg);
+        self
+    }
+    pub fn queue_all(&mut self, msgs: impl IntoIterator<Item=M>) -> &mut Self {
+        self.messages.extend(msgs);
+        self
+    }
+
+    pub fn spawn_len(&self) -> usize {
+        self.agents.len()
+    }
+    pub fn queue_len(&self) -> usize {
+        self.messages.len()
+    }
+}
 
 /// Represents a game which can be run in the main loop.
 ///
@@ -27,15 +81,17 @@ use crate::{
 /// This makes the code a bit harder to write, but it clearly separates concerns and encourages you to put your heavy
 /// logic somewhere other than the render thread.
 pub trait Game: Send {
+    type Message: Message;
+
     /// The user has done some input; update the UI and inform [`Agent`]s accordingly.
     ///
     /// Returns whether the game needs to be redrawn after the user input.
-    fn input(&mut self, input: Action, events: &mut Vec<Event>) -> bool;
+    fn input(&mut self, input: Action, replies: &mut Replies<Self::Message>) -> bool;
 
     /// An event has happened; update the UI accordingly.
     ///
     /// Returns whether the game needs to be redrawn after the event.
-    fn event(&mut self, event: &Event) -> bool;
+    fn event(&mut self, event: &Self::Message) -> bool;
 
     /// Render the game onto the provided `Screen`.
     // TODO: Make this take &self instead
@@ -45,8 +101,8 @@ pub trait Game: Send {
 /// Handles starting up and running a `Game`.
 #[must_use]
 pub struct Runner<G: Game + 'static> {
-    events: Vec<Event>,
-    agents: Vec<Box<dyn Agent>>,
+    events: Vec<G::Message>,
+    agents: Vec<Box<dyn Agent<G::Message>>>,
     game: G,
 }
 
@@ -61,13 +117,13 @@ impl<G: Game + 'static> Runner<G> {
     }
 
     /// Set an agent to be running at game startup, to process the first tick of events
-    pub fn spawn(mut self, agent: impl Agent + Send + Sync + 'static) -> Self {
+    pub fn spawn(mut self, agent: impl Agent<G::Message> + 'static) -> Self {
         self.agents.push(Box::new(agent));
         self
     }
 
-    /// Add an [`Event`] to be executed on the first tick, by the first crop of [`spawn`][Self::spawn]ed agents.
-    pub fn queue(mut self, event: Event) -> Self {
+    /// Add a message to be handled on the first tick, by the first crop of [`spawn`][Self::spawn]ed agents.
+    pub fn queue(mut self, event: G::Message) -> Self {
         self.events.push(event);
         self
     }
@@ -78,16 +134,15 @@ impl<G: Game + 'static> Runner<G> {
         let Self {
             mut game,
             mut events,
-            agents,
+            agents: mut new_agents,
         } = self;
 
-        let mut replies = vec![];
-        let mut agents: Vec<_> = agents
-            .into_iter()
-            .map(|mut a| (a.start(&mut events), a))
-            .collect();
+        let mut replies = Replies::default();
+        let mut agents = vec![];
         let mut tainted = true;
         loop {
+            agents.extend(new_agents.drain(..).map(|mut a| (a.start(&mut replies), a)));
+
             let new_size = iosys.size();
             if new_size != screen.size() {
                 tainted = true;
@@ -109,13 +164,6 @@ impl<G: Game + 'static> Runner<G> {
             }
 
             for event in &events {
-                // TODO: better way to spawn agents
-                if let Event::SpawnAgent(bundle) = event {
-                    if let Some(mut ag) = bundle.take() {
-                        agents.push((ag.start(&mut replies), ag));
-                    }
-                    continue;
-                }
                 tainted |= game.event(event);
                 for (cf, agent) in &mut agents {
                     if !cf.is_ready() {
@@ -125,8 +173,9 @@ impl<G: Game + 'static> Runner<G> {
                 }
             }
 
-            mem::swap(&mut events, &mut replies);
-            replies.clear();
+            mem::swap(&mut replies.messages, &mut events);
+            replies.messages.clear();
+            mem::swap(&mut replies.agents, &mut new_agents);
 
             // filter out agents that will never wake up
             util::retain_unstable(&mut agents, |(cf, _ag)| match cf {

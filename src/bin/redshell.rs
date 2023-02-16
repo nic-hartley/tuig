@@ -3,7 +3,7 @@ use std::time::Duration;
 use redshell::{
     agents::{Agent, ControlFlow, Event},
     app::{App, ChatApp, CliApp},
-    game::{Game, Runner},
+    game::{Game, Runner, Replies},
     io::{
         input::{Action, Key},
         output::Screen,
@@ -42,7 +42,7 @@ impl NPC {
     }
 
     /// Advance to the next message/state
-    fn advance(&mut self, replies: &mut Vec<Event>) -> ControlFlow {
+    fn advance(&mut self, replies: &mut Replies<Event>) -> ControlFlow {
         if self.state >= self.all_states.len() {
             return ControlFlow::Kill;
         }
@@ -51,7 +51,7 @@ impl NPC {
         self.message += 1;
         if self.message != self.state().messages.len() {
             // if it's not the last message, we can send now (and then just ignore events until the next mssage)
-            replies.push(Event::NPCChatMessage {
+            replies.queue(Event::NPCChatMessage {
                 from: self.name.clone(),
                 text,
                 options: vec![],
@@ -66,7 +66,7 @@ impl NPC {
                 .map(|(s, _)| s.clone())
                 .collect();
 
-            replies.push(Event::NPCChatMessage {
+            replies.queue(Event::NPCChatMessage {
                 from: self.name.clone(),
                 text,
                 options,
@@ -76,12 +76,12 @@ impl NPC {
     }
 }
 
-impl Agent for NPC {
-    fn start(&mut self, replies: &mut Vec<Event>) -> ControlFlow {
+impl Agent<Event> for NPC {
+    fn start(&mut self, replies: &mut Replies<Event>) -> ControlFlow {
         self.advance(replies)
     }
 
-    fn react(&mut self, event: &Event, replies: &mut Vec<Event>) -> ControlFlow {
+    fn react(&mut self, event: &Event, replies: &mut Replies<Event>) -> ControlFlow {
         if self.state >= self.all_states.len() {
             // reached the end of the conversation tree
             ControlFlow::Kill
@@ -154,7 +154,9 @@ impl Redshell {
 }
 
 impl Game for Redshell {
-    fn input(&mut self, input: Action, replies: &mut Vec<Event>) -> bool {
+    type Message = Event;
+
+    fn input(&mut self, input: Action, replies: &mut Replies<Event>) -> bool {
         match input {
             Action::KeyPress { key: Key::F(num) } => {
                 if num <= self.apps.len() {

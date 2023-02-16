@@ -41,19 +41,19 @@ impl<T> Clone for Bundle<T> {
 
 macro_rules! trait_bundle {
     ( $(
-        $fn:ident($trait:ident) => $enum:ident
+        $fn:ident($trait:ident $($extra:tt)*) => $enum:ident
     ),* $(,)? ) => { $(
         paste::paste! {
-            pub type [< Bundled $trait >] = Bundle<Box<dyn $trait + Send + Sync>>;
+            pub type [< Bundled $trait >] = Bundle<Box<dyn $trait $($extra)*>>;
             impl [< Bundled $trait >] {
                 #[cfg_attr(coverage, no_coverage)]
-                pub fn new(contents: impl $trait + Send + Sync + 'static) -> Self {
+                pub fn new(contents: impl $trait $($extra)* + 'static) -> Self {
                     Bundle::of(Box::new(contents))
                 }
             }
             impl Event {
                 #[cfg_attr(coverage, no_coverage)]
-                pub fn $fn(item: impl $trait + Send + Sync + 'static) -> Self {
+                pub fn $fn(item: impl $trait $($extra)* + 'static) -> Self {
                     Self::$enum([< Bundled $trait >]::new(item))
                 }
             }
@@ -61,7 +61,7 @@ macro_rules! trait_bundle {
     )* };
 }
 trait_bundle! {
-    spawn(Agent) => SpawnAgent,
+    spawn(Agent<Event>) => SpawnAgent,
     install(Tool) => InstallTool,
     add_tab(App) => AddTab,
 }
