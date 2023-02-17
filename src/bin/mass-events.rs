@@ -1,6 +1,10 @@
 use std::time::Instant;
 
-use redshell::{agents::{Agent, ControlFlow}, game::{Replies, Runner, Game, Response}, io::{input::Action, output::Screen}};
+use redshell::{
+    agents::{Agent, ControlFlow},
+    game::{Game, Replies, Response, Runner},
+    io::{input::Action, output::Screen},
+};
 
 const AGENTS: u128 = 20_000;
 
@@ -66,7 +70,10 @@ impl Game for TinyGame {
     }
 
     fn render(&mut self, _onto: &mut Screen) {
-        println!("count={}, max={}, complete={}", self.count, self.max, self.complete);
+        println!(
+            "count={}, max={}, complete={}",
+            self.count, self.max, self.complete
+        );
     }
 }
 

@@ -3,7 +3,7 @@ use std::time::Duration;
 use redshell::{
     agents::{Agent, ControlFlow, Event},
     app::{App, ChatApp, CliApp},
-    game::{Game, Replies, Runner, Response},
+    game::{Game, Replies, Response, Runner},
     io::{
         input::{Action, Key},
         output::Screen,

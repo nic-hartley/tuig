@@ -189,7 +189,7 @@ impl<G: Game + 'static> Runner<G> {
                         Response::Redraw => tainted = true,
                         // TODO: Clean shutdown
                         Response::Quit => break 'mainloop,
-                    }
+                    },
                 }
             }
 
