@@ -3,7 +3,7 @@ use std::time::Duration;
 use redshell::{
     agents::{Agent, ControlFlow, Event},
     app::{App, ChatApp, CliApp},
-    game::{Game, Replies, Runner},
+    game::{Game, Replies, Runner, Response},
     io::{
         input::{Action, Key},
         output::Screen,
@@ -156,21 +156,28 @@ impl Redshell {
 impl Game for Redshell {
     type Message = Event;
 
-    fn input(&mut self, input: Action, replies: &mut Replies<Event>) -> bool {
+    fn input(&mut self, input: Action, replies: &mut Replies<Event>) -> Response {
         match input {
             Action::KeyPress { key: Key::F(num) } => {
                 if num <= self.apps.len() {
                     self.sel_app = num as usize - 1;
-                    true
+                    Response::Redraw
                 } else {
-                    false
+                    Response::Nothing
                 }
             }
-            other => self.apps[self.sel_app].0.input(other, replies),
+            other => {
+                let app_taint = self.apps[self.sel_app].0.input(other, replies);
+                if app_taint {
+                    Response::Redraw
+                } else {
+                    Response::Nothing
+                }
+            }
         }
     }
 
-    fn event(&mut self, event: &Event) -> bool {
+    fn event(&mut self, event: &Event) -> Response {
         match event {
             Event::AddTab(b) => {
                 let app = b
@@ -178,7 +185,7 @@ impl Game for Redshell {
                     .expect("app bundle taken before sole consumer got it");
                 let notifs = app.notifs();
                 self.apps.push((app, notifs));
-                true
+                Response::Redraw
             }
             event => {
                 let mut tainted = false;
@@ -193,7 +200,11 @@ impl Game for Redshell {
                         *old_notifs = new_notifs;
                     }
                 }
-                tainted
+                if tainted {
+                    Response::Redraw
+                } else {
+                    Response::Nothing
+                }
             }
         }
     }

@@ -13,6 +13,7 @@ rust-version = "1.59"
 # (though ideally you'd only ever set `plat_` features!)
 
 __sys = []
+sys_nop = ["__sys"]
 sys_cli = ["__sys", "crossterm"]
 
 __sys_gui = ["__sys", "winit"]
@@ -30,6 +31,18 @@ plat_wasm = []
 [[bin]]
 name = "redshell-concept"
 required-features = ["__sys"]
+
+[[bin]]
+name = "redshell"
+required-features = ["__sys"]
+
+[[bin]]
+name = "mass-events"
+required-features = ["__sys"]
+
+# [[bench]]
+# name = "mass-events"
+# harness = false
 
 [profile.release]
 opt-level = 'z'

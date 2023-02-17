@@ -18,7 +18,7 @@ use crate::{
 pub trait Message: Clone + Send + Sync {}
 impl<T: Clone + Send + Sync> Message for T {}
 
-/// Allows a [`Game`] to make things happen in the engine in response to user input.
+/// Allows a [`Game`] or [`Agent`] to make things happen in the engine in response to events or input.
 pub struct Replies<M: Message> {
     agents: Vec<Box<dyn Agent<M>>>,
     messages: Vec<M>,
@@ -82,6 +82,17 @@ impl<M: Message> Replies<M> {
     }
 }
 
+/// Allows a [`Game`] to control the engine in response to events or input.
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum Response {
+    /// Nothing in particular needs to be done.
+    Nothing,
+    /// The visual state has updated, and the screen needs to be redrawn.
+    Redraw,
+    /// The game should be exited, e.g. because the user clicked "Exit" in the menu.
+    Quit,
+}
+
 /// Represents a game which can be run in the main loop.
 ///
 /// Note that `Game`s don't run the bulk of the game logic; that's the `Agent`'s job. The `Game` trait is the place
@@ -100,12 +111,12 @@ pub trait Game: Send {
     /// The user has done some input; update the UI and inform [`Agent`]s accordingly.
     ///
     /// Returns whether the game needs to be redrawn after the user input.
-    fn input(&mut self, input: Action, replies: &mut Replies<Self::Message>) -> bool;
+    fn input(&mut self, input: Action, replies: &mut Replies<Self::Message>) -> Response;
 
     /// An event has happened; update the UI accordingly.
     ///
     /// Returns whether the game needs to be redrawn after the event.
-    fn event(&mut self, event: &Self::Message) -> bool;
+    fn event(&mut self, event: &Self::Message) -> Response;
 
     /// Render the game onto the provided `Screen`.
     // TODO: Make this take &self instead
@@ -154,7 +165,7 @@ impl<G: Game + 'static> Runner<G> {
         let mut replies = Replies::default();
         let mut agents = vec![];
         let mut tainted = true;
-        loop {
+        'mainloop: loop {
             agents.extend(new_agents.drain(..).map(|mut a| (a.start(&mut replies), a)));
 
             let new_size = iosys.size();
@@ -173,12 +184,22 @@ impl<G: Game + 'static> Runner<G> {
                 match inp {
                     Action::Closed => break,
                     Action::Redraw => tainted = true,
-                    other => tainted |= game.input(other, &mut replies),
+                    other => match game.input(other, &mut replies) {
+                        Response::Nothing => (),
+                        Response::Redraw => tainted = true,
+                        // TODO: Clean shutdown
+                        Response::Quit => break 'mainloop,
+                    }
                 }
             }
 
             for event in &events {
-                tainted |= game.event(event);
+                match game.event(event) {
+                    Response::Nothing => (),
+                    Response::Redraw => tainted = true,
+                    // TODO: Clean shutdown
+                    Response::Quit => break 'mainloop,
+                }
                 for (cf, agent) in &mut agents {
                     if !cf.is_ready() {
                         continue;
@@ -195,12 +216,13 @@ impl<G: Game + 'static> Runner<G> {
             util::retain_unstable(&mut agents, |(cf, _ag)| match cf {
                 // never is_ready again
                 ControlFlow::Kill => false,
-                // if there's only one reference, it's the one in the handle
+                // if there's only one reference, it's the one in this handle
                 ControlFlow::Handle(h) => h.references() > 1,
                 // otherwise it might eventually wake up, keep it around
                 _ => true,
             });
         }
+        iosys.stop();
     }
 
     /// Start the game running.
