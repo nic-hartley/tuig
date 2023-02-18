@@ -88,10 +88,17 @@ fn main() {
         starter = starter.spawn(TinyAgent { factor });
     }
     let start = Instant::now();
-    let TinyGame { count, max, complete } = starter.run();
+    let TinyGame {
+        count,
+        max,
+        complete,
+    } = starter.run();
     let dur = Instant::now() - start;
     println!("Completed in {:.02}s", dur.as_secs_f32());
-    println!("Final state: count={}, max={}, complete={}", count, max, complete);
+    println!(
+        "Final state: count={}, max={}, complete={}",
+        count, max, complete
+    );
     // Ensure we get the right answers
     assert_eq!(count, 1854634);
     assert_eq!(max, 27114424);

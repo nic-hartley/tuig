@@ -12,7 +12,6 @@ use crate::{
         output::Screen,
         sys::{self, IoSystem},
     },
-    util,
 };
 
 pub trait Message: Clone + Send + Sync {}
@@ -229,7 +228,7 @@ impl<G: Game + 'static> Runner<G> {
     /// Start the game running.
     ///
     /// This **must** be run on the main thread. Ideally, you'd run it from `main` directly.
-    /// 
+    ///
     /// This function only exits when [`Game::event`] or [`Game::input`] returns [`Response::Quit`]. It returns the
     /// [`Game`], primarily for testing purposes.
     pub fn run(self) -> G {

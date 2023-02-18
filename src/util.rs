@@ -16,19 +16,3 @@ macro_rules! setters {
 }
 
 pub(crate) use setters;
-
-/// The same as [`Vec::retain`], but doesn't attempt to preserve the ordering of elements.
-pub(crate) fn retain_unstable<T, P: Fn(&T) -> bool>(this: &mut Vec<T>, cond: P) {
-    let mut new_size = this.len();
-    let mut idx = 0;
-    while idx < new_size {
-        let elem = &this[idx];
-        if cond(elem) {
-            idx += 1;
-        } else {
-            this.swap(idx, new_size - 1);
-            new_size -= 1;
-        }
-    }
-    this.truncate(new_size);
-}
