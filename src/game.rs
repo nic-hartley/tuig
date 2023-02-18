@@ -153,7 +153,7 @@ impl<G: Game + 'static> Runner<G> {
         self
     }
 
-    fn run_game(self, iosys: &mut dyn IoSystem) {
+    fn run_game(self, iosys: &mut dyn IoSystem) -> G {
         let mut screen = Screen::new(iosys.size());
 
         let Self {
@@ -213,7 +213,7 @@ impl<G: Game + 'static> Runner<G> {
             mem::swap(&mut replies.agents, &mut new_agents);
 
             // filter out agents that will never wake up
-            util::retain_unstable(&mut agents, |(cf, _ag)| match cf {
+            agents.retain(|(cf, _ag)| match cf {
                 // never is_ready again
                 ControlFlow::Kill => false,
                 // if there's only one reference, it's the one in this handle
@@ -223,14 +223,19 @@ impl<G: Game + 'static> Runner<G> {
             });
         }
         iosys.stop();
+        game
     }
 
     /// Start the game running.
     ///
     /// This **must** be run on the main thread. Ideally, you'd run it from `main` directly.
-    pub fn run(self) {
+    /// 
+    /// This function only exits when [`Game::event`] or [`Game::input`] returns [`Response::Quit`]. It returns the
+    /// [`Game`], primarily for testing purposes.
+    pub fn run(self) -> G {
         let (mut iosys, mut iorun) = sys::load().expect("failed to load");
-        thread::spawn(move || self.run_game(iosys.as_mut()));
+        let thread = thread::spawn(move || self.run_game(iosys.as_mut()));
         iorun.run();
+        thread.join().unwrap()
     }
 }

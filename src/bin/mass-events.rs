@@ -6,12 +6,12 @@ use redshell::{
     io::{input::Action, output::Screen},
 };
 
-const AGENTS: u128 = 20_000;
+const AGENTS: u64 = 20_000;
 
-type TinyMessage = u128;
+type TinyMessage = u64;
 
 struct TinyAgent {
-    factor: u128,
+    factor: u64,
 }
 
 impl Agent<TinyMessage> for TinyAgent {
@@ -31,15 +31,20 @@ impl Agent<TinyMessage> for TinyAgent {
             };
             replies.queue(next);
         }
+        // // Simulate longer processing time
+        // match self.factor % 8 {
+        //     0 => (),
+        //     sleep => std::thread::sleep(std::time::Duration::from_micros(sleep)),
+        // }
         ControlFlow::Continue
     }
 }
 
 #[derive(Default)]
 struct TinyGame {
-    count: u128,
+    count: u64,
     max: TinyMessage,
-    complete: u128,
+    complete: u64,
 }
 
 impl Game for TinyGame {
@@ -83,7 +88,12 @@ fn main() {
         starter = starter.spawn(TinyAgent { factor });
     }
     let start = Instant::now();
-    starter.run();
+    let TinyGame { count, max, complete } = starter.run();
     let dur = Instant::now() - start;
     println!("Completed in {:.02}s", dur.as_secs_f32());
+    println!("Final state: count={}, max={}, complete={}", count, max, complete);
+    // Ensure we get the right answers
+    assert_eq!(count, 1854634);
+    assert_eq!(max, 27114424);
+    assert_eq!(complete, 20000);
 }
