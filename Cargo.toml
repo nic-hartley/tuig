@@ -15,17 +15,18 @@ rust-version = "1.59"
 __sys = []
 sys_nop = ["__sys"]
 sys_cli = ["__sys", "crossterm"]
-
 __sys_gui = ["__sys", "winit"]
 sys_gui_softbuffer = ["__sys_gui", "fontdue", "softbuffer", "rayon", "winapi/winuser"]
 
-# for running as an SSH 'shell' (or any other TTY)
+__run = []
+run_orig = ["__run"]
+run_single = ["__run"]
+run_std_multi = ["__run"]
+run_rayon = ["__run", "rayon"]
+
 plat_ssh = ["sys_cli"]
-# for distribution on Steam
 plat_steam = []
-# for distributing on bootable media
 plat_floppy = []
-# for itch.io and other web instances
 plat_wasm = []
 
 [[bin]]
@@ -38,7 +39,7 @@ required-features = ["__sys"]
 
 [[bin]]
 name = "mass-events"
-required-features = ["__sys"]
+required-features = ["sys_nop"]
 
 # [[bench]]
 # name = "mass-events"

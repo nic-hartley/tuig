@@ -26,8 +26,11 @@ Eventually, this crate will contain:
 This will make extremely heavy use of features, so I'll explain my intended setup here:
 
 - `sys_*` are the IO subsystems available. At least one must be selected.
-  - `sys_gui_*` are the various flavors of GUI rendering backend
+  - `sys_gui_*` are the various flavors of GUI rendering backend.
+  - If several are selected, they're chosen from at runtime; see `redshell::io::sys::load`.
+- `run_*` are the agent runners. Exactly one must be selected.
+  - These decide how agents, the `Game`, and the IO system are run, e.g. what type of multithreading is used.
 - `plat_*` are the platforms available to be targeted. At most one must be selected.
-  - These swap out the `main` function in the `redshell` binary, and pick the `sys_*` appropriate for the target.
+  - These pick the other features appropriate for the target. Don't use it with others.
 
 If you're doing anything besides developing on `redshell` itself you almost certainly want to pick **only** a `plat_*` feature and nothing else.

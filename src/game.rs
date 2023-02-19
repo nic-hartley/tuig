@@ -165,8 +165,6 @@ impl<G: Game + 'static> Runner<G> {
         let mut agents = vec![];
         let mut tainted = true;
         'mainloop: loop {
-            agents.extend(new_agents.drain(..).map(|mut a| (a.start(&mut replies), a)));
-
             let new_size = iosys.size();
             if new_size != screen.size() {
                 tainted = true;
@@ -199,11 +197,16 @@ impl<G: Game + 'static> Runner<G> {
                     // TODO: Clean shutdown
                     Response::Quit => break 'mainloop,
                 }
-                for (cf, agent) in &mut agents {
-                    if !cf.is_ready() {
-                        continue;
-                    }
+            }
+
+            agents.extend(new_agents.drain(..).map(|mut a| (a.start(&mut replies), a)));
+
+            for (cf, agent) in agents.iter_mut().filter(|(cf, _)| cf.is_ready()) {
+                for event in &events {
                     *cf = agent.react(event, &mut replies);
+                    if !cf.is_ready() {
+                        break;
+                    }
                 }
             }
 
