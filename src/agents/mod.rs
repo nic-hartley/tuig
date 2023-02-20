@@ -2,7 +2,7 @@ mod cf;
 pub use cf::{ControlFlow, WaitHandle};
 
 mod event;
-pub use event::{Bundle, BundledAgent, BundledApp, BundledTool, Event};
+pub use event::{Bundle, BundledApp, BundledTool, Event};
 
 use crate::game::{Message, Replies};
 
