@@ -3,8 +3,6 @@ use std::sync::{Arc, Mutex};
 
 use crate::{app::App, io::clifmt::Text, tools::Tool};
 
-use super::Agent;
-
 /// Convenience for the things that pass trait objects around, but only one of them.
 pub struct Bundle<T>(Arc<Mutex<Option<T>>>);
 
@@ -61,7 +59,6 @@ macro_rules! trait_bundle {
     )* };
 }
 trait_bundle! {
-    spawn(Agent<Event>) => SpawnAgent,
     install(Tool) => InstallTool,
     add_tab(App) => AddTab,
 }
@@ -70,8 +67,6 @@ trait_bundle! {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Event {
-    /// Have a new agent spawned and processing events
-    SpawnAgent(BundledAgent),
     /// Create a new tab on the player's UI
     AddTab(BundledApp),
 

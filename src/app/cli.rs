@@ -1,7 +1,7 @@
 use std::{collections::VecDeque, sync::Arc};
 
 use crate::{
-    agents::{Bundle, Event},
+    agents::Event,
     game::Replies,
     io::{
         clifmt::Text,
@@ -86,9 +86,7 @@ impl CliApp {
             None => (trimmed, ""),
         };
         if let Some(tool) = self.state.machine.tools.get(cmd).map(|r| r.value().clone()) {
-            events.queue(Event::SpawnAgent(Bundle::of(
-                tool.run(rest.trim(), &self.state),
-            )));
+            events.spawn_boxed(tool.run(rest.trim(), &self.state));
             self.prompt = false;
         } else {
             let line =
