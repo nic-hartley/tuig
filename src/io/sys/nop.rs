@@ -1,6 +1,9 @@
 use std::{
     io,
-    sync::{Arc, Barrier},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Barrier,
+    },
     time::Duration,
 };
 
@@ -44,22 +47,36 @@ impl IoSystem for NopSystem {
 /// An implementation of [`IoRunner`] that doesn't actually do anything except wait for `.stop` to be called. Used by
 /// [`NopSystem`], for benchmarking or testing.
 #[derive(Clone)]
-pub struct NopIoRunner(Arc<Barrier>);
+pub struct NopIoRunner(Arc<AtomicBool>, Arc<Barrier>);
 
 impl NopIoRunner {
     /// Create a [`NopIoRunner`].
     pub fn new() -> Self {
-        Self(Arc::new(Barrier::new(2)))
+        Self(Arc::new(false.into()), Arc::new(Barrier::new(2)))
     }
 
     /// Tell the [`NopIoRunner`] to stop.
     pub fn stop(&mut self) {
-        self.0.wait();
+        self.0.store(true, Ordering::Release);
+        self.1.wait();
     }
 }
 
 impl IoRunner for NopIoRunner {
+    fn step(&mut self) -> bool {
+        if self.0.load(Ordering::Acquire) {
+            // ensure that `stop` returns
+            self.1.wait();
+            true
+        } else {
+            false
+        }
+    }
+
     fn run(&mut self) {
-        self.0.wait();
+        // we don't need to constantly check
+        while !self.0.load(Ordering::Acquire) {
+            self.1.wait();
+        }
     }
 }

@@ -60,8 +60,21 @@ pub trait IoSystem: Send {
 ///
 /// This type exists so that things which need to run on the main thread specifically, can.
 pub trait IoRunner {
+    /// Execute one 'step', which should be quick and must be non-blocking. Returns whether an exit has been requested
+    /// (i.e. by [`IoSystem::stop`]) since the last time `step` was called.
+    ///
+    /// Will always be called on the main thread.
+    #[must_use]
+    fn step(&mut self) -> bool;
+
     /// Run until the paired [`IoSystem`] tells you to stop.
-    fn run(&mut self);
+    ///
+    /// Will always be called on the main thread.
+    ///
+    /// The default implementation just runs `while !self.step() { }`.
+    fn run(&mut self) {
+        while !self.step() {}
+    }
 }
 /// Based on IO system features enabled, attempt to initialize an IO system; in order:
 ///
