@@ -92,6 +92,11 @@ pub enum Response {
     Quit,
 }
 
+struct AgentRunner<M: Message> {
+    agents: Vec<(ControlFlow, Box<dyn Agent<M>>)>,
+    replies: Replies<M>,
+}
+
 /// Represents a game which can be run in the main loop.
 ///
 /// Note that `Game`s don't run the bulk of the game logic; that's the `Agent`'s job. The `Game` trait is the place
@@ -105,6 +110,7 @@ pub enum Response {
 /// This makes the code a bit harder to write, but it clearly separates concerns and encourages you to put your heavy
 /// logic somewhere other than the render thread.
 pub trait Game: Send {
+    /// The message that this `Game` will be passing around between `Agent`s and itself.
     type Message: Message;
 
     /// The user has done some input; update the UI and inform [`Agent`]s accordingly.
@@ -130,6 +136,51 @@ pub struct Runner<G: Game + 'static> {
     game: G,
 }
 
+impl<M: Message> AgentRunner<M> {
+    fn new() -> Self {
+        Self {
+            agents: Default::default(),
+            replies: Default::default(),
+        }
+    }
+
+    /// Perform one round of event processing.
+    /// 
+    /// `agents` and `events` are both input and output.
+    fn step(&mut self, agents: &mut Vec<Box<dyn Agent<M>>>, events: &mut Vec<M>) {
+        self.agents.extend(agents.drain(..).map(|mut a| (a.start(&mut self.replies), a)));
+
+        for (cf, agent) in self.agents.iter_mut() {
+            if !cf.is_ready() {
+                continue;
+            }
+            for event in events.iter() {
+                *cf = agent.react(event, &mut self.replies);
+                if !cf.is_ready() {
+                    break;
+                }
+            }
+        }
+
+        // filter out agents that will never wake up
+        self.agents.retain(|(cf, _ag)| match cf {
+            // never is_ready again
+            ControlFlow::Kill => false,
+            // if there's only one reference, it's the one in this handle
+            ControlFlow::Handle(h) => h.references() > 1,
+            // otherwise it might eventually wake up, keep it around
+            _ => true,
+        });
+
+        // we're done with the old events now
+        events.clear();
+        // pragmatically this just outputs self.replies.messages and clears it, but this reuses allocations
+        mem::swap(&mut self.replies.messages, events);
+        // ditto but for agents (no clear needed because we drained earlier)
+        mem::swap(&mut self.replies.agents, agents);
+    }
+}
+
 impl<G: Game + 'static> Runner<G> {
     /// Prepare a game to be run
     pub fn new(game: G) -> Self {
@@ -152,17 +203,19 @@ impl<G: Game + 'static> Runner<G> {
         self
     }
 
+    #[cfg(feature = "run_orig")]
     fn run_game(self, iosys: &mut dyn IoSystem) -> G {
         let mut screen = Screen::new(iosys.size());
 
         let Self {
             mut game,
             mut events,
-            agents: mut new_agents,
+            mut agents,
         } = self;
 
+        let mut ar = AgentRunner::new();
+
         let mut replies = Replies::default();
-        let mut agents = vec![];
         let mut tainted = true;
         'mainloop: loop {
             let new_size = iosys.size();
@@ -199,33 +252,23 @@ impl<G: Game + 'static> Runner<G> {
                 }
             }
 
-            agents.extend(new_agents.drain(..).map(|mut a| (a.start(&mut replies), a)));
+            events.extend(replies.messages.drain(..));
+            agents.extend(replies.agents.drain(..));
 
-            for (cf, agent) in agents.iter_mut().filter(|(cf, _)| cf.is_ready()) {
-                for event in &events {
-                    *cf = agent.react(event, &mut replies);
-                    if !cf.is_ready() {
-                        break;
-                    }
-                }
-            }
-
-            mem::swap(&mut replies.messages, &mut events);
-            replies.messages.clear();
-            mem::swap(&mut replies.agents, &mut new_agents);
-
-            // filter out agents that will never wake up
-            agents.retain(|(cf, _ag)| match cf {
-                // never is_ready again
-                ControlFlow::Kill => false,
-                // if there's only one reference, it's the one in this handle
-                ControlFlow::Handle(h) => h.references() > 1,
-                // otherwise it might eventually wake up, keep it around
-                _ => true,
-            });
+            ar.step(&mut agents, &mut events);
         }
         iosys.stop();
         game
+    }
+
+    /// Implementation of [`Self::run`] for `run_orig`: Monopolizes the main thread for the IoRunner, and spins off
+    /// another thread to handle the game and all agents.
+    #[cfg(feature = "run_orig")]
+    fn run_impl(self) -> G {
+        let (mut iosys, mut iorun) = sys::load().expect("failed to load");
+        let thread = thread::spawn(move || self.run_game(iosys.as_mut()));
+        iorun.run();
+        thread.join().unwrap()
     }
 
     /// Start the game running.
@@ -234,10 +277,8 @@ impl<G: Game + 'static> Runner<G> {
     ///
     /// This function only exits when [`Game::event`] or [`Game::input`] returns [`Response::Quit`]. It returns the
     /// [`Game`], primarily for testing purposes.
+    #[cfg(feature = "__run")]
     pub fn run(self) -> G {
-        let (mut iosys, mut iorun) = sys::load().expect("failed to load");
-        let thread = thread::spawn(move || self.run_game(iosys.as_mut()));
-        iorun.run();
-        thread.join().unwrap()
+        self.run_impl()
     }
 }
