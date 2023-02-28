@@ -1,7 +1,7 @@
 use core::fmt;
 use std::sync::{Arc, Mutex};
 
-use crate::{app::App, io::clifmt::Text, tools::Tool};
+use crate::{app::App, io::clifmt::Text, tools::Tool, game::Message};
 
 /// Convenience for the things that pass trait objects around, but only one of them.
 pub struct Bundle<T>(Arc<Mutex<Option<T>>>);
@@ -67,6 +67,9 @@ trait_bundle! {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Event {
+    /// See [`Message::tick`].
+    Tick,
+
     /// Create a new tab on the player's UI
     AddTab(BundledApp),
 
@@ -118,6 +121,12 @@ impl Event {
     #[cfg_attr(coverage, no_coverage)]
     pub fn cd(to: &str) -> Event {
         Event::ChangeDir(to.into())
+    }
+}
+
+impl Message for Event {
+    fn tick() -> Self {
+        Self::Tick
     }
 }
 

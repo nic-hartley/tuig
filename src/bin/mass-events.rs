@@ -62,7 +62,7 @@ impl Game for TinyGame {
             self.max = *event;
             Response::Redraw
         } else {
-            if self.count % (AGENTS / 10) == 0 {
+            if self.count % (AGENTS / 100) == 0 {
                 Response::Redraw
             } else {
                 Response::Nothing

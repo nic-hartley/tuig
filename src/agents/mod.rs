@@ -54,7 +54,7 @@ impl<M: Message> Agent<M> for NopAgent {
 mod test {
     use super::*;
 
-    #[derive(Clone)]
+    #[derive(Clone, Default)]
     struct TestMessage;
 
     #[coverage_helper::test]

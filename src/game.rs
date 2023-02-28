@@ -14,8 +14,18 @@ use crate::{
     },
 };
 
-pub trait Message: Clone + Send + Sync {}
-impl<T: Clone + Send + Sync> Message for T {}
+pub trait Message: Clone + Send + Sync {
+    /// The message to send agents when there aren't any other messages queued for processing, to ensure every awake
+    /// agent processes at least one event per round. Will **not** be sent if there are any other events.
+    /// 
+    /// This method should be as simple and fast as possible, ideally just returning a constant value.
+    fn tick() -> Self;
+}
+impl<T: Clone + Send + Sync + Default> Message for T {
+    fn tick() -> Self {
+        Self::default()
+    }
+}
 
 /// Allows a [`Game`] or [`Agent`] to make things happen in the engine in response to events or input.
 pub struct Replies<M: Message> {
@@ -149,6 +159,10 @@ impl<M: Message> AgentRunner<M> {
     /// `agents` and `events` are both input and output.
     fn step(&mut self, agents: &mut Vec<Box<dyn Agent<M>>>, events: &mut Vec<M>) {
         self.agents.extend(agents.drain(..).map(|mut a| (a.start(&mut self.replies), a)));
+
+        if events.is_empty() {
+            events.push(M::tick());
+        }
 
         for (cf, agent) in self.agents.iter_mut() {
             if !cf.is_ready() {
