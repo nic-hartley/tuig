@@ -11,6 +11,7 @@ pub mod io;
 pub mod machine;
 pub mod tools;
 mod util;
+mod timing;
 
 /// The current state of the game, including the state of the UI.
 #[derive(Default)]

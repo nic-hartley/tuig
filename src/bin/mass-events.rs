@@ -21,7 +21,7 @@ impl Agent<TinyMessage> for TinyAgent {
     }
 
     fn react(&mut self, event: &TinyMessage, replies: &mut Replies<TinyMessage>) -> ControlFlow {
-        if *event == 1 {
+        if *event <= 1 {
             // ignore it: collatz ended
         } else if *event % AGENTS == self.factor % AGENTS {
             let next = if *event % 2 == 0 {
@@ -50,7 +50,9 @@ struct TinyGame {
 impl Game for TinyGame {
     type Message = TinyMessage;
     fn event(&mut self, event: &Self::Message) -> Response {
-        self.count += 1;
+        if event != &0 {
+            self.count += 1;
+        }
         if *event == 1 {
             self.complete += 1;
             if self.complete == AGENTS {
