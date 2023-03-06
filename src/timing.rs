@@ -36,7 +36,7 @@ impl Timer {
 
     /// Check whether we've ticked yet; if so, reset the timer. Useful for ratelimiting.
     pub fn ready(&mut self) -> bool {
-        if Instant::now() < self.next {
+        if Instant::now() > self.next {
             self.tick();
             true
         } else {
