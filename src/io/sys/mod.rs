@@ -2,10 +2,7 @@
 //! a feature named similarly and exports a struct implementing `IoSystem`. The actual intended input and output APIs
 //! are in the `input` and `output` modules.
 
-use std::{
-    io,
-    time::{Duration, Instant},
-};
+use std::io;
 
 use super::{input::Action, output::Screen, XY};
 
@@ -34,17 +31,6 @@ pub trait IoSystem: Send {
     fn input(&mut self) -> io::Result<Action>;
     /// If the next user input is available, return it.
     fn poll_input(&mut self) -> io::Result<Option<Action>>;
-    /// Wait for the next user input, up to a timeout.
-    fn input_until(&mut self, time: Duration) -> io::Result<Option<Action>> {
-        let end = Instant::now() + time;
-        while Instant::now() < end {
-            if let Some(input) = self.poll_input()? {
-                return Ok(Some(input));
-            }
-            std::thread::sleep(time / 20);
-        }
-        Ok(None)
-    }
 
     /// Tells the associated [`IoRunner`] to stop and return control of the main thread, and tell the [`IoSystem`] to
     /// dispose of any resources it's handling.

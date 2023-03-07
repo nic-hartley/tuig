@@ -155,7 +155,8 @@ fn mouse_demo(io: &mut dyn IoSystem) {
     let mut last_text = String::new();
     let mut text = String::new();
     loop {
-        if let Some(mut act) = io.input_until(Duration::from_secs_f32(0.05)).unwrap() {
+        thread::sleep(Duration::from_secs_f32(1.0 / 60.0));
+        if let Some(mut act) = io.poll_input().unwrap() {
             while let Some(later) = io.poll_input().unwrap() {
                 act = later;
             }

@@ -31,10 +31,6 @@ impl IoSystem for NopSystem {
     fn poll_input(&mut self) -> io::Result<Option<Action>> {
         Ok(None)
     }
-    fn input_until(&mut self, time: Duration) -> io::Result<Option<Action>> {
-        std::thread::sleep(time);
-        Ok(None)
-    }
     fn size(&self) -> XY {
         XY(80, 24)
     }
