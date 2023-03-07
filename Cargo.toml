@@ -35,11 +35,11 @@ required-features = ["__sys"]
 
 [[bin]]
 name = "redshell"
-required-features = ["__sys"]
+required-features = ["__sys", "__run"]
 
 [[bin]]
 name = "mass-events"
-required-features = ["sys_nop"]
+required-features = ["sys_nop", "__run"]
 
 # [[bench]]
 # name = "mass-events"

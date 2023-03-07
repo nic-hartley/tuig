@@ -9,8 +9,9 @@ pub mod cutscenes;
 pub mod game;
 pub mod io;
 pub mod machine;
-mod timing;
 pub mod tools;
+pub mod runner;
+mod timing;
 mod util;
 
 /// The current state of the game, including the state of the UI.

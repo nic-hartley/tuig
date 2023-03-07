@@ -3,12 +3,12 @@ use std::time::Duration;
 use redshell::{
     agents::{Agent, ControlFlow, Event},
     app::{App, ChatApp, CliApp},
-    game::{Game, Replies, Response, Runner},
+    game::{Game, Replies, Response},
     io::{
         input::{Action, Key},
         output::Screen,
     },
-    tools, GameState,
+    tools, GameState, runner::Runner,
 };
 
 /// A single step in the conversation tree of an [`NPC`]
@@ -271,5 +271,5 @@ fn main() {
                 ask "uh ok" => 100,
             ],
         ))
-        .run();
+        .load_run();
 }

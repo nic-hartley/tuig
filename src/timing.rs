@@ -1,5 +1,9 @@
 //! Miscellaneous helper types around controlling the timing of events.
 
+// Not everything here is used under every feature combination; we silence the warnings rather than trying to define
+// under exactly what conditions any given function is expected to be used.
+#![allow(unused)]
+
 use std::time::{Duration, Instant};
 
 /// Keeps track of time between relatively steady pulses.

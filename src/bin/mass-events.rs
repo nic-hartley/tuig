@@ -2,8 +2,8 @@ use std::time::Instant;
 
 use redshell::{
     agents::{Agent, ControlFlow},
-    game::{Game, Replies, Response, Runner},
-    io::{input::Action, output::Screen},
+    game::{Game, Replies, Response},
+    io::{input::Action, output::Screen}, runner::Runner,
 };
 
 const AGENTS: u64 = 10_000;
@@ -94,7 +94,7 @@ fn main() {
         count,
         max,
         complete,
-    } = starter.run();
+    } = starter.load_run();
     let dur = Instant::now() - start;
     println!("Completed in {:.02}s", dur.as_secs_f32());
     println!(
