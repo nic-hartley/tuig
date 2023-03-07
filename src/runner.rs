@@ -2,22 +2,15 @@
 
 #![cfg(feature = "__run")]
 
-
 use std::{mem, thread, time::Duration};
 
 use crate::{
     agents::{Agent, ControlFlow},
-    io::{
-        input::Action,
-        output::Screen,
-        sys::IoSystem,
-    }, game::{Message, Replies, Game, Response},
+    game::{Game, Message, Replies, Response},
+    io::{input::Action, output::Screen, sys::IoSystem},
 };
 
-use crate::{
-    timing::Timer,
-    io::sys::IoRunner,
-};
+use crate::{io::sys::IoRunner, timing::Timer};
 
 #[cfg(feature = "__sys")]
 use crate::io::sys;
@@ -310,7 +303,7 @@ impl<G: Game + 'static> Runner<G> {
     }
 
     /// Use [`sys::load`] to intelligently pick an iosystem, load it, and [`Self::run`].
-    /// 
+    ///
     /// This **must** be run on the main thread. Ideally, you'd run it from `main` directly.
     ///
     /// This function only exits when [`Game::event`] or [`Game::input`] returns [`Response::Quit`]. It returns the

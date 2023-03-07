@@ -3,7 +3,8 @@ use std::time::Instant;
 use redshell::{
     agents::{Agent, ControlFlow},
     game::{Game, Replies, Response},
-    io::{input::Action, output::Screen}, runner::Runner,
+    io::{input::Action, output::Screen},
+    runner::Runner,
 };
 
 const AGENTS: u64 = 10_000;

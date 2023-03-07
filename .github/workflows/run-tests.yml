@@ -82,7 +82,7 @@ jobs:
       matrix:
         run: [orig, single]  # TODO: std_multi, rayon
         sys: [nop, cli, gui_softbuffer]
-    name: Checking run_${{ matrix.run }} and sys_${{ matrix.sys }}
+    name: Check run_${{ matrix.run }} and sys_${{ matrix.sys }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/cache@v3

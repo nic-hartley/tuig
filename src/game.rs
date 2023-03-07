@@ -4,7 +4,10 @@
 
 use core::fmt;
 
-use crate::{agents::Agent, io::{input::Action, output::Screen}};
+use crate::{
+    agents::Agent,
+    io::{input::Action, output::Screen},
+};
 
 pub trait Message: Clone + Send + Sync {
     /// The message to send agents when there aren't any other messages queued for processing, to ensure every awake

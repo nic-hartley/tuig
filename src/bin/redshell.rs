@@ -8,7 +8,8 @@ use redshell::{
         input::{Action, Key},
         output::Screen,
     },
-    tools, GameState, runner::Runner,
+    runner::Runner,
+    tools, GameState,
 };
 
 /// A single step in the conversation tree of an [`NPC`]
