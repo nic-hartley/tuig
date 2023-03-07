@@ -12,13 +12,12 @@ on:
 jobs:
 
 
-  test:
+  unit-and-integration:
     strategy:
       fail-fast: false
       matrix:
         rust: [stable, 1.59, nightly]
         platform: [windows, macos, ubuntu]
-        coverage: [false]
     name: ${{ matrix.platform }} / Rust ${{ matrix.rust }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
@@ -45,3 +44,34 @@ jobs:
         cargo fmt --check
         cargo check --all-features
         cargo test --all-features
+
+
+  mass-events:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [orig, single]
+    name: ${{ matrix.runner }} runner
+    runs-on: linux-latest
+    steps:
+    - uses: actions/cache@v3
+      with:
+        path: ~/.rustup/
+        key: rustup-linux-stable
+    - uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: cargo-cache
+    - uses: actions/cache@v3
+      with:
+        path: ./target
+        key: target-dir-linux-stable
+    - name: Set up Rust
+      run: |
+        rustup default stable
+        rustup component add rustfmt
+
+    - uses: actions/checkout@v3
+    - name: Run tests
+      run: |
+        cargo run --release --bin mass-events --features sys_nop,run_${{ matrix.runner }}
