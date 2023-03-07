@@ -203,7 +203,6 @@ struct GameRunner<G: Game, IO: IoSystem> {
     screen: Screen,
     tainted: bool,
     render_timer: Timer,
-    event_timer: Timer,
 }
 
 impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
@@ -216,8 +215,6 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
             tainted: true,
             // Render at most ~60fps
             render_timer: Timer::new(1.0 / 60.0),
-            // Process events every quarter of a second
-            event_timer: Timer::new(1.0 / 4.0),
         }
     }
 
@@ -267,18 +264,6 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
         false
     }
 
-    /// How long to wait until IO should be done.
-    ///
-    /// See [`Timer::remaining`] for timing details.
-    fn remaining(&self) -> Duration {
-        self.event_timer.remaining()
-    }
-
-    /// Check whether the input time is complete and, if so, reset it
-    fn input_done(&mut self) -> bool {
-        self.event_timer.tick_ready()
-    }
-
     /// Render to the screen.
     ///
     /// This will automatically only render if:
@@ -306,6 +291,7 @@ pub struct Runner<G: Game + 'static> {
     events: Vec<G::Message>,
     agents: Vec<Box<dyn Agent<G::Message>>>,
     game: G,
+    input_tick: f32,
 }
 
 impl<G: Game + 'static> Runner<G> {
@@ -315,6 +301,7 @@ impl<G: Game + 'static> Runner<G> {
             game,
             events: vec![],
             agents: vec![],
+            input_tick: 0.25,
         }
     }
 
@@ -330,39 +317,50 @@ impl<G: Game + 'static> Runner<G> {
         self
     }
 
-    #[cfg(feature = "run_orig")]
-    fn run_game(self, iosys: impl IoSystem) -> G {
-        let Self {
-            game,
-            mut events,
-            mut agents,
-        } = self;
-
-        let mut ar = AgentRunner::new();
-        let mut gr = GameRunner::new(game, iosys);
-
-        'mainloop: loop {
-            while !gr.input_done() {
-                gr.render();
-                if gr.io(&mut events, &mut agents) {
-                    break 'mainloop;
-                }
-            }
-            gr.render();
-            if gr.feed(&events) {
-                break 'mainloop;
-            }
-            ar.step(&mut events, &mut agents);
-        }
-        gr.iosys.stop();
-        gr.game
+    /// Set the target time between rounds of events.
+    /// 
+    /// Note that rounds may take longer, if it just takes longer to handle all the events in a round.
+    pub fn input_tick(mut self, tick: f32) -> Self {
+        self.input_tick = tick;
+        self
     }
 
     /// Implementation of [`Self::run`] for `run_orig`: Monopolizes the main thread for the IoRunner, and spins off
     /// another thread to handle the game and all agents.
     #[cfg(feature = "run_orig")]
     fn run_orig(self, iosys: impl IoSystem + 'static, mut iorun: impl IoRunner) -> G {
-        let thread = thread::spawn(move || self.run_game(iosys));
+        let Self {
+            game,
+            mut events,
+            mut agents,
+            input_tick,
+        } = self;
+
+        let thread = thread::spawn(move || {
+            let mut ar = AgentRunner::new();
+            let mut gr = GameRunner::new(game, iosys);
+            let mut input_timer = Timer::new(input_tick);
+
+            'mainloop: loop {
+                loop {
+                    gr.render();
+                    if gr.io(&mut events, &mut agents) {
+                        break 'mainloop;
+                    }
+                    if input_timer.tick_ready() {
+                        break;
+                    }
+                    thread::sleep(input_timer.remaining().min(Duration::from_millis(2)));
+                }
+                gr.render();
+                if gr.feed(&events) {
+                    break 'mainloop;
+                }
+                ar.step(&mut events, &mut agents);
+            }
+            gr.iosys.stop();
+            gr.game
+        });
         iorun.run();
         thread.join().unwrap()
     }
@@ -373,10 +371,12 @@ impl<G: Game + 'static> Runner<G> {
             game,
             mut events,
             mut agents,
+            input_tick,
         } = self;
 
         let mut ar = AgentRunner::new();
         let mut gr = GameRunner::new(game, iosys);
+        let mut input_timer = Timer::new(input_tick);
 
         'mainloop: loop {
             loop {
@@ -387,11 +387,10 @@ impl<G: Game + 'static> Runner<G> {
                 if gr.io(&mut events, &mut agents) {
                     break 'mainloop;
                 }
-                if gr.input_done() {
+                if input_timer.tick_ready() {
                     break;
                 }
-                // TODO: drop this to like. 2ms.
-                thread::sleep(gr.remaining().min(Duration::from_secs_f32(0.2)));
+                thread::sleep(input_timer.remaining().min(Duration::from_millis(2)));
             }
             gr.render();
             if gr.feed(&events) {

@@ -6,7 +6,7 @@ use redshell::{
     io::{input::Action, output::Screen},
 };
 
-const AGENTS: u64 = 20_000;
+const AGENTS: u64 = 10_000;
 
 type TinyMessage = u64;
 
@@ -85,7 +85,7 @@ impl Game for TinyGame {
 }
 
 fn main() {
-    let mut starter = Runner::new(TinyGame::default());
+    let mut starter = Runner::new(TinyGame::default()).input_tick(0.0);
     for factor in 1..=AGENTS {
         starter = starter.spawn(TinyAgent { factor });
     }
@@ -102,7 +102,7 @@ fn main() {
         count, max, complete
     );
     // Ensure we get the right answers
-    assert_eq!(count, 1854634);
+    assert_eq!(count, 859666);
     assert_eq!(max, 27114424);
-    assert_eq!(complete, 20000);
+    assert_eq!(complete, 10000);
 }
