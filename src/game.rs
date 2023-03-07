@@ -10,14 +10,15 @@ use crate::{
     io::{
         input::Action,
         output::Screen,
-        sys::{self, IoSystem, IoRunner},
-    }, timing::Timer,
+        sys::{self, IoRunner, IoSystem},
+    },
+    timing::Timer,
 };
 
 pub trait Message: Clone + Send + Sync {
     /// The message to send agents when there aren't any other messages queued for processing, to ensure every awake
     /// agent processes at least one event per round. Will **not** be sent if there are any other events.
-    /// 
+    ///
     /// This method should be as simple and fast as possible, ideally just returning a constant value.
     fn tick() -> Self;
 }
@@ -147,15 +148,19 @@ impl<M: Message> AgentRunner<M> {
     }
 
     /// Perform one round of event processing.
-    /// 
+    ///
     /// `agents` and `events` are both input and output:
-    /// 
+    ///
     /// - `agents` and `events` passed in are the agents/events for this runner to run
     /// - `agents` and `events` coming out are the agents that this round spawned
-    /// 
+    ///
     /// Notably the vecs *will be cleared* and old events *will not be available*!
     fn step(&mut self, events: &mut Vec<M>, agents: &mut Vec<Box<dyn Agent<M>>>) {
-        self.agents.extend(agents.drain(..).map(|mut a| (a.start(&mut self.replies), a)));
+        self.agents.extend(
+            agents
+                .drain(..)
+                .map(|mut a| (a.start(&mut self.replies), a)),
+        );
 
         if events.is_empty() {
             events.push(M::tick());
@@ -205,7 +210,10 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
     fn new(game: G, iosys: IO) -> Self {
         let screen = Screen::new(iosys.size());
         Self {
-            game, iosys, screen, tainted: true,
+            game,
+            iosys,
+            screen,
+            tainted: true,
             // Render at most ~60fps
             render_timer: Timer::new(1.0 / 60.0),
             // Process events every quarter of a second
@@ -214,7 +222,7 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
     }
 
     /// Feed a list of events to the associated `Game`.
-    /// 
+    ///
     /// Returns whether a stop was requested.
     fn feed(&mut self, events: &[G::Message]) -> bool {
         if events.is_empty() {
@@ -232,10 +240,17 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
     }
 
     /// Do a step of IO with the associated `IoSystem` and `Game`.
-    /// 
+    ///
     /// Returns whether a stop was requested.
-    fn io(&mut self, events: &mut Vec<G::Message>, agents: &mut Vec<Box<dyn Agent<G::Message>>>) -> bool {
-        let mut replies = Replies { agents: mem::take(agents), messages: mem::take(events) };
+    fn io(
+        &mut self,
+        events: &mut Vec<G::Message>,
+        agents: &mut Vec<Box<dyn Agent<G::Message>>>,
+    ) -> bool {
+        let mut replies = Replies {
+            agents: mem::take(agents),
+            messages: mem::take(events),
+        };
         while let Ok(Some(action)) = self.iosys.poll_input() {
             match action {
                 Action::Closed => return true,
@@ -253,7 +268,7 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
     }
 
     /// How long to wait until IO should be done.
-    /// 
+    ///
     /// See [`Timer::remaining`] for timing details.
     fn remaining(&self) -> Duration {
         self.event_timer.remaining()
@@ -265,9 +280,9 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
     }
 
     /// Render to the screen.
-    /// 
+    ///
     /// This will automatically only render if:
-    /// 
+    ///
     /// - The screen contents have been tainted (e.g. by a [`Response::Redraw`] or [`Action::Redraw`])
     /// - It's been long enough since the last redraw
     fn render(&mut self) {

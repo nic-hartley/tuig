@@ -34,7 +34,7 @@ pub trait IoSystem: Send {
 
     /// Tells the associated [`IoRunner`] to stop and return control of the main thread, and tell the [`IoSystem`] to
     /// dispose of any resources it's handling.
-    /// 
+    ///
     /// This **must** return even if the `IoRunner` isn't done tearing down, to avoid deadlocks in the singlethreaded
     /// mode.
     ///
@@ -74,7 +74,7 @@ pub trait IoRunner {
 ///
 /// This macro takes a function or method to call with the loaded `impl IoSystem`. That structure is weird but it
 /// enables having ownership of the varied types, without needing a `Box`.
-/// 
+///
 /// The callback can be any "function call", up to the parens, e.g. `run` or `self.start`. It will be called as
 /// `$thing(iosys, iorun)`. If it's called, this macro "returns" `Ok(())`. Otherwise, all attempted loads failed, and
 /// this macro "returns" `Err(map)`, where `map` maps `&'static str` feature name to `io::Error` failure.

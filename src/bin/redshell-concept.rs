@@ -16,7 +16,10 @@ use redshell::{
 /// Attempt to load a system, or explode and die somewhat cleanly
 pub fn load_or_die() -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
     // oh how I hurt myself...
-    fn ret<S: IoSystem + 'static, R: IoRunner + 'static>(sys: S, run: R) -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
+    fn ret<S: IoSystem + 'static, R: IoRunner + 'static>(
+        sys: S,
+        run: R,
+    ) -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
         (Box::new(sys), Box::new(run))
     }
     let errs = match sys::load!(ret) {

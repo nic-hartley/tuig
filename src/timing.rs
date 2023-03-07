@@ -1,9 +1,9 @@
 //! Miscellaneous helper types around controlling the timing of events.
 
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 
 /// Keeps track of time between relatively steady pulses.
-/// 
+///
 /// Ticks try to stay lined up with the original tick, but if [`Self::tick`] is called more than half a period
 /// delayed, the next tick will be reset relative to the current time instead. If called early it will always advance
 /// by exactly one tick.
@@ -15,12 +15,16 @@ pub struct Timer {
 impl Timer {
     /// Create a new timer with the given period. The first tick is right now.
     pub fn new(period: f32) -> Self {
-        Self { next: Instant::now(), period: Duration::from_secs_f32(period) }
+        Self {
+            next: Instant::now(),
+            period: Duration::from_secs_f32(period),
+        }
     }
 
     /// How much time is left before the timer ticks over. Minimum 0.0.
     pub fn remaining(&self) -> Duration {
-        self.next.checked_duration_since(Instant::now())
+        self.next
+            .checked_duration_since(Instant::now())
             .unwrap_or(Duration::ZERO)
     }
 

@@ -1,8 +1,6 @@
 use std::{
     io,
-    sync::{
-        Arc, Condvar, Mutex,
-    },
+    sync::{Arc, Condvar, Mutex},
     time::Duration,
 };
 
@@ -52,17 +50,21 @@ impl NopIoRunner {
 
     /// Tell the [`NopIoRunner`] to stop.
     pub fn stop(&mut self) {
-        *self.0.0.lock().unwrap() = true;
-        self.0.1.notify_all()
+        *self.0 .0.lock().unwrap() = true;
+        self.0 .1.notify_all()
     }
 }
 
 impl IoRunner for NopIoRunner {
     fn step(&mut self) -> bool {
-        *self.0.0.lock().unwrap()
+        *self.0 .0.lock().unwrap()
     }
 
     fn run(&mut self) {
-        let _unused = self.0.1.wait_while(self.0.0.lock().unwrap(), |b| !*b).unwrap();
+        let _unused = self
+            .0
+             .1
+            .wait_while(self.0 .0.lock().unwrap(), |b| !*b)
+            .unwrap();
     }
 }
