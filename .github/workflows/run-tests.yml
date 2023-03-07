@@ -47,8 +47,6 @@ jobs:
 
 
   mass-events:
-    # Only run this once the other, shorter tests are done.
-    needs: unit-and-integration
     strategy:
       fail-fast: false
       matrix:
