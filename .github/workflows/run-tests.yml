@@ -1,4 +1,4 @@
-name: Run test battery
+name: Tests
 run-name: Testing ${{github.ref_name}}
 # no permission for the token, this runs on pull requests
 permissions: {}
@@ -18,7 +18,7 @@ jobs:
       matrix:
         rust: [stable, 1.59, nightly]
         platform: [windows, macos, ubuntu]
-    name: ${{ matrix.platform }} / Rust ${{ matrix.rust }}
+    name: Rust ${{ matrix.rust }} / ${{ matrix.platform }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
     - uses: actions/cache@v3
@@ -51,7 +51,7 @@ jobs:
       fail-fast: false
       matrix:
         runner: [orig, single]
-    name: ${{ matrix.runner }} runner
+    name: Runner ${{ matrix.runner }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/cache@v3
