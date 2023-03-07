@@ -318,7 +318,7 @@ impl<G: Game + 'static> Runner<G> {
     }
 
     /// Set the target time between rounds of events.
-    /// 
+    ///
     /// Note that rounds may take longer, if it just takes longer to handle all the events in a round.
     pub fn input_tick(mut self, tick: f32) -> Self {
         self.input_tick = tick;
