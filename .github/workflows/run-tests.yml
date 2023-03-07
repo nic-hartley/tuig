@@ -54,12 +54,12 @@ jobs:
       matrix:
         runner: [orig, single]
     name: ${{ matrix.runner }} runner
-    runs-on: linux-latest
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/cache@v3
       with:
         path: ~/.rustup/
-        key: rustup-linux-stable
+        key: rustup-ubuntu-stable
     - uses: actions/cache@v3
       with:
         path: ~/.cargo/registry
@@ -67,7 +67,7 @@ jobs:
     - uses: actions/cache@v3
       with:
         path: ./target
-        key: target-dir-linux-stable
+        key: target-dir-ubuntu-stable
     - name: Set up Rust
       run: |
         rustup default stable
