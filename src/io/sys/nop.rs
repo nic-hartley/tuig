@@ -1,8 +1,7 @@
 use std::{
     io,
     sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Barrier,
+        Arc, Condvar, Mutex,
     },
     time::Duration,
 };
@@ -47,36 +46,27 @@ impl IoSystem for NopSystem {
 /// An implementation of [`IoRunner`] that doesn't actually do anything except wait for `.stop` to be called. Used by
 /// [`NopSystem`], for benchmarking or testing.
 #[derive(Clone)]
-pub struct NopIoRunner(Arc<AtomicBool>, Arc<Barrier>);
+pub struct NopIoRunner(Arc<(Mutex<bool>, Condvar)>);
 
 impl NopIoRunner {
     /// Create a [`NopIoRunner`].
     pub fn new() -> Self {
-        Self(Arc::new(false.into()), Arc::new(Barrier::new(2)))
+        Self(Arc::new((Mutex::new(false), Condvar::new())))
     }
 
     /// Tell the [`NopIoRunner`] to stop.
     pub fn stop(&mut self) {
-        self.0.store(true, Ordering::Release);
-        self.1.wait();
+        *self.0.0.lock().unwrap() = true;
+        self.0.1.notify_all()
     }
 }
 
 impl IoRunner for NopIoRunner {
     fn step(&mut self) -> bool {
-        if self.0.load(Ordering::Acquire) {
-            // ensure that `stop` returns
-            self.1.wait();
-            true
-        } else {
-            false
-        }
+        *self.0.0.lock().unwrap()
     }
 
     fn run(&mut self) {
-        // we don't need to constantly check
-        while !self.0.load(Ordering::Acquire) {
-            self.1.wait();
-        }
+        let _unused = self.0.1.wait_while(self.0.0.lock().unwrap(), |b| !*b).unwrap();
     }
 }

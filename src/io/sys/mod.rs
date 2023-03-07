@@ -48,6 +48,9 @@ pub trait IoSystem: Send {
 
     /// Tells the associated [`IoRunner`] to stop and return control of the main thread, and tell the [`IoSystem`] to
     /// dispose of any resources it's handling.
+    /// 
+    /// This **must** return even if the `IoRunner` isn't done tearing down, to avoid deadlocks in the singlethreaded
+    /// mode.
     ///
     /// This will always be the last method called on this object (unless you count `Drop::drop`) so feel free to
     /// panic in the others if they're called after this one, especially `draw`.

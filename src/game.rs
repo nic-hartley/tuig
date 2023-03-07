@@ -3,7 +3,7 @@
 //! This is also the primary split between the "engine" and "game" halves.
 
 use core::fmt;
-use std::{fmt::Debug, mem, thread};
+use std::{fmt::Debug, mem, thread, time::Duration};
 
 use crate::{
     agents::{Agent, ControlFlow},
@@ -213,54 +213,70 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
         }
     }
 
-    /// This uses the same API as [`AgentRunner::step`].
+    /// Feed a list of events to the associated `Game`.
     /// 
-    /// Returns whether to keep running the game or not
-    fn step(&mut self, events: &mut Vec<G::Message>, agents: &mut Vec<Box<dyn Agent<G::Message>>>) -> bool {
-        // handle game events as the last bit before the tickover
-        for event in events.iter() {
+    /// Returns whether a stop was requested.
+    fn feed(&mut self, events: &[G::Message]) -> bool {
+        if events.is_empty() {
+            return self.feed(&[G::Message::tick()]);
+        }
+
+        for event in events {
             match self.game.event(event) {
                 Response::Nothing => (),
                 Response::Redraw => self.tainted = true,
-                Response::Quit => return false,
+                Response::Quit => return true,
             }
         }
-        // and that's it, there's no replying to events, so we can just clear the vec (to reuse allocations)
-        events.clear();
-        // we don't care about agents, so clear those as well.
-        agents.clear();
+        false
+    }
 
-        // process input for any remaining time (input_until is supposed to prefer exhausting all input,
-        // so we'll eagerly grab all available input until we're out of time)
-
-        // the take/replace ensures we reuse allocations as much as possible; the earlier `clear`s ensure they start
-        // empty and don't cause problems.
+    /// Do a step of IO with the associated `IoSystem` and `Game`.
+    /// 
+    /// Returns whether a stop was requested.
+    fn io(&mut self, events: &mut Vec<G::Message>, agents: &mut Vec<Box<dyn Agent<G::Message>>>) -> bool {
         let mut replies = Replies { agents: mem::take(agents), messages: mem::take(events) };
-        while let Ok(Some(action)) = self.iosys.input_until(self.event_timer.remaining()) {
+        while let Ok(Some(action)) = self.iosys.poll_input() {
             match action {
-                Action::Closed => return false,
+                Action::Closed => return true,
                 Action::Redraw => self.tainted = true,
                 other => match self.game.input(other, &mut replies) {
                     Response::Nothing => (),
                     Response::Redraw => self.tainted = true,
-                    Response::Quit => return false,
+                    Response::Quit => return true,
                 },
             }
         }
         *agents = replies.agents;
         *events = replies.messages;
-
-        self.event_timer.tick();
-        self.render();
-        true
+        false
     }
 
+    /// How long to wait until IO should be done.
+    /// 
+    /// See [`Timer::remaining`] for timing details.
+    fn remaining(&self) -> Duration {
+        self.event_timer.remaining()
+    }
+
+    /// Check whether the input time is complete and, if so, reset it
+    fn input_done(&mut self) -> bool {
+        self.event_timer.tick_ready()
+    }
+
+    /// Render to the screen.
+    /// 
+    /// This will automatically only render if:
+    /// 
+    /// - The screen contents have been tainted (e.g. by a [`Response::Redraw`] or [`Action::Redraw`])
+    /// - It's been long enough since the last redraw
     fn render(&mut self) {
-        if !self.render_timer.ready() {
-            return;
-        }
         let new_size = self.iosys.size();
         if self.tainted || new_size != self.screen.size() {
+            if !self.render_timer.tick_ready() {
+                // avoid wasting too much time rendering
+                return;
+            }
             self.screen.resize(new_size);
             self.game.render(&mut self.screen);
             self.iosys.draw(&self.screen).unwrap();
@@ -310,9 +326,16 @@ impl<G: Game + 'static> Runner<G> {
         let mut ar = AgentRunner::new();
         let mut gr = GameRunner::new(game, iosys);
 
-        loop {
-            if !gr.step(&mut events, &mut agents) {
-                break;
+        'mainloop: loop {
+            while !gr.input_done() {
+                gr.render();
+                if gr.io(&mut events, &mut agents) {
+                    break 'mainloop;
+                }
+            }
+            gr.render();
+            if gr.feed(&events) {
+                break 'mainloop;
             }
             ar.step(&mut events, &mut agents);
         }
@@ -323,10 +346,47 @@ impl<G: Game + 'static> Runner<G> {
     /// Implementation of [`Self::run`] for `run_orig`: Monopolizes the main thread for the IoRunner, and spins off
     /// another thread to handle the game and all agents.
     #[cfg(feature = "run_orig")]
-    fn run_impl(self, iosys: impl IoSystem + 'static, mut iorun: impl IoRunner) -> G {
+    fn run_orig(self, iosys: impl IoSystem + 'static, mut iorun: impl IoRunner) -> G {
         let thread = thread::spawn(move || self.run_game(iosys));
         iorun.run();
         thread.join().unwrap()
+    }
+
+    #[cfg(feature = "run_single")]
+    fn run_single(self, iosys: impl IoSystem + 'static, mut iorun: impl IoRunner) -> G {
+        let Self {
+            game,
+            mut events,
+            mut agents,
+        } = self;
+
+        let mut ar = AgentRunner::new();
+        let mut gr = GameRunner::new(game, iosys);
+
+        'mainloop: loop {
+            loop {
+                gr.render();
+                if iorun.step() {
+                    break 'mainloop;
+                }
+                if gr.io(&mut events, &mut agents) {
+                    break 'mainloop;
+                }
+                if gr.input_done() {
+                    break;
+                }
+                // TODO: drop this to like. 2ms.
+                thread::sleep(gr.remaining().min(Duration::from_secs_f32(0.2)));
+            }
+            gr.render();
+            if gr.feed(&events) {
+                break 'mainloop;
+            }
+            ar.step(&mut events, &mut agents);
+        }
+        gr.iosys.stop();
+        iorun.run();
+        gr.game
     }
 
     /// Start the game running.
@@ -336,7 +396,16 @@ impl<G: Game + 'static> Runner<G> {
     /// This function only exits when [`Game::event`] or [`Game::input`] returns [`Response::Quit`]. It returns the
     /// [`Game`], primarily for testing purposes.
     #[cfg(all(feature = "__run", feature = "__sys"))]
+    #[allow(unreachable_code)] // primarily for `cargo check --all-features`
     pub fn run(self) -> G {
-        sys::load!(self.run_impl).unwrap()
+        macro_rules! run_call {
+            ( $( $feature:literal => $function:ident ),* $(,)? ) => { $(
+                #[cfg(feature = $feature)]
+                {
+                    return sys::load!(self.$function).unwrap();
+                }
+            )* };
+        }
+        run_call!("run_orig" => run_orig, "run_single" => run_single);
     }
 }
