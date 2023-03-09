@@ -21,7 +21,6 @@ sys_gui_softbuffer = ["__sys_gui", "fontdue", "softbuffer", "rayon", "winapi/win
 __run = []
 run_orig = ["__run"]
 run_single = ["__run"]
-run_std_multi = ["__run"]
 run_rayon = ["__run", "rayon", "crossbeam"]
 
 plat_ssh = ["sys_cli"]
