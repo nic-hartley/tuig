@@ -3,11 +3,12 @@ use std::time::Duration;
 use redshell::{
     agents::{Agent, ControlFlow, Event},
     app::{App, ChatApp, CliApp},
-    game::{Game, Runner},
+    game::{Game, Replies, Response},
     io::{
         input::{Action, Key},
         output::Screen,
     },
+    runner::Runner,
     tools, GameState,
 };
 
@@ -42,7 +43,7 @@ impl NPC {
     }
 
     /// Advance to the next message/state
-    fn advance(&mut self, replies: &mut Vec<Event>) -> ControlFlow {
+    fn advance(&mut self, replies: &mut Replies<Event>) -> ControlFlow {
         if self.state >= self.all_states.len() {
             return ControlFlow::Kill;
         }
@@ -51,7 +52,7 @@ impl NPC {
         self.message += 1;
         if self.message != self.state().messages.len() {
             // if it's not the last message, we can send now (and then just ignore events until the next mssage)
-            replies.push(Event::NPCChatMessage {
+            replies.queue(Event::NPCChatMessage {
                 from: self.name.clone(),
                 text,
                 options: vec![],
@@ -66,7 +67,7 @@ impl NPC {
                 .map(|(s, _)| s.clone())
                 .collect();
 
-            replies.push(Event::NPCChatMessage {
+            replies.queue(Event::NPCChatMessage {
                 from: self.name.clone(),
                 text,
                 options,
@@ -76,12 +77,12 @@ impl NPC {
     }
 }
 
-impl Agent for NPC {
-    fn start(&mut self, replies: &mut Vec<Event>) -> ControlFlow {
+impl Agent<Event> for NPC {
+    fn start(&mut self, replies: &mut Replies<Event>) -> ControlFlow {
         self.advance(replies)
     }
 
-    fn react(&mut self, event: &Event, replies: &mut Vec<Event>) -> ControlFlow {
+    fn react(&mut self, event: &Event, replies: &mut Replies<Event>) -> ControlFlow {
         if self.state >= self.all_states.len() {
             // reached the end of the conversation tree
             ControlFlow::Kill
@@ -154,21 +155,30 @@ impl Redshell {
 }
 
 impl Game for Redshell {
-    fn input(&mut self, input: Action, replies: &mut Vec<Event>) -> bool {
+    type Message = Event;
+
+    fn input(&mut self, input: Action, replies: &mut Replies<Event>) -> Response {
         match input {
             Action::KeyPress { key: Key::F(num) } => {
                 if num <= self.apps.len() {
                     self.sel_app = num as usize - 1;
-                    true
+                    Response::Redraw
                 } else {
-                    false
+                    Response::Nothing
                 }
             }
-            other => self.apps[self.sel_app].0.input(other, replies),
+            other => {
+                let app_taint = self.apps[self.sel_app].0.input(other, replies);
+                if app_taint {
+                    Response::Redraw
+                } else {
+                    Response::Nothing
+                }
+            }
         }
     }
 
-    fn event(&mut self, event: &Event) -> bool {
+    fn event(&mut self, event: &Event) -> Response {
         match event {
             Event::AddTab(b) => {
                 let app = b
@@ -176,7 +186,7 @@ impl Game for Redshell {
                     .expect("app bundle taken before sole consumer got it");
                 let notifs = app.notifs();
                 self.apps.push((app, notifs));
-                true
+                Response::Redraw
             }
             event => {
                 let mut tainted = false;
@@ -191,7 +201,11 @@ impl Game for Redshell {
                         *old_notifs = new_notifs;
                     }
                 }
-                tainted
+                if tainted {
+                    Response::Redraw
+                } else {
+                    Response::Nothing
+                }
             }
         }
     }
@@ -258,5 +272,5 @@ fn main() {
                 ask "uh ok" => 100,
             ],
         ))
-        .run();
+        .load_run();
 }

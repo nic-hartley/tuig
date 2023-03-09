@@ -1,7 +1,8 @@
 use std::{collections::VecDeque, sync::Arc};
 
 use crate::{
-    agents::{Bundle, Event},
+    agents::Event,
+    game::Replies,
     io::{
         clifmt::Text,
         helpers::{TextInput, TextInputRequest},
@@ -74,7 +75,7 @@ impl CliApp {
     /// Actually run a command.
     ///
     /// Adds the line to the scrollback, finds the tool and runs it or errors, etc.
-    fn run_cmd(&mut self, line: String, events: &mut Vec<Event>) {
+    fn run_cmd(&mut self, line: String, events: &mut Replies<Event>) {
         self.add_scroll(text!("> ", bright_white "{}"(line), "\n"));
         let trimmed = line.trim();
         if trimmed.is_empty() {
@@ -85,9 +86,7 @@ impl CliApp {
             None => (trimmed, ""),
         };
         if let Some(tool) = self.state.machine.tools.get(cmd).map(|r| r.value().clone()) {
-            events.push(Event::SpawnAgent(Bundle::of(
-                tool.run(rest.trim(), &self.state),
-            )));
+            events.spawn_boxed(tool.run(rest.trim(), &self.state));
             self.prompt = false;
         } else {
             let line =
@@ -106,9 +105,7 @@ impl CliApp {
             }
         } else {
             /// Tiny adapter so `AsRef` will get the key instead of the value
-            struct Adapter<'a>(
-                dashmap::mapref::multiple::RefMulti<'a, String, Arc<dyn Tool + Send + Sync>>,
-            );
+            struct Adapter<'a>(dashmap::mapref::multiple::RefMulti<'a, String, Arc<dyn Tool>>);
             impl<'a> AsRef<str> for Adapter<'a> {
                 fn as_ref(&self) -> &str {
                     self.0.key().as_ref()
@@ -125,7 +122,7 @@ impl App for CliApp {
         "terminal"
     }
 
-    fn input(&mut self, a: Action, events: &mut Vec<Event>) -> bool {
+    fn input(&mut self, a: Action, replies: &mut Replies<Event>) -> bool {
         if self.prompt {
             match self.input.action(a) {
                 TextInputRequest::Nothing => (),
@@ -134,7 +131,7 @@ impl App for CliApp {
                     self.input.set_complete(complete);
                 }
                 TextInputRequest::Line(l) => {
-                    self.run_cmd(l, events);
+                    self.run_cmd(l, replies);
                 }
             };
             self.input.tainted()

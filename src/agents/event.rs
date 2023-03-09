@@ -1,9 +1,7 @@
 use core::fmt;
 use std::sync::{Arc, Mutex};
 
-use crate::{app::App, io::clifmt::Text, tools::Tool};
-
-use super::Agent;
+use crate::{app::App, game::Message, io::clifmt::Text, tools::Tool};
 
 /// Convenience for the things that pass trait objects around, but only one of them.
 pub struct Bundle<T>(Arc<Mutex<Option<T>>>);
@@ -41,19 +39,19 @@ impl<T> Clone for Bundle<T> {
 
 macro_rules! trait_bundle {
     ( $(
-        $fn:ident($trait:ident) => $enum:ident
+        $fn:ident($trait:ident $($extra:tt)*) => $enum:ident
     ),* $(,)? ) => { $(
         paste::paste! {
-            pub type [< Bundled $trait >] = Bundle<Box<dyn $trait + Send + Sync>>;
+            pub type [< Bundled $trait >] = Bundle<Box<dyn $trait $($extra)*>>;
             impl [< Bundled $trait >] {
                 #[cfg_attr(coverage, no_coverage)]
-                pub fn new(contents: impl $trait + Send + Sync + 'static) -> Self {
+                pub fn new(contents: impl $trait $($extra)* + 'static) -> Self {
                     Bundle::of(Box::new(contents))
                 }
             }
             impl Event {
                 #[cfg_attr(coverage, no_coverage)]
-                pub fn $fn(item: impl $trait + Send + Sync + 'static) -> Self {
+                pub fn $fn(item: impl $trait $($extra)* + 'static) -> Self {
                     Self::$enum([< Bundled $trait >]::new(item))
                 }
             }
@@ -61,7 +59,6 @@ macro_rules! trait_bundle {
     )* };
 }
 trait_bundle! {
-    spawn(Agent) => SpawnAgent,
     install(Tool) => InstallTool,
     add_tab(App) => AddTab,
 }
@@ -70,8 +67,9 @@ trait_bundle! {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Event {
-    /// Have a new agent spawned and processing events
-    SpawnAgent(BundledAgent),
+    /// See [`Message::tick`].
+    Tick,
+
     /// Create a new tab on the player's UI
     AddTab(BundledApp),
 
@@ -123,6 +121,12 @@ impl Event {
     #[cfg_attr(coverage, no_coverage)]
     pub fn cd(to: &str) -> Event {
         Event::ChangeDir(to.into())
+    }
+}
+
+impl Message for Event {
+    fn tick() -> Self {
+        Self::Tick
     }
 }
 

@@ -94,7 +94,7 @@ pub struct Machine {
     /// The files on this machine
     pub root: Arc<DashMap<String, Entry>>,
     /// the tools available at the command line
-    pub tools: DashMap<String, Arc<dyn Tool + Send + Sync>>,
+    pub tools: DashMap<String, Arc<dyn Tool>>,
 }
 
 impl Machine {

@@ -1,10 +1,9 @@
 /// Implements the (crossterm-based) rendering to CLI.
 use std::{
     io::{self, Write},
-    mem,
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc::{self, TryRecvError},
+        mpsc::{self, RecvError, TryRecvError},
         Arc,
     },
     time::Duration,
@@ -48,7 +47,12 @@ pub struct CliRunner {
 }
 
 impl IoRunner for CliRunner {
-    fn run(&mut self) {
+    fn step(&mut self) -> bool {
+        // check whether we've been told to stop
+        if self.stop.load(Ordering::Relaxed) {
+            return true;
+        }
+
         macro_rules! mods {
             ( $mods:ident, $action:ident ) => {
                 if $mods.contains(ct::KeyModifiers::SHIFT) {
@@ -68,115 +72,108 @@ impl IoRunner for CliRunner {
             ( $type:ident $( ($nt:expr) )? $( { $($br:tt)* } )? ) => {
                 match self.actions.send(Action::$type $(($nt))? $({$($br)*})? ) {
                     Ok(_) => (),
-                    Err(_) => return,
+                    Err(_) => return true,
                 }
             }
         }
-        loop {
-            // check whether we've been told to stop
-            if self.stop.load(Ordering::Relaxed) {
-                return;
+        // get an event from the terminal
+        // (zero timeout to avoid blocking in `step`)
+        match crossterm::event::poll(Duration::ZERO) {
+            Ok(false) => return false,
+            Ok(true) => (),
+            Err(e) => {
+                try_send!(Error(format!("polling: {}", e)));
+                return true;
             }
-            // get an event from the terminal
-            // (this has a timeout so we regularly check whether we should stop)
-            match crossterm::event::poll(Duration::from_millis(100)) {
-                Ok(false) => continue,
-                Ok(true) => (),
-                Err(e) => {
-                    try_send!(Error(format!("polling: {}", e)));
-                    return;
-                }
-            }
-            // we have an event, so get it
-            let ev = match crossterm::event::read() {
-                Ok(ev) => ev,
-                Err(e) => {
-                    try_send!(Error(format!("polling: {}", e)));
-                    return;
-                }
-            };
-            // process the event into a redshell `Event`
-            match ev {
-                ct::Event::Key(ct::KeyEvent { code, modifiers }) => {
-                    mods!(modifiers, KeyPress);
-                    if code == ct::KeyCode::BackTab {
-                        try_send!(KeyPress {
-                            key: Key::LeftShift
-                        });
-                        try_send!(KeyPress { key: Key::Tab });
-                        try_send!(KeyRelease { key: Key::Tab });
-                        try_send!(KeyRelease {
-                            key: Key::LeftShift
-                        });
-                    } else if code == ct::KeyCode::Null {
-                        try_send!(Unknown("null character".into()));
-                    } else {
-                        let action_code = match code {
-                            ct::KeyCode::Char(c) => Key::Char(c),
-                            ct::KeyCode::F(c) => Key::F(c as usize),
-                            ct::KeyCode::Backspace => Key::Backspace,
-                            ct::KeyCode::Enter => Key::Enter,
-                            ct::KeyCode::Left => Key::Left,
-                            ct::KeyCode::Right => Key::Right,
-                            ct::KeyCode::Up => Key::Up,
-                            ct::KeyCode::Down => Key::Down,
-                            ct::KeyCode::Home => Key::Home,
-                            ct::KeyCode::End => Key::End,
-                            ct::KeyCode::PageUp => Key::PageUp,
-                            ct::KeyCode::PageDown => Key::PageDown,
-                            ct::KeyCode::Tab => Key::Tab,
-                            ct::KeyCode::Delete => Key::Delete,
-                            ct::KeyCode::Insert => Key::Insert,
-                            ct::KeyCode::Esc => Key::Escape,
-                            kc => unreachable!(
-                                "unhandled keycode {:?}; should be handled earlier",
-                                kc
-                            ),
-                        };
-                        try_send!(KeyPress { key: action_code });
-                        try_send!(KeyRelease { key: action_code });
-                    }
-                    mods!(modifiers, KeyRelease);
-                }
-                ct::Event::Resize(..) => try_send!(Redraw),
-                ct::Event::Mouse(ct::MouseEvent {
-                    row,
-                    column: col,
-                    kind,
-                    modifiers,
-                }) => {
-                    mods!(modifiers, KeyPress);
-                    let pos = XY(col as usize, row as usize);
-                    match kind {
-                        ct::MouseEventKind::Up(btn) => try_send!(MouseRelease {
-                            button: io4ct_btn(btn)
-                        }),
-                        ct::MouseEventKind::Down(btn) => try_send!(MousePress {
-                            button: io4ct_btn(btn)
-                        }),
-                        ct::MouseEventKind::Drag(_) => try_send!(MouseMove { pos }),
-                        ct::MouseEventKind::Moved => try_send!(MouseMove { pos }),
-                        ct::MouseEventKind::ScrollUp => {
-                            try_send!(MousePress {
-                                button: MouseButton::ScrollUp
-                            });
-                            try_send!(MousePress {
-                                button: MouseButton::ScrollUp
-                            });
-                        }
-                        ct::MouseEventKind::ScrollDown => {
-                            try_send!(MousePress {
-                                button: MouseButton::ScrollDown
-                            });
-                            try_send!(MousePress {
-                                button: MouseButton::ScrollDown
-                            });
-                        }
-                    }
-                    mods!(modifiers, KeyRelease);
-                }
-            };
         }
+        // we have an event, so get it
+        let ev = match crossterm::event::read() {
+            Ok(ev) => ev,
+            Err(e) => {
+                try_send!(Error(format!("polling: {}", e)));
+                return true;
+            }
+        };
+        // process the event into a redshell `Event`
+        match ev {
+            ct::Event::Key(ct::KeyEvent { code, modifiers }) => {
+                mods!(modifiers, KeyPress);
+                if code == ct::KeyCode::BackTab {
+                    try_send!(KeyPress {
+                        key: Key::LeftShift
+                    });
+                    try_send!(KeyPress { key: Key::Tab });
+                    try_send!(KeyRelease { key: Key::Tab });
+                    try_send!(KeyRelease {
+                        key: Key::LeftShift
+                    });
+                } else if code == ct::KeyCode::Null {
+                    try_send!(Unknown("null character".into()));
+                } else {
+                    let action_code = match code {
+                        ct::KeyCode::Char(c) => Key::Char(c),
+                        ct::KeyCode::F(c) => Key::F(c as usize),
+                        ct::KeyCode::Backspace => Key::Backspace,
+                        ct::KeyCode::Enter => Key::Enter,
+                        ct::KeyCode::Left => Key::Left,
+                        ct::KeyCode::Right => Key::Right,
+                        ct::KeyCode::Up => Key::Up,
+                        ct::KeyCode::Down => Key::Down,
+                        ct::KeyCode::Home => Key::Home,
+                        ct::KeyCode::End => Key::End,
+                        ct::KeyCode::PageUp => Key::PageUp,
+                        ct::KeyCode::PageDown => Key::PageDown,
+                        ct::KeyCode::Tab => Key::Tab,
+                        ct::KeyCode::Delete => Key::Delete,
+                        ct::KeyCode::Insert => Key::Insert,
+                        ct::KeyCode::Esc => Key::Escape,
+                        kc => unreachable!("unhandled keycode {:?}; should be handled earlier", kc),
+                    };
+                    try_send!(KeyPress { key: action_code });
+                    try_send!(KeyRelease { key: action_code });
+                }
+                mods!(modifiers, KeyRelease);
+            }
+            ct::Event::Resize(..) => try_send!(Redraw),
+            ct::Event::Mouse(ct::MouseEvent {
+                row,
+                column: col,
+                kind,
+                modifiers,
+            }) => {
+                mods!(modifiers, KeyPress);
+                let pos = XY(col as usize, row as usize);
+                match kind {
+                    ct::MouseEventKind::Up(btn) => try_send!(MouseRelease {
+                        button: io4ct_btn(btn)
+                    }),
+                    ct::MouseEventKind::Down(btn) => try_send!(MousePress {
+                        button: io4ct_btn(btn)
+                    }),
+                    ct::MouseEventKind::Drag(_) => try_send!(MouseMove { pos }),
+                    ct::MouseEventKind::Moved => try_send!(MouseMove { pos }),
+                    ct::MouseEventKind::ScrollUp => {
+                        try_send!(MousePress {
+                            button: MouseButton::ScrollUp
+                        });
+                        try_send!(MousePress {
+                            button: MouseButton::ScrollUp
+                        });
+                    }
+                    ct::MouseEventKind::ScrollDown => {
+                        try_send!(MousePress {
+                            button: MouseButton::ScrollDown
+                        });
+                        try_send!(MousePress {
+                            button: MouseButton::ScrollDown
+                        });
+                    }
+                }
+                mods!(modifiers, KeyRelease);
+            }
+        };
+
+        false
     }
 }
 
@@ -265,7 +262,7 @@ fn render_row(row: &[Cell], out: &mut Vec<u8>) {
 
 pub struct AnsiIo {
     queue: mpsc::Receiver<Action>,
-    stop: Option<Arc<AtomicBool>>,
+    stop: Arc<AtomicBool>,
 }
 
 impl AnsiIo {
@@ -311,7 +308,7 @@ impl AnsiIo {
         Ok((
             Self {
                 queue: queue_r,
-                stop: Some(stop.clone()),
+                stop: stop.clone(),
             },
             runner,
         ))
@@ -349,13 +346,9 @@ impl IoSystem for AnsiIo {
     }
 
     fn stop(&mut self) {
-        let stop = mem::replace(&mut self.stop, None).expect("already dropped");
-        // if the receiver is dead, that's fine; that means the queue won't have anything
-        // else put in it. (and it can happen if e.g. there's an IO error)
-        let _ = stop.store(true, Ordering::Relaxed);
-        while self.queue.try_recv().is_ok() {
+        self.stop.store(true, Ordering::Relaxed);
+        while self.queue.recv() != Err(RecvError) {
             // flushing the queue and waiting for it to disconnect in the condition itself
         }
-        Self::clean_term().expect("failed to clean up terminal");
     }
 }

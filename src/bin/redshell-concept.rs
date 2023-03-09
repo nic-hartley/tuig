@@ -3,6 +3,7 @@ use std::{env, thread, time::Duration};
 use redshell::{
     agents::Event,
     app::{App, ChatApp},
+    game::Replies,
     io::{
         input::{Action, Key},
         output::{Color, FormattedExt, Screen, Text},
@@ -14,7 +15,14 @@ use redshell::{
 
 /// Attempt to load a system, or explode and die somewhat cleanly
 pub fn load_or_die() -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
-    let errs = match sys::load() {
+    // oh how I hurt myself...
+    fn ret<S: IoSystem + 'static, R: IoRunner + 'static>(
+        sys: S,
+        run: R,
+    ) -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
+        (Box::new(sys), Box::new(run))
+    }
+    let errs = match sys::load!(ret) {
         Ok(pair) => return pair,
         Err(e) => e,
     };
@@ -127,8 +135,7 @@ fn chat_demo(io: &mut dyn IoSystem) {
             app.on_event(&chat);
         }
         for input in inputs.into_iter() {
-            let mut _events = vec![];
-            app.input(input.clone(), &mut _events);
+            app.input(input.clone(), &mut Replies::default());
         }
         app.render(&state, &mut s);
         s.textbox(text!(
@@ -151,7 +158,8 @@ fn mouse_demo(io: &mut dyn IoSystem) {
     let mut last_text = String::new();
     let mut text = String::new();
     loop {
-        if let Some(mut act) = io.input_until(Duration::from_secs_f32(0.05)).unwrap() {
+        thread::sleep(Duration::from_secs_f32(1.0 / 60.0));
+        if let Some(mut act) = io.poll_input().unwrap() {
             while let Some(later) = io.poll_input().unwrap() {
                 act = later;
             }

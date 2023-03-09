@@ -5,6 +5,7 @@ use std::mem;
 use crate::{
     agents::Event,
     constants::{gameplay::MAX_USERNAME, graphics::HEADER_HEIGHT},
+    game::Replies,
     io::{
         clifmt::FormattedExt,
         input::{Action, Key},
@@ -82,7 +83,7 @@ impl super::App for ChatApp {
         "chat"
     }
 
-    fn input(&mut self, a: Action, events: &mut Vec<Event>) -> bool {
+    fn input(&mut self, a: Action, replies: &mut Replies<Event>) -> bool {
         if self.dms.is_empty() {
             // nothing to do if there aren't any DMs
             return false;
@@ -103,7 +104,7 @@ impl super::App for ChatApp {
                 let ev = Event::player_chat(&dm.target, &selected);
                 dm.msgs.push(Message::from_player(selected));
                 dm.sel = 0;
-                events.push(ev);
+                replies.queue(ev);
             }
             Key::Up if self.current_dm > 0 => {
                 self.current_dm -= 1;
@@ -439,7 +440,7 @@ mod tests {
         app.on_event(&Event::npc_chat("meowza", "nyehehe! i am a cat!", &[]));
         app.on_event(&Event::npc_chat("meowza", "i can haz cheezburgr?", &[]));
         app.on_event(&Event::npc_chat("meowza", "i am in ur walls", &[]));
-        app.input(DOWN, &mut vec![]);
+        app.input(DOWN, &mut Replies::default());
         app.render(&GameState::default(), &mut Screen::new(XY(200, 200)));
         assert_eq!(app.notifs(), 3);
     }

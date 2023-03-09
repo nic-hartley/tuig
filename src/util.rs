@@ -15,20 +15,17 @@ macro_rules! setters {
     };
 }
 
-pub(crate) use setters;
-
-/// The same as [`Vec::retain`], but doesn't attempt to preserve the ordering of elements.
-pub(crate) fn retain_unstable<T, P: Fn(&T) -> bool>(this: &mut Vec<T>, cond: P) {
-    let mut new_size = this.len();
-    let mut idx = 0;
-    while idx < new_size {
-        let elem = &this[idx];
-        if cond(elem) {
-            idx += 1;
-        } else {
-            this.swap(idx, new_size - 1);
-            new_size -= 1;
-        }
-    }
-    this.truncate(new_size);
+/// Short syntax for feature-gated function calls
+macro_rules! feature_switch {
+    ( $( $feature:literal => $call:expr ),* $(,)? ) => { loop {
+        $(
+            #[cfg(feature = $feature)]
+            {
+                break $call;
+            }
+        )*
+        unreachable!("feature_switch! but no features enabled!");
+    } }
 }
+
+pub(crate) use {feature_switch, setters};

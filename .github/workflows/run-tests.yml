@@ -1,4 +1,4 @@
-name: Test
+name: Tests
 run-name: Testing ${{github.ref_name}}
 # no permission for the token, this runs on pull requests
 permissions: {}
@@ -12,14 +12,13 @@ on:
 jobs:
 
 
-  test:
+  unit-and-integration:
     strategy:
       fail-fast: false
       matrix:
-        rust: [stable, 1.59, nightly]
+        rust: [stable, "1.60", nightly]
         platform: [windows, macos, ubuntu]
-        coverage: [false]
-    name: ${{ matrix.platform }} / Rust ${{ matrix.rust }}
+    name: Rust ${{ matrix.rust }} / ${{ matrix.platform }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
     - uses: actions/cache@v3
@@ -47,14 +46,18 @@ jobs:
         cargo test --all-features
 
 
-  coverage:
-    name: Coverage
+  mass-events:
+    strategy:
+      fail-fast: false
+      matrix:
+        run: [orig, single, rayon]
+    name: Runner ${{ matrix.run }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/cache@v3
       with:
         path: ~/.rustup/
-        key: rustup-coverage
+        key: rustup-ubuntu-stable
     - uses: actions/cache@v3
       with:
         path: ~/.cargo/registry
@@ -62,22 +65,43 @@ jobs:
     - uses: actions/cache@v3
       with:
         path: ./target
-        key: target-dir-coverage
+        key: target-dir-ubuntu-stable
     - name: Set up Rust
       run: |
-        rustup default nightly
-        rustup component add rustfmt
-        cargo install cargo-llvm-cov
+        rustup default stable
 
     - uses: actions/checkout@v3
-    - name: Run coverage tests
+    - name: Deploy events
       run: |
-        ./run-coverage.sh
+        cargo run --release --bin mass-events --features sys_nop,run_${{ matrix.run }}
 
-    - if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+
+  exhaustive-features:
+    strategy:
+      fail-fast: false
+      matrix:
+        run: [orig, single, rayon]  # TODO: std_multi
+        sys: [nop, cli, gui_softbuffer]
+    name: Check run_${{ matrix.run }} and sys_${{ matrix.sys }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/cache@v3
       with:
-        name: coverage-report
-        path: |
-          target/llvm-cov/html
-        if-no-files-found: error
+        path: ~/.rustup/
+        key: rustup-ubuntu-stable
+    - uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: cargo-cache
+    - uses: actions/cache@v3
+      with:
+        path: ./target
+        key: target-dir-ubuntu-stable
+    - name: Set up Rust
+      run: |
+        rustup default stable
+
+    - uses: actions/checkout@v3
+    - name: Check feature compatibility
+      run: |
+        cargo check --features sys_${{ matrix.sys }},run_${{ matrix.run }} --all-targets

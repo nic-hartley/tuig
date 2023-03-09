@@ -9,6 +9,8 @@ pub mod cutscenes;
 pub mod game;
 pub mod io;
 pub mod machine;
+pub mod runner;
+mod timing;
 pub mod tools;
 mod util;
 

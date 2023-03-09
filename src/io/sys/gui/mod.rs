@@ -12,7 +12,7 @@ use std::{
 use winit::{
     dpi::LogicalSize,
     event::{ElementState, Event, VirtualKeyCode, WindowEvent},
-    event_loop::{EventLoop, EventLoopBuilder},
+    event_loop::{ControlFlow, EventLoop, EventLoopBuilder},
     platform::run_return::EventLoopExtRunReturn,
     window::{Window, WindowBuilder},
 };
@@ -194,11 +194,13 @@ fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
     let kill_send = killer.clone();
     let runner = WindowRunner {
         el,
-        act_send,
-        kill_recv,
-        char_size,
-        win_size,
-        prev_cursor_pos: XY(0, 0),
+        rest: WrRest {
+            act_send,
+            kill_recv,
+            char_size,
+            win_size,
+            prev_cursor_pos: XY(0, 0),
+        },
     };
     Ok(WindowSpawnOutput {
         window,
@@ -306,9 +308,11 @@ impl<B: GuiBackend> IoSystem for Gui<B> {
     }
 }
 
-/// Runner for the main thread (as required by Windows windowing) to pull and convert events.
-pub struct WindowRunner {
-    el: EventLoop<Action>,
+// This struct is a little bit of a hack. We want `run_return_cb` to be its own function, so that `IoRunner::step` and
+// `IoRunner::run` can share the same code, but there's a *lot* of fields being accessed, so we want to pass `self`.
+// But if we do that, we hit lifetime issues (`self.object.thing(|...| self.callback(...))` doesn't work great) and
+// Rust can't tell that we don't need `self.el` in the mean time. So we manually split it out into its own struct.
+struct WrRest {
     act_send: mpsc::Sender<Action>,
     kill_recv: Arc<Once>,
     char_size: XY,
@@ -316,84 +320,108 @@ pub struct WindowRunner {
     prev_cursor_pos: XY,
 }
 
-impl IoRunner for WindowRunner {
-    fn run(&mut self) {
-        // the bugs don't bother us anyway -- we just don't want the entire process to exit when this is done.
-        self.el.run_return(|ev, _, cf| {
-            if self.kill_recv.is_completed() {
-                cf.set_exit();
-                return;
-            }
+impl WrRest {
+    const CONTINUE_CODE: i32 = 0;
+    const STOP_CODE: i32 = 0;
 
+    fn run_return_cb(&mut self, stepping: bool, ev: Event<'_, Action>, cf: &mut ControlFlow) {
+        if self.kill_recv.is_completed() {
+            cf.set_exit_with_code(Self::STOP_CODE);
+            return;
+        }
+
+        if stepping {
+            // exit immediately afterwards with CONTINUE_CODE
+            cf.set_exit_with_code(Self::CONTINUE_CODE)
+        } else {
             // ensure that we check at least once a second to see if we should quit
             cf.set_wait_until(Instant::now() + Duration::from_secs(1));
+        }
 
-            macro_rules! send {
-                ( $( $act:expr ),* $(,)? ) => { {
-                    $(
-                        if let Err(_) = self.act_send.send( $act ) {
-                            // they hung up on us! how rude!
-                            cf.set_exit();
-                        }
-                    )*
-                } };
+        macro_rules! send {
+            ( $( $act:expr ),* $(,)? ) => { {
+                $(
+                    if let Err(_) = self.act_send.send( $act ) {
+                        // they hung up on us! how rude!
+                        cf.set_exit_with_code(Self::STOP_CODE);
+                    }
+                )*
+            } };
+        }
+        match ev {
+            Event::UserEvent(a) => send!(a),
+            Event::WindowEvent {
+                event: WindowEvent::Resized(sz),
+                ..
+            } => {
+                self.win_size = XY(sz.width as usize, sz.height as usize);
+                send!(Action::Redraw);
             }
-            match ev {
-                Event::UserEvent(a) => send!(a),
-                Event::WindowEvent {
-                    event: WindowEvent::Resized(sz),
-                    ..
-                } => {
-                    self.win_size = XY(sz.width as usize, sz.height as usize);
-                    send!(Action::Redraw);
-                }
-                Event::RedrawRequested(_) => send!(Action::Redraw),
-                Event::WindowEvent {
-                    event: WindowEvent::CloseRequested | WindowEvent::Destroyed,
-                    ..
-                } => {
-                    send!(Action::Closed);
-                }
-                // for now this is good enough
-                Event::WindowEvent {
-                    event: WindowEvent::KeyboardInput { input, .. },
-                    ..
-                } => {
-                    if let Some(key) = key4vkc(input.virtual_keycode) {
-                        match input.state {
-                            ElementState::Pressed => send!(Action::KeyPress { key }),
-                            ElementState::Released => send!(Action::KeyRelease { key }),
-                        }
+            Event::RedrawRequested(_) => send!(Action::Redraw),
+            Event::WindowEvent {
+                event: WindowEvent::CloseRequested | WindowEvent::Destroyed,
+                ..
+            } => {
+                send!(Action::Closed);
+            }
+            // for now this is good enough
+            Event::WindowEvent {
+                event: WindowEvent::KeyboardInput { input, .. },
+                ..
+            } => {
+                if let Some(key) = key4vkc(input.virtual_keycode) {
+                    match input.state {
+                        ElementState::Pressed => send!(Action::KeyPress { key }),
+                        ElementState::Released => send!(Action::KeyRelease { key }),
                     }
                 }
-                Event::WindowEvent {
-                    event: WindowEvent::CursorMoved { position, .. },
-                    ..
-                } => {
-                    let position = XY(position.x as usize, position.y as usize);
-                    let position = char4pixel_pos(position, self.char_size, self.win_size);
-                    if self.prev_cursor_pos != position {
-                        send!(Action::MouseMove { pos: position });
-                        self.prev_cursor_pos = position;
+            }
+            Event::WindowEvent {
+                event: WindowEvent::CursorMoved { position, .. },
+                ..
+            } => {
+                let position = XY(position.x as usize, position.y as usize);
+                let position = char4pixel_pos(position, self.char_size, self.win_size);
+                if self.prev_cursor_pos != position {
+                    send!(Action::MouseMove { pos: position });
+                    self.prev_cursor_pos = position;
+                }
+            }
+            Event::WindowEvent {
+                event: WindowEvent::MouseInput { state, button, .. },
+                ..
+            } => {
+                if let Some(button) = mb4button(button) {
+                    match state {
+                        ElementState::Pressed => send!(Action::MousePress { button }),
+                        ElementState::Released => send!(Action::MouseRelease { button }),
                     }
                 }
-                Event::WindowEvent {
-                    event: WindowEvent::MouseInput { state, button, .. },
-                    ..
-                } => {
-                    if let Some(button) = mb4button(button) {
-                        match state {
-                            ElementState::Pressed => send!(Action::MousePress { button }),
-                            ElementState::Released => send!(Action::MouseRelease { button }),
-                        }
-                    }
-                }
-                Event::Suspended => send!(Action::Paused),
-                Event::Resumed => send!(Action::Unpaused),
+            }
+            Event::Suspended => send!(Action::Paused),
+            Event::Resumed => send!(Action::Unpaused),
 
-                // other things can be ignored (for now)
-                _ => (),
-            };
-        });
+            // other things can be ignored (for now)
+            _ => (),
+        };
+    }
+}
+
+/// Runner for the main thread (as required by Windows windowing) to pull and convert events.
+pub struct WindowRunner {
+    el: EventLoop<Action>,
+    rest: WrRest,
+}
+
+impl IoRunner for WindowRunner {
+    fn step(&mut self) -> bool {
+        self.el
+            .run_return(|ev, _, cf| self.rest.run_return_cb(true, ev, cf))
+            == WrRest::STOP_CODE
+    }
+
+    fn run(&mut self) {
+        self.el
+            .run_return(|ev, _, cf| self.rest.run_return_cb(false, ev, cf));
     }
 }

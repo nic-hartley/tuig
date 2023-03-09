@@ -2,6 +2,7 @@
 
 use crate::{
     agents::Event,
+    game::Replies,
     io::{input::Action, output::Screen},
     GameState,
 };
@@ -18,7 +19,7 @@ pub trait App: Send + Sync + 'static {
     /// Take a single input action, returning any new events generated as a result.
     ///
     /// Returns whether this item was tainted, i.e. true if it needs to be redrawn.
-    fn input(&mut self, a: Action, events: &mut Vec<Event>) -> bool;
+    fn input(&mut self, a: Action, events: &mut Replies<Event>) -> bool;
     /// Receive an event, in case the app needs to care to render it.
     ///
     /// Returns whether this item was tainted, i.e. true if it needs to be redrawn.
@@ -47,11 +48,11 @@ macro_rules! assert_input {
         $( $test:tt )*
     ) => {
         {
-            let mut evs = vec![];
+            let mut evs = $crate::game::Replies::default();
             let taint = $app.input($( $arg ),* , &mut evs);
             $( assert!(!taint, "app tainted unexpectedly"); $( $clean )? )?
             $( assert!(taint, "app didn't taint when expected"); $( $taint )? )?
-            assert_input!(@cmp evs $( $test )*);
+            assert_input!(@cmp evs.messages() $( $test )*);
         }
     };
     (@cmp $evs:ident == $other:expr) => { assert_eq!($evs, $other) };
