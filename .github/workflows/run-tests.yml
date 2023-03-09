@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [stable, 1.59, nightly]
+        rust: [stable, 1.60, nightly]
         platform: [windows, macos, ubuntu]
     name: Rust ${{ matrix.rust }} / ${{ matrix.platform }}
     runs-on: ${{ matrix.platform }}-latest

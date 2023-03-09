@@ -6,7 +6,7 @@ description = "A console-based hacking game. Currently building the engine to su
 license = "BSD-3-Clause"
 
 # if bumping this, be sure to edit run-tests as well!
-rust-version = "1.59"
+rust-version = "1.60"
 
 [features]
 # `__` indicates you should NOT manually set that feature!
