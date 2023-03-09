@@ -191,7 +191,7 @@ impl Game for Redshell {
             event => {
                 let mut tainted = false;
                 for (i, (app, old_notifs)) in self.apps.iter_mut().enumerate() {
-                    let ev_taint = app.on_event(event);
+                    let ev_taint = app.on_event(event, i == self.sel_app);
                     if i == self.sel_app {
                         tainted |= ev_taint;
                     }
