@@ -36,6 +36,7 @@ impl<M: Message> AgentRunner<M> {
     /// - `agents` and `events` coming out are the agents that this round spawned
     ///
     /// Notably the vecs *will be cleared* and old events *will not be available*!
+    #[cfg_attr(feature = "run_rayon", allow(unused))]
     fn step(&mut self, events: &mut Vec<M>, agents: &mut Vec<Box<dyn Agent<M>>>) {
         self.agents.extend(
             agents
@@ -75,6 +76,64 @@ impl<M: Message> AgentRunner<M> {
         mem::swap(&mut self.replies.messages, events);
         // ditto but for agents (no clear needed because we drained earlier)
         mem::swap(&mut self.replies.agents, agents);
+    }
+
+    /// Perform one round of event processing, using rayon.
+    ///
+    /// `agents` and `events` are both input and output:
+    ///
+    /// - `agents` and `events` passed in are the agents/events for this runner to run
+    /// - `agents` and `events` coming out are the agents that this round spawned
+    ///
+    /// Notably the vecs *will be cleared* and old events *will not be available*!
+    #[cfg(feature = "run_rayon")]
+    fn step_rayon(&mut self, events: &mut Vec<M>, agents: &mut Vec<Box<dyn Agent<M>>>) {
+        use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
+
+        let mut replies = Replies::default();
+        self.agents.extend(
+            agents
+                .drain(..)
+                .map(|mut a| (a.start(&mut replies), a)),
+        );
+
+        if events.is_empty() {
+            events.push(M::tick());
+        }
+
+        let agent_replies = self.agents.par_iter_mut().map(|(cf, agent)| {
+            let mut replies = Replies::default();
+            if !cf.is_ready() {
+                return replies;
+            }
+            for event in events.iter() {
+                *cf = agent.react(event, &mut replies);
+                if !cf.is_ready() {
+                    break;
+                }
+            }
+            replies
+        }).reduce(Replies::default, |mut old, new| {
+            old.agents.extend(new.agents);
+            old.messages.extend(new.messages);
+            old
+        });
+        replies.agents.extend(agent_replies.agents);
+        replies.messages.extend(agent_replies.messages);
+
+        // filter out agents that will never wake up
+        self.agents.retain(|(cf, _ag)| match cf {
+            // never is_ready again
+            ControlFlow::Kill => false,
+            // if there's only one reference, it's the one in this handle
+            ControlFlow::Handle(h) => h.references() > 1,
+            // otherwise it might eventually wake up, keep it around
+            _ => true,
+        });
+
+        // no attempt to reuse allocations because we can't anyway in parallel
+        *events = replies.messages;
+        *agents = replies.agents;
     }
 }
 
@@ -284,6 +343,45 @@ impl<G: Game + 'static> Runner<G> {
         gr.game
     }
 
+    #[cfg(feature = "run_rayon")]
+    fn run_rayon(self, iosys: impl IoSystem + 'static, mut iorun: impl IoRunner) -> G {
+        let (send, recv) = crossbeam::channel::bounded(0);
+        rayon::spawn(move || {
+            let Self {
+                game,
+                mut events,
+                mut agents,
+                input_tick,
+            } = self;
+
+            let mut ar = AgentRunner::new();
+            let mut gr = GameRunner::new(game, iosys);
+            let mut input_timer = Timer::new(input_tick);
+
+            'mainloop: loop {
+                loop {
+                    gr.render();
+                    if gr.io(&mut events, &mut agents) {
+                        break 'mainloop;
+                    }
+                    if input_timer.tick_ready() {
+                        break;
+                    }
+                    thread::sleep(input_timer.remaining().min(Duration::from_millis(2)));
+                }
+                gr.render();
+                if gr.feed(&events) {
+                    break 'mainloop;
+                }
+                ar.step_rayon(&mut events, &mut agents);
+            }
+            gr.iosys.stop();
+            send.send(gr.game).unwrap();
+        });
+        iorun.run();
+        recv.recv().unwrap()
+    }
+
     /// Start the game running, according to the feature-selected runner.
     ///
     /// This function only exits when [`Game::event`] or [`Game::input`] returns [`Response::Quit`]. It returns the
@@ -291,15 +389,13 @@ impl<G: Game + 'static> Runner<G> {
     #[cfg(feature = "__run")]
     #[allow(unreachable_code)] // for `cargo check --all-features`
     pub fn run(self, iosys: impl IoSystem + 'static, iorun: impl IoRunner) -> G {
-        macro_rules! run_call {
-            ( $( $feature:literal => $function:ident ),* $(,)? ) => { $(
-                #[cfg(feature = $feature)]
-                {
-                    return self.$function(iosys, iorun);
-                }
-            )* };
-        }
-        run_call!("run_orig" => run_orig, "run_single" => run_single);
+        use crate::util::feature_switch;
+
+        feature_switch!(
+            "run_orig" => self.run_orig(iosys, iorun),
+            "run_single" => self.run_single(iosys, iorun),
+            "run_rayon" => self.run_rayon(iosys, iorun),
+        )
     }
 
     /// Use [`sys::load`] to intelligently pick an iosystem, load it, and [`Self::run`].

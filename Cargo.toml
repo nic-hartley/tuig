@@ -22,7 +22,7 @@ __run = []
 run_orig = ["__run"]
 run_single = ["__run"]
 run_std_multi = ["__run"]
-run_rayon = ["__run", "rayon"]
+run_rayon = ["__run", "rayon", "crossbeam"]
 
 plat_ssh = ["sys_cli"]
 plat_steam = []
@@ -66,6 +66,8 @@ softbuffer = { version = "0.1.1", optional = true }
 fontdue = { version = "0.7.2", optional = true }
 rayon = { version = "1.6.1", optional = true }
 winapi = { version = "0.3.9", optional = true }
+# run_rayon
+crossbeam = { version = "0.8.2", optional = true }
 
 [dev-dependencies]
 coverage-helper = "0.1.0"
