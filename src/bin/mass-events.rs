@@ -32,11 +32,6 @@ impl Agent<TinyMessage> for TinyAgent {
             };
             replies.queue(next);
         }
-        // // Simulate longer processing time
-        // match self.factor % 8 {
-        //     0 => (),
-        //     sleep => std::thread::sleep(std::time::Duration::from_micros(sleep)),
-        // }
         ControlFlow::Continue
     }
 }
