@@ -230,7 +230,10 @@ Available concept art is:
 
     let (mut iosys, mut runner) = load_or_die();
 
-    thread::spawn(move || concept(iosys.as_mut()));
+    thread::spawn(move || {
+        concept(iosys.as_mut());
+        iosys.stop();
+    });
 
     runner.run();
 }
