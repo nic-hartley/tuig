@@ -50,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        run: [orig, single]
+        run: [orig, single, rayon]
     name: Runner ${{ matrix.run }}
     runs-on: ubuntu-latest
     steps:
