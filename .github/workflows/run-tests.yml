@@ -80,7 +80,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        run: [orig, single]  # TODO: std_multi, rayon
+        run: [orig, single, rayon]  # TODO: std_multi
         sys: [nop, cli, gui_softbuffer]
     name: Check run_${{ matrix.run }} and sys_${{ matrix.sys }}
     runs-on: ubuntu-latest
