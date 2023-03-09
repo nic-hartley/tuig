@@ -91,33 +91,34 @@ impl<M: Message> AgentRunner<M> {
         use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
         let mut replies = Replies::default();
-        self.agents.extend(
-            agents
-                .drain(..)
-                .map(|mut a| (a.start(&mut replies), a)),
-        );
+        self.agents
+            .extend(agents.drain(..).map(|mut a| (a.start(&mut replies), a)));
 
         if events.is_empty() {
             events.push(M::tick());
         }
 
-        let agent_replies = self.agents.par_iter_mut().map(|(cf, agent)| {
-            let mut replies = Replies::default();
-            if !cf.is_ready() {
-                return replies;
-            }
-            for event in events.iter() {
-                *cf = agent.react(event, &mut replies);
+        let agent_replies = self
+            .agents
+            .par_iter_mut()
+            .map(|(cf, agent)| {
+                let mut replies = Replies::default();
                 if !cf.is_ready() {
-                    break;
+                    return replies;
                 }
-            }
-            replies
-        }).reduce(Replies::default, |mut old, new| {
-            old.agents.extend(new.agents);
-            old.messages.extend(new.messages);
-            old
-        });
+                for event in events.iter() {
+                    *cf = agent.react(event, &mut replies);
+                    if !cf.is_ready() {
+                        break;
+                    }
+                }
+                replies
+            })
+            .reduce(Replies::default, |mut old, new| {
+                old.agents.extend(new.agents);
+                old.messages.extend(new.messages);
+                old
+            });
         replies.agents.extend(agent_replies.agents);
         replies.messages.extend(agent_replies.messages);
 

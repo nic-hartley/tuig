@@ -28,4 +28,4 @@ macro_rules! feature_switch {
     } }
 }
 
-pub(crate) use {setters, feature_switch};
+pub(crate) use {feature_switch, setters};
