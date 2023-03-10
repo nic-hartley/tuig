@@ -15,10 +15,33 @@ use super::ModState;
 pub enum TextInputRequest {
     /// Action doesn't require any response.
     Nothing,
+    /// You need to redraw and that's it.
+    Redraw,
     /// Autocomplete has been requested, with the given text.
     Autocomplete,
     /// User has submitted a line by pressing Enter.
     Line(String),
+}
+
+impl TextInputRequest {
+    pub fn is_tainting(&self) -> bool {
+        !matches!(self, Self::Nothing)
+    }
+
+    // for testing we generally want to treat `Nothing` and `Redraw` identically, as they both "aren't important"
+    // (in particular, feed! shouldn't care)
+    #[cfg(test)]
+    fn test_eq(&self, other: &Self) -> bool {
+        match self {
+            Self::Nothing | Self::Redraw => matches!(other, Self::Nothing | Self::Redraw),
+            Self::Autocomplete => matches!(other, Self::Autocomplete),
+            Self::Line(self_s) => if let Self::Line(other_s) = other {
+                self_s == other_s
+            } else {
+                false
+            }
+        }
+    }
 }
 
 /// Allows the user to input text, rendering it to a bounded area and offering hooks for tab-based autocomplete.
@@ -33,9 +56,6 @@ pub struct TextInput {
     cursor: usize,
     /// any autocomplete that's been requested
     autocomplete: String,
-
-    /// whether the textbox needs to be redrawn since it was last rendered
-    tainted: bool,
 
     /// the current state of the keyboard modifiers
     modstate: ModState,
@@ -57,7 +77,6 @@ impl TextInput {
             line: String::new(),
             cursor: 0,
             autocomplete: String::new(),
-            tainted: true,
             modstate: Default::default(),
             history: Default::default(),
             hist_pos: 0,
@@ -71,12 +90,6 @@ impl TextInput {
 
     pub fn set_complete(&mut self, text: String) {
         self.autocomplete = text;
-        self.tainted = true;
-    }
-
-    /// Whether this text box needs to be redrawn.
-    pub fn tainted(&self) -> bool {
-        self.tainted
     }
 
     fn cur_line(&self) -> &str {
@@ -140,7 +153,6 @@ impl TextInput {
                 self.cursor = 0;
                 self.autocomplete = String::new();
                 let old_line = mem::replace(&mut self.line, String::new());
-                self.tainted = true;
                 if !old_line.trim().is_empty() && self.hist_cap > 0 {
                     if self.history.len() == self.hist_cap {
                         self.history.pop_front();
@@ -154,8 +166,7 @@ impl TextInput {
             _ => return TextInputRequest::Nothing,
         }
         self.autocomplete = String::new();
-        self.tainted = true;
-        TextInputRequest::Nothing
+        TextInputRequest::Redraw
     }
 
     /// Handles an [`Action`] which should go to the textbox, for things like typing and autocompletion.
@@ -170,8 +181,7 @@ impl TextInput {
     }
 
     /// Builds a `Vec<Text>` with the prompt line, for rendering.
-    pub fn render<'s>(&mut self) -> Vec<Text> {
-        self.tainted = false;
+    pub fn render<'s>(&self) -> Vec<Text> {
         let line = self.cur_line();
         if self.cursor == line.len() {
             if self.autocomplete.is_empty() {
@@ -218,20 +228,13 @@ mod test {
     macro_rules! feed {
         ( $ti:ident: $(
             $key:ident $( ( $content:expr ) )? $( $side:ident )?
-        ),* $( => $( tainted $( @@ $taint_yes:ident )? )? $( untainted $( @@ $taint_no:ident )? )? )? ) => {
+        ),* ) => {
             $(
-                assert_eq!(feed!(@@one $ti: $key $( ($content) )?), TextInputRequest::Nothing);
+                assert!(matches!(
+                    feed!(@@one $ti: $key $( ($content) )?),
+                    TextInputRequest::Nothing | TextInputRequest::Redraw,
+                ));
             )*
-            $(
-                $(
-                    assert!($ti.tainted(), "text input not tainted after render-relevant inputs");
-                    $( $taint_yes )?
-                )?
-                $(
-                    assert!($ti.tainted(), "text input tainted after render-irrelevant inputs");
-                    $( $taint_no )?
-                )?
-            )?
         };
         ( @@one $ti:ident: String($val:literal) ) => {
             {
@@ -267,7 +270,7 @@ mod test {
             {
                 let res1 = feed!(@@one $ti: $key $( ( $content ) )? KeyPress );
                 let res2 = feed!(@@one $ti: $key $( ( $content ) )? KeyRelease );
-                assert_eq!(res1, res2, "press/release fed char differed");
+                assert!(res1.test_eq(&res2), "press/release fed char differed");
                 res1
             }
         };
@@ -278,16 +281,14 @@ mod test {
 
     #[coverage_helper::test]
     fn blank_renders_to_prompt() {
-        let mut ti = TextInput::new("> ", 0);
-        assert!(ti.tainted(), "not tainted to force initial draw");
+        let ti = TextInput::new("> ", 0);
         assert_eq!(ti.render(), text!["> ", bright_white "", underline " "]);
-        assert!(!ti.tainted(), "render doesn't untaint");
     }
 
     #[coverage_helper::test]
     fn text_renders_to_prompt() {
         let mut ti = TextInput::new("> ", 0);
-        feed!(ti: String("abcdef") => tainted);
+        feed!(ti: String("abcdef"));
         assert_eq!(
             ti.render(),
             text!["> ", bright_white "abcdef", underline " "]
@@ -302,15 +303,13 @@ mod test {
             ti.render(),
             text!["> ", bright_white "", underline bright_black "m", bright_black "lem"]
         );
-        assert!(!ti.tainted(), "render doesn't untaint");
     }
 
     #[coverage_helper::test]
     fn text_renders_to_prompt_with_autocomplete() {
         let mut ti = TextInput::new("> ", 0);
-        feed!(ti: String("abcdef") => tainted);
+        feed!(ti: String("abcdef"));
         ti.set_complete("mlem".into());
-        assert!(ti.tainted(), "not tainted after visually important changes");
         assert_eq!(
             ti.render(),
             text!["> ", bright_white "abcdef", bright_black underline "m", bright_black "lem"]
@@ -320,7 +319,7 @@ mod test {
     #[coverage_helper::test]
     fn text_renders_to_prompt_moved_cursor() {
         let mut ti = TextInput::new("> ", 0);
-        feed!(ti: String("abcdef"), Left, Left => tainted);
+        feed!(ti: String("abcdef"), Left, Left);
         assert_eq!(
             ti.render(),
             text!["> ", bright_white "abcd", underline bright_white "e", bright_white "f"]
@@ -330,9 +329,8 @@ mod test {
     #[coverage_helper::test]
     fn text_renders_to_prompt_with_autocomplete_moved_cursor() {
         let mut ti = TextInput::new("> ", 0);
-        feed!(ti: String("abcdef"), Left, Left, Left, Right => tainted);
+        feed!(ti: String("abcdef"), Left, Left, Left, Right);
         ti.set_complete("mlem".into());
-        assert!(ti.tainted(), "not tainted after visually important changes");
         assert_eq!(
             ti.render(),
             text!["> ", bright_white "abcd", underline bright_black "m", bright_black "lem", bright_white "ef"]
@@ -342,7 +340,7 @@ mod test {
     #[coverage_helper::test]
     fn typing_uppercase() {
         let mut ti = TextInput::new("> ", 0);
-        feed!(ti: String("abCDef") => tainted);
+        feed!(ti: String("abCDef"));
         assert_eq!(
             ti.render(),
             text!["> ", bright_white "abCDef", underline " "]
@@ -426,9 +424,9 @@ mod test {
             TextInputRequest::Line("ghi".into())
         );
         assert_eq!(ti.render(), text!["> ", bright_white "", underline " "]);
-        feed!(ti: Up, Up, Up => tainted);
+        feed!(ti: Up, Up, Up);
         assert_eq!(ti.render(), text!["> ", bright_white "abc", underline " "]);
-        feed!(ti: Down => tainted);
+        feed!(ti: Down);
         assert_eq!(ti.render(), text!["> ", bright_white "def", underline " "]);
     }
 
@@ -452,9 +450,9 @@ mod test {
         );
         feed!(ti: String("jkl"));
         assert_eq!(ti.render(), text!["> ", bright_white "jkl", underline " "]);
-        feed!(ti: Up => tainted);
+        feed!(ti: Up);
         assert_eq!(ti.render(), text!["> ", bright_white "ghi", underline " "]);
-        feed!(ti: Down => tainted);
+        feed!(ti: Down);
         assert_eq!(ti.render(), text!["> ", bright_white "jkl", underline " "]);
     }
 
@@ -478,11 +476,11 @@ mod test {
         );
         feed!(ti: Up);
         assert_eq!(ti.render(), text!["> ", bright_white "ghi", underline " "]);
-        feed!(ti: Char('j') => tainted);
+        feed!(ti: Char('j'));
         assert_eq!(ti.render(), text!["> ", bright_white "ghij", underline " "]);
-        feed!(ti: Up => tainted);
+        feed!(ti: Up);
         assert_eq!(ti.render(), text!["> ", bright_white "ghi", underline " "]);
-        feed!(ti: Up => tainted);
+        feed!(ti: Up);
         assert_eq!(ti.render(), text!["> ", bright_white "def", underline " "]);
     }
 
@@ -506,11 +504,11 @@ mod test {
         );
         feed!(ti: Up);
         assert_eq!(ti.render(), text!["> ", bright_white "ghi", underline " "]);
-        feed!(ti: Backspace => tainted);
+        feed!(ti: Backspace);
         assert_eq!(ti.render(), text!["> ", bright_white "gh", underline " "]);
-        feed!(ti: Up => tainted);
+        feed!(ti: Up);
         assert_eq!(ti.render(), text!["> ", bright_white "ghi", underline " "]);
-        feed!(ti: Up => tainted);
+        feed!(ti: Up);
         assert_eq!(ti.render(), text!["> ", bright_white "def", underline " "]);
     }
 
@@ -539,11 +537,11 @@ mod test {
             TextInputRequest::Line("ghi".into())
         );
         assert_eq!(ti.render(), text!["> ", bright_white "", underline " "]);
-        feed!(ti: Up => tainted);
+        feed!(ti: Up);
         assert_eq!(ti.render(), text!["> ", bright_white "ghi", underline " "]);
-        feed!(ti: Up => tainted);
+        feed!(ti: Up);
         assert_eq!(ti.render(), text!["> ", bright_white "ghi", underline " "]);
-        feed!(ti: Up => tainted);
+        feed!(ti: Up);
         assert_eq!(ti.render(), text!["> ", bright_white "def", underline " "]);
     }
 }

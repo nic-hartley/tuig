@@ -33,7 +33,7 @@ pub trait App: Send + Sync + 'static {
     ///
     /// You can be sure that this will never be called except when the module is the active one; feel free to use it
     /// for e.g. clearing notifications.
-    fn render(&mut self, state: &GameState, screen: &mut Screen);
+    fn render(&self, state: &GameState, screen: &mut Screen);
 }
 
 mod chat;

@@ -210,7 +210,7 @@ impl Game for Redshell {
         }
     }
 
-    fn render(&mut self, onto: &mut Screen) {
+    fn render(&self, onto: &mut Screen) {
         self.apps[self.sel_app].0.render(&self.state, onto);
         let mut header = onto
             .header()
