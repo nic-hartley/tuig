@@ -35,10 +35,12 @@ impl TextInputRequest {
         match self {
             Self::Nothing | Self::Redraw => matches!(other, Self::Nothing | Self::Redraw),
             Self::Autocomplete => matches!(other, Self::Autocomplete),
-            Self::Line(self_s) => if let Self::Line(other_s) = other {
-                self_s == other_s
-            } else {
-                false
+            Self::Line(self_s) => {
+                if let Self::Line(other_s) = other {
+                    self_s == other_s
+                } else {
+                    false
+                }
             }
         }
     }

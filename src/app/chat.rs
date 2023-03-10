@@ -244,9 +244,7 @@ impl super::App for ChatApp {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        app::{assert_input, App},
-    };
+    use crate::app::{assert_input, App};
 
     #[allow(unused_imports)]
     use super::*;
@@ -335,14 +333,20 @@ mod tests {
     #[coverage_helper::test]
     fn test_receive_option() {
         let mut app = app_dm(&[], 0);
-        app.on_event(&Event::npc_chat("targette", "hello there", &["hi", "no"]), true);
+        app.on_event(
+            &Event::npc_chat("targette", "hello there", &["hi", "no"]),
+            true,
+        );
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "hi")]);
     }
 
     #[coverage_helper::test]
     fn test_receive_next_option() {
         let mut app = app_dm(&[], 0);
-        app.on_event(&Event::npc_chat("targette", "hello there", &["hi", "no"]), true);
+        app.on_event(
+            &Event::npc_chat("targette", "hello there", &["hi", "no"]),
+            true,
+        );
         assert_input!(app.input(RIGHT) taints, .is_empty());
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "no")]);
     }
@@ -350,11 +354,10 @@ mod tests {
     #[coverage_helper::test]
     fn test_switch_dms() {
         let mut app = app_dm(&["normal", "human", "words"], 0);
-        app.on_event(&Event::npc_chat(
-            "meowza",
-            "nyehehe! i am a cat!",
-            &["hi", "hello"],
-        ), true);
+        app.on_event(
+            &Event::npc_chat("meowza", "nyehehe! i am a cat!", &["hi", "hello"]),
+            true,
+        );
         assert_input!(app.input(DOWN) taints, .is_empty());
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("meowza", "hi")]);
     }
@@ -362,11 +365,10 @@ mod tests {
     #[coverage_helper::test]
     fn test_switch_dms_extra() {
         let mut app = app_dm(&["normal", "human", "words"], 0);
-        app.on_event(&Event::npc_chat(
-            "meowza",
-            "nyehehe! i am a cat!",
-            &["hi", "hello"],
-        ), true);
+        app.on_event(
+            &Event::npc_chat("meowza", "nyehehe! i am a cat!", &["hi", "hello"]),
+            true,
+        );
         assert_input!(app.input(DOWN) taints, .is_empty());
         assert_input!(app.input(DOWN) clean, .is_empty());
         assert_input!(app.input(DOWN) clean, .is_empty());
@@ -376,11 +378,10 @@ mod tests {
     #[coverage_helper::test]
     fn test_switch_dms_back() {
         let mut app = app_dm(&["normal", "human", "words"], 0);
-        app.on_event(&Event::npc_chat(
-            "meowza",
-            "nyehehe! i am a cat!",
-            &["hi", "hello"],
-        ), true);
+        app.on_event(
+            &Event::npc_chat("meowza", "nyehehe! i am a cat!", &["hi", "hello"]),
+            true,
+        );
         assert_input!(app.input(DOWN) taints, .is_empty());
         assert_input!(app.input(UP) taints, .is_empty());
         assert_input!(app.input(ENTER) taints, == &[Event::player_chat("targette", "normal")]);
@@ -389,11 +390,10 @@ mod tests {
     #[coverage_helper::test]
     fn test_switch_dms_back_extra() {
         let mut app = app_dm(&["normal", "human", "words"], 0);
-        app.on_event(&Event::npc_chat(
-            "meowza",
-            "nyehehe! i am a cat!",
-            &["hi", "hello"],
-        ), true);
+        app.on_event(
+            &Event::npc_chat("meowza", "nyehehe! i am a cat!", &["hi", "hello"]),
+            true,
+        );
         assert_input!(app.input(DOWN) taints, .is_empty());
         assert_input!(app.input(UP) taints, .is_empty());
         assert_input!(app.input(UP) clean, .is_empty());
@@ -425,8 +425,14 @@ mod tests {
         app.on_event(&Event::npc_chat("targette", "hi", &[]), false);
         app.on_event(&Event::npc_chat("targette", "hello", &[]), false);
         app.on_event(&Event::npc_chat("targette", "wassup", &["hi", "no"]), false);
-        app.on_event(&Event::npc_chat("meowza", "nyehehe! i am a cat!", &[]), false);
-        app.on_event(&Event::npc_chat("meowza", "i can haz cheezburgr?", &[]), false);
+        app.on_event(
+            &Event::npc_chat("meowza", "nyehehe! i am a cat!", &[]),
+            false,
+        );
+        app.on_event(
+            &Event::npc_chat("meowza", "i can haz cheezburgr?", &[]),
+            false,
+        );
         app.on_event(&Event::npc_chat("meowza", "i am in ur walls", &[]), false);
         assert_eq!(app.notifs(), 6);
     }
@@ -437,8 +443,14 @@ mod tests {
         app.on_event(&Event::npc_chat("targette", "hi", &[]), false);
         app.on_event(&Event::npc_chat("targette", "hello", &[]), false);
         app.on_event(&Event::npc_chat("targette", "wassup", &["hi", "no"]), false);
-        app.on_event(&Event::npc_chat("meowza", "nyehehe! i am a cat!", &[]), false);
-        app.on_event(&Event::npc_chat("meowza", "i can haz cheezburgr?", &[]), false);
+        app.on_event(
+            &Event::npc_chat("meowza", "nyehehe! i am a cat!", &[]),
+            false,
+        );
+        app.on_event(
+            &Event::npc_chat("meowza", "i can haz cheezburgr?", &[]),
+            false,
+        );
         app.on_event(&Event::npc_chat("meowza", "i am in ur walls", &[]), false);
         app.input(DOWN, &mut Replies::default());
         assert_eq!(app.notifs(), 3);

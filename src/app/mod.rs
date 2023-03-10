@@ -21,7 +21,7 @@ pub trait App: Send + Sync + 'static {
     /// Returns whether this item was tainted, i.e. true if it needs to be redrawn.
     fn input(&mut self, a: Action, events: &mut Replies<Event>) -> bool;
     /// Receive an event, in case the app needs to care to render it.
-    /// 
+    ///
     /// `focused` indicates whether this app is the current "foreground" one.
     ///
     /// Returns whether this item was tainted, i.e. true if it needs to be redrawn.
