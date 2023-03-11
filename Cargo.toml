@@ -1,48 +1,5 @@
-[package]
-name = "redshell"
-version = "0.0.4"
-edition = "2021"
-description = "A console-based hacking game. Currently building the engine to support dual TUI/GUI interfaces."
-license = "BSD-3-Clause"
-
-# if bumping this, be sure to edit run-tests as well!
-rust-version = "1.60"
-
-[features]
-# `__` indicates you should NOT manually set that feature!
-# (though ideally you'd only ever set `plat_` features!)
-
-__sys = []
-sys_nop = ["__sys"]
-sys_cli = ["__sys", "crossterm"]
-__sys_gui = ["__sys", "winit"]
-sys_gui_softbuffer = ["__sys_gui", "fontdue", "softbuffer", "rayon", "winapi/winuser"]
-
-__run = []
-run_orig = ["__run"]
-run_single = ["__run"]
-run_rayon = ["__run", "rayon", "crossbeam"]
-
-plat_ssh = ["sys_cli"]
-plat_steam = []
-plat_floppy = []
-plat_wasm = []
-
-[[bin]]
-name = "redshell-concept"
-required-features = ["__sys"]
-
-[[bin]]
-name = "redshell"
-required-features = ["__sys", "__run"]
-
-[[bin]]
-name = "mass-events"
-required-features = ["sys_nop", "__run"]
-
-# [[bench]]
-# name = "mass-events"
-# harness = false
+[workspace]
+members = ["engine", "redshell"]
 
 [profile.release]
 opt-level = 'z'
@@ -50,24 +7,3 @@ lto = true
 codegen-units = 1
 panic = 'abort'
 strip = true
-
-[dependencies]
-paste = "1.0.5"
-rand = { version = "0.8.5", features = ["small_rng"] }
-lazy_static = "1.4.0"
-dashmap = "5.4.0"
-# sys_cli
-crossterm = { version = "0.20.0", optional = true }
-# sys_gui_*
-winit = { version = "0.27.5", optional = true }
-# sys_gui_softbuffer
-softbuffer = { version = "0.1.1", optional = true }
-fontdue = { version = "0.7.2", optional = true }
-rayon = { version = "1.6.1", optional = true }
-winapi = { version = "0.3.9", optional = true }
-# run_rayon
-crossbeam = { version = "0.8.2", optional = true }
-
-[dev-dependencies]
-coverage-helper = "0.1.0"
-mock_instant = "0.2.1"
