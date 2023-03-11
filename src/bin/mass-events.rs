@@ -72,7 +72,7 @@ impl Game for TinyGame {
         Response::Nothing
     }
 
-    fn render(&mut self, _onto: &mut Screen) {
+    fn render(&self, _onto: &mut Screen) {
         println!(
             "count={}, max={}, complete={}",
             self.count, self.max, self.complete

@@ -132,7 +132,7 @@ fn chat_demo(io: &mut dyn IoSystem) {
     for (chats, inputs) in frames.into_iter() {
         s.resize(io.size());
         for chat in chats {
-            app.on_event(&chat);
+            app.on_event(&chat, true);
         }
         for input in inputs.into_iter() {
             app.input(input.clone(), &mut Replies::default());
@@ -230,7 +230,10 @@ Available concept art is:
 
     let (mut iosys, mut runner) = load_or_die();
 
-    thread::spawn(move || concept(iosys.as_mut()));
+    thread::spawn(move || {
+        concept(iosys.as_mut());
+        iosys.stop();
+    });
 
     runner.run();
 }

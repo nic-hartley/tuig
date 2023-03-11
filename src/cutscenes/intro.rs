@@ -258,7 +258,8 @@ fn name_input(io: &mut dyn IoSystem, screen: &mut Screen, text: &[Text]) -> io::
             other => match ti.action(other) {
                 // ignore autocomplete
                 TextInputRequest::Autocomplete => false,
-                TextInputRequest::Nothing => ti.tainted(),
+                TextInputRequest::Nothing => false,
+                TextInputRequest::Redraw => true,
                 TextInputRequest::Line(name) => break name,
             },
         };

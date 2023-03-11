@@ -74,6 +74,44 @@ In particular, it includes a (skippable) tutorial on the concept of command line
 
 ## Chat
 
+```
+header      header      header      header      header      header      header  
+                                                                  |             
+                                                                  |             
+                                                                  |             
+                                                                  |             
+                                                                  |             
+                                                                  |             
+                                                                  |             
+                                                                  |             
+                                                                  |             
+                                                                  |             
+                                                                  |             
+                                                                  |             
+                                                                  |             
+                                                                  |             
+                                                                  |             
+     admin: this is the chatlog                                   |             
+        me: oh yeah?                                              |             
+     admin: yeah.                                                 |             
+     admin: and down at the bottom, you see those?                |             
+     admin: the options.                                          |             
+        me: mhm.                                                  | 1 meg       
+     admin: pick one of em.                                       | + flkajsfa  
+          > foo  bar  baz                                         |   admin     
+```
+
+The chat is the main interface to the social part of the game.
+Through it you can talk to and trade with NPCs.
+Chats are strictly DMs, no group chats or channels.
+
+The UI presents one chatlog at a time, as well as a list of your most recently chatting peers.
+There's an unread count per chat, and the total notif count is just the sum of all of those.
+You can select options in the current chat, if there are any, with the left and right arrows and enter.
+Scroll up and down in the chatlog with the up and down arrows.
+Change chats with ctrl+tab and ctrl+shift+tab, like in a browser.
+You can also click on chat options or names to choose them, and scroll with the mouse wheel.
+
 ## Shell
 
 ## Notes

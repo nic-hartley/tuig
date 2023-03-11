@@ -46,10 +46,57 @@ pub struct CliRunner {
     stop: Arc<AtomicBool>,
 }
 
+impl CliRunner {
+    fn init_term() -> crossterm::Result<()> {
+        terminal::enable_raw_mode()?;
+        execute!(
+            std::io::stdout(),
+            EnableMouseCapture,
+            EnterAlternateScreen,
+            DisableLineWrap,
+            Hide,
+            Clear(ClearType::All),
+        )?;
+        Ok(())
+    }
+
+    fn clean_term() -> crossterm::Result<()> {
+        execute!(
+            std::io::stdout(),
+            Clear(ClearType::All),
+            Show,
+            EnableLineWrap,
+            LeaveAlternateScreen,
+            DisableMouseCapture,
+        )?;
+        terminal::disable_raw_mode()?;
+        Ok(())
+    }
+
+    fn new(actions: mpsc::Sender<Action>, stop: Arc<AtomicBool>) -> crossterm::Result<Self> {
+        Self::init_term()?;
+        std::panic::set_hook(Box::new(|i| {
+            let _ = Self::clean_term();
+            println!("{}", i);
+            // set back up in preparation for drop
+            #[cfg(panic = "unwind")]
+            let _ = Self::init_term();
+        }));
+        Ok(Self { actions, stop })
+    }
+}
+
+impl Drop for CliRunner {
+    fn drop(&mut self) {
+        let _ = Self::clean_term();
+    }
+}
+
 impl IoRunner for CliRunner {
     fn step(&mut self) -> bool {
         // check whether we've been told to stop
         if self.stop.load(Ordering::Relaxed) {
+            writeln!(std::io::stderr(), "closing gracefully-ish").unwrap();
             return true;
         }
 
@@ -266,45 +313,10 @@ pub struct AnsiIo {
 }
 
 impl AnsiIo {
-    fn init_term() -> crossterm::Result<()> {
-        terminal::enable_raw_mode()?;
-        execute!(
-            std::io::stdout(),
-            EnableMouseCapture,
-            EnterAlternateScreen,
-            DisableLineWrap,
-            Hide,
-            Clear(ClearType::All),
-        )?;
-        Ok(())
-    }
-
-    fn clean_term() -> crossterm::Result<()> {
-        execute!(
-            std::io::stdout(),
-            Clear(ClearType::All),
-            Show,
-            EnableLineWrap,
-            LeaveAlternateScreen,
-            DisableMouseCapture,
-        )?;
-        terminal::disable_raw_mode()?;
-        Ok(())
-    }
-
     pub fn get() -> crossterm::Result<(Self, CliRunner)> {
-        Self::init_term()?;
-        std::panic::set_hook(Box::new(|i| {
-            let _ = Self::clean_term();
-            println!("{}", i);
-            let _ = Self::init_term();
-        }));
         let (queue_s, queue_r) = mpsc::channel();
         let stop = Arc::new(AtomicBool::new(false));
-        let runner = CliRunner {
-            actions: queue_s,
-            stop: stop.clone(),
-        };
+        let runner = CliRunner::new(queue_s, stop.clone())?;
         Ok((
             Self {
                 queue: queue_r,

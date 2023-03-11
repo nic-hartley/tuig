@@ -123,9 +123,12 @@ impl App for CliApp {
     }
 
     fn input(&mut self, a: Action, replies: &mut Replies<Event>) -> bool {
+        self.unread = 0;
         if self.prompt {
-            match self.input.action(a) {
-                TextInputRequest::Nothing => (),
+            let tir = self.input.action(a);
+            let tainted = tir.is_tainting();
+            match tir {
+                TextInputRequest::Nothing | TextInputRequest::Redraw => (),
                 TextInputRequest::Autocomplete => {
                     let complete = self.autocomplete(self.input.completable());
                     self.input.set_complete(complete);
@@ -134,13 +137,16 @@ impl App for CliApp {
                     self.run_cmd(l, replies);
                 }
             };
-            self.input.tainted()
+            tainted
         } else {
             false
         }
     }
 
-    fn on_event(&mut self, ev: &Event) -> bool {
+    fn on_event(&mut self, ev: &Event, focused: bool) -> bool {
+        if focused {
+            self.unread = 0;
+        }
         match ev {
             Event::CommandOutput(line) => {
                 self.add_scroll(line.clone());
@@ -171,9 +177,7 @@ impl App for CliApp {
         self.unread
     }
 
-    fn render(&mut self, _state: &GameState, screen: &mut Screen) {
-        self.unread = 0;
-
+    fn render(&self, _state: &GameState, screen: &mut Screen) {
         let help_height = if !self.help.is_empty() {
             let tb_met = screen
                 .textbox(text!(bright_green "# {}"(self.help)))

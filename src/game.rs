@@ -125,5 +125,5 @@ pub trait Game: Send {
 
     /// Render the game onto the provided `Screen`.
     // TODO: Make this take &self instead
-    fn render(&mut self, onto: &mut Screen);
+    fn render(&self, onto: &mut Screen);
 }

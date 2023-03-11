@@ -22,8 +22,10 @@ pub trait App: Send + Sync + 'static {
     fn input(&mut self, a: Action, events: &mut Replies<Event>) -> bool;
     /// Receive an event, in case the app needs to care to render it.
     ///
+    /// `focused` indicates whether this app is the current "foreground" one.
+    ///
     /// Returns whether this item was tainted, i.e. true if it needs to be redrawn.
-    fn on_event(&mut self, ev: &Event) -> bool;
+    fn on_event(&mut self, ev: &Event, focused: bool) -> bool;
 
     /// The number of notifications this app has.
     fn notifs(&self) -> usize;
@@ -31,7 +33,7 @@ pub trait App: Send + Sync + 'static {
     ///
     /// You can be sure that this will never be called except when the module is the active one; feel free to use it
     /// for e.g. clearing notifications.
-    fn render(&mut self, state: &GameState, screen: &mut Screen);
+    fn render(&self, state: &GameState, screen: &mut Screen);
 }
 
 mod chat;
