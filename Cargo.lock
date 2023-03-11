@@ -405,10 +405,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
 
 [[package]]
-name = "engine"
-version = "0.1.0"
-
-[[package]]
 name = "errno"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1121,6 +1117,7 @@ dependencies = [
  "rand",
  "rayon",
  "softbuffer",
+ "tui-engine",
  "winapi",
  "winit",
 ]
@@ -1391,6 +1388,10 @@ name = "ttf-parser"
 version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b3e06c9b9d80ed6b745c7159c40b311ad2916abb34a49e9be2653b90db0d8dd"
+
+[[package]]
+name = "tui-engine"
+version = "0.1.0"
 
 [[package]]
 name = "unicode-ident"
