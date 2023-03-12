@@ -281,13 +281,13 @@ mod test {
         };
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn blank_renders_to_prompt() {
         let ti = TextInput::new("> ", 0);
         assert_eq!(ti.render(), text!["> ", bright_white "", underline " "]);
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn text_renders_to_prompt() {
         let mut ti = TextInput::new("> ", 0);
         feed!(ti: String("abcdef"));
@@ -297,7 +297,7 @@ mod test {
         );
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn blank_renders_to_prompt_with_autocomplete() {
         let mut ti = TextInput::new("> ", 0);
         ti.set_complete("mlem".into());
@@ -307,7 +307,7 @@ mod test {
         );
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn text_renders_to_prompt_with_autocomplete() {
         let mut ti = TextInput::new("> ", 0);
         feed!(ti: String("abcdef"));
@@ -318,7 +318,7 @@ mod test {
         );
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn text_renders_to_prompt_moved_cursor() {
         let mut ti = TextInput::new("> ", 0);
         feed!(ti: String("abcdef"), Left, Left);
@@ -328,7 +328,7 @@ mod test {
         );
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn text_renders_to_prompt_with_autocomplete_moved_cursor() {
         let mut ti = TextInput::new("> ", 0);
         feed!(ti: String("abcdef"), Left, Left, Left, Right);
@@ -339,7 +339,7 @@ mod test {
         );
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn typing_uppercase() {
         let mut ti = TextInput::new("> ", 0);
         feed!(ti: String("abCDef"));
@@ -349,21 +349,21 @@ mod test {
         );
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn backspacing_chars() {
         let mut ti = TextInput::new("> ", 0);
         feed!(ti: String("abcd"), Backspace, Backspace, String("ef"));
         assert_eq!(ti.render(), text!["> ", bright_white "abef", underline " "]);
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn deleting_chars() {
         let mut ti = TextInput::new("> ", 0);
         feed!(ti: String("abcd"), Left, Left, Delete, Delete, String("ef"));
         assert_eq!(ti.render(), text!["> ", bright_white "abef", underline " "]);
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn tab_triggers_autocomplete() {
         let mut ti = TextInput::new("> ", 0);
         feed!(ti: String("abc"));
@@ -379,7 +379,7 @@ mod test {
         );
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn tab_twice_finishes_autocomplete() {
         let mut ti = TextInput::new("> ", 0);
         feed!(ti: String("abc"));
@@ -396,7 +396,7 @@ mod test {
         );
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn enter_sends_line() {
         let mut ti = TextInput::new("> ", 0);
         feed!(ti: String("abc"));
@@ -407,7 +407,7 @@ mod test {
         assert_eq!(ti.render(), text!["> ", bright_white "", underline " "]);
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn history_scrolls_with_arrows() {
         let mut ti = TextInput::new("> ", 10);
         feed!(ti: String("abc"));
@@ -432,7 +432,7 @@ mod test {
         assert_eq!(ti.render(), text!["> ", bright_white "def", underline " "]);
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn history_scroll_to_bottom_doesnt_reset_line() {
         let mut ti = TextInput::new("> ", 10);
         feed!(ti: String("abc"));
@@ -458,7 +458,7 @@ mod test {
         assert_eq!(ti.render(), text!["> ", bright_white "jkl", underline " "]);
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn history_selects_with_typing() {
         let mut ti = TextInput::new("> ", 10);
         feed!(ti: String("abc"));
@@ -486,7 +486,7 @@ mod test {
         assert_eq!(ti.render(), text!["> ", bright_white "def", underline " "]);
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn history_selects_with_backspace() {
         let mut ti = TextInput::new("> ", 10);
         feed!(ti: String("abc"));
@@ -514,7 +514,7 @@ mod test {
         assert_eq!(ti.render(), text!["> ", bright_white "def", underline " "]);
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn history_selects_with_enter() {
         let mut ti = TextInput::new("> ", 10);
         feed!(ti: String("abc"));

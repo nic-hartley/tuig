@@ -1,8 +1,7 @@
 use crate::{
     io::{
         clifmt::{Formatted, FormattedExt},
-        output::{Screen, Text},
-        XY,
+        output::{Screen, Text}, xy::XY,
     },
     text, text1,
 };
@@ -343,14 +342,14 @@ mod test {
         };
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn blank_textbox_renders_nothing() {
         let mut sc = screen(50, 30);
         sc.textbox(vec![]);
         screen_assert!(sc: blank.., ..);
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn basic_textbox_renders_right() {
         let mut sc = screen(50, 30);
         let res = sc
@@ -372,7 +371,7 @@ mod test {
         assert_eq!(res.scroll, 0);
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn textbox_positioning_works() {
         let mut sc = screen(50, 30);
         let res = sc
@@ -399,7 +398,7 @@ mod test {
         assert_eq!(res.scroll, 0);
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn textbox_wraps_words_and_overwrites() {
         let mut sc = screen(50, 30);
         let res = sc
@@ -423,7 +422,7 @@ mod test {
         assert_eq!(res.scroll, 0);
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn textbox_wrap_carries_formatting() {
         let mut sc = screen(50, 30);
         sc.textbox(
@@ -442,7 +441,7 @@ mod test {
         );
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn textbox_linefill_carries_formatting() {
         let mut sc = screen(50, 30);
         sc.textbox(
@@ -461,7 +460,7 @@ mod test {
         );
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn textbox_size_truncates() {
         let mut sc = screen(50, 30);
         let res = sc
@@ -483,7 +482,7 @@ mod test {
         assert_eq!(res.scroll, 0);
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn textbox_scroll_moves_view() {
         let mut sc = screen(50, 30);
         let res = sc
@@ -506,7 +505,7 @@ mod test {
         assert_eq!(res.scroll, 2);
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn textbox_scroll_bottom_moves_view() {
         let mut sc = screen(50, 30);
         let res = sc

@@ -11,8 +11,7 @@ use std::{
 
 pub use super::clifmt::*;
 pub use super::widgets::*;
-
-use super::XY;
+use super::xy::XY;
 
 /// An iterator over the rows of cells in a [`Screen`].
 pub struct ScreenRows<'s> {

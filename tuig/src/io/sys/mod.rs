@@ -4,7 +4,7 @@
 
 use std::io;
 
-use super::{input::Action, output::Screen, XY};
+use super::{input::Action, output::Screen, xy::XY};
 
 #[cfg(feature = "sys_cli")]
 pub mod ansi_cli;

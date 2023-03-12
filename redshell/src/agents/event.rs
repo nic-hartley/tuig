@@ -134,21 +134,21 @@ impl Message for Event {
 mod bundle_test {
     use super::*;
 
-    #[coverage_helper::test]
+    #[test]
     fn item_taken_once() {
         let bundle = Bundle::of(1);
         assert_eq!(bundle.take(), Some(1));
         assert_eq!(bundle.take(), None);
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn bundle_eq_compares_ptrs() {
         let b1 = Bundle::of(1);
         let b2 = b1.clone();
         assert_eq!(b1, b2);
     }
 
-    #[coverage_helper::test]
+    #[test]
     fn bundle_eq_doesnt_compare_contents() {
         let b1 = Bundle::of(1);
         let b2 = Bundle::of(1);

@@ -1117,7 +1117,7 @@ dependencies = [
  "rand",
  "rayon",
  "softbuffer",
- "tui-engine",
+ "tuig",
  "winapi",
  "winit",
 ]
@@ -1390,8 +1390,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b3e06c9b9d80ed6b745c7159c40b311ad2916abb34a49e9be2653b90db0d8dd"
 
 [[package]]
-name = "tui-engine"
-version = "0.1.0"
+name = "tuig"
+version = "0.0.1"
+dependencies = [
+ "crossbeam",
+ "crossterm",
+ "fontdue",
+ "mock_instant",
+ "paste",
+ "rand",
+ "rayon",
+ "softbuffer",
+ "winit",
+]
 
 [[package]]
 name = "unicode-ident"

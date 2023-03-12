@@ -1,16 +1,7 @@
-//! Common code and types between input and output.
-
 use std::{
     fmt,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign},
 };
-
-pub mod clifmt;
-pub mod helpers;
-pub mod input;
-pub mod output;
-pub mod sys;
-pub mod widgets;
 
 /// A position or size, with an X and a Y component.
 ///
@@ -144,7 +135,7 @@ impl PartialOrd for XY {
 mod test {
     use super::*;
 
-    #[coverage_helper::test]
+    #[test]
     fn xy_clamps_elementwise() {
         let tl = XY(2, 3);
         let br = XY(8, 7);

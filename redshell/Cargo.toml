@@ -45,7 +45,7 @@ required-features = ["sys_nop", "__run"]
 # harness = false
 
 [dependencies]
-tui-engine = { path = "../engine" }
+tuig = { path = "../tuig" }
 
 paste = "1.0.5"
 rand = { version = "0.8.5", features = ["small_rng"] }

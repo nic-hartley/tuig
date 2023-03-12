@@ -1,13 +1,7 @@
-//! The [`Game`] interface is the primary split between the "engine" and "game" code. It defines a single interface
-//! through which the game can be rendered, handle events, spawn agents, etc. while being easy to run under a variety
-//! of runners or systems.
+use std::fmt;
 
-use core::fmt;
+use crate::{agent::Agent, io::{input::Action, output::Screen}};
 
-use crate::{
-    agents::Agent,
-    io::{input::Action, output::Screen},
-};
 
 pub trait Message: Clone + Send + Sync {
     /// The message to send agents when there aren't any other messages queued for processing, to ensure every awake

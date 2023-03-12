@@ -1,6 +1,6 @@
 //! The various data types representing different player to the game.
 
-use crate::io::XY;
+use super::xy::XY;
 
 /// A key which can be pressed or released
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
