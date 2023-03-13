@@ -1,10 +1,9 @@
 use std::mem;
 
+use tuig::{Agent, Replies, ControlFlow, text};
+
 use crate::{
-    agents::{Agent, ControlFlow, Event},
-    app::CliState,
-    game::Replies,
-    text,
+    app::CliState, event::Event,
 };
 
 use super::{AutocompleteType, FixedOutput, Tool};

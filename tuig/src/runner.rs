@@ -5,14 +5,14 @@
 use std::{mem, thread, time::Duration};
 
 use crate::{
-    agents::{Agent, ControlFlow},
+    agent::{Agent, ControlFlow},
     game::{Game, Message, Replies, Response},
     io::{input::Action, output::Screen, sys::IoSystem},
 };
 
 use crate::{io::sys::IoRunner, timing::Timer};
 
-#[cfg(feature = "__sys")]
+#[cfg(feature = "__io")]
 use crate::io::sys;
 
 struct AgentRunner<M: Message> {
@@ -405,7 +405,7 @@ impl<G: Game + 'static> Runner<G> {
     ///
     /// This function only exits when [`Game::event`] or [`Game::input`] returns [`Response::Quit`]. It returns the
     /// [`Game`], primarily for testing purposes.
-    #[cfg(all(feature = "__sys", feature = "__run"))]
+    #[cfg(all(feature = "__io", feature = "__run"))]
     pub fn load_run(self) -> G {
         sys::load!(self.run).unwrap()
     }

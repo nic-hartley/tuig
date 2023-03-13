@@ -1,9 +1,8 @@
 use crate::{
     io::{
-        clifmt::{Formatted, FormattedExt},
-        output::{Screen, Text}, xy::XY,
+        output::{Screen}, xy::XY,
     },
-    text, text1,
+    text, text1, format::{Text, Formatted, FormattedExt},
 };
 
 fn breakable(ch: char) -> bool {
@@ -244,8 +243,7 @@ mod test {
     use std::ops::{Bound, RangeBounds};
 
     use crate::{
-        io::clifmt::{Cell, Color, Formatted, FormattedExt},
-        text1,
+        text1, format::{Cell, Color, FormattedExt},
     };
 
     use super::*;

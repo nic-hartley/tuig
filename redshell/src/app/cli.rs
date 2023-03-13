@@ -1,17 +1,10 @@
 use std::{collections::VecDeque, sync::Arc};
 
+use tuig::{format::Text, TextInput, Replies, text, Action, TextInputRequest, Screen};
+
 use crate::{
-    agents::Event,
-    game::Replies,
-    io::{
-        clifmt::Text,
-        helpers::{TextInput, TextInputRequest},
-        input::Action,
-        output::Screen,
-    },
-    text,
     tools::{autocomplete, Tool},
-    GameState, Machine,
+    GameState, Machine, event::Event,
 };
 
 use super::App;

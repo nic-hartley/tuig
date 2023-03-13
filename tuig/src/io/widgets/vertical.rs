@@ -1,6 +1,6 @@
 use crate::{
     cell,
-    io::output::{Cell, Screen},
+    io::output::{Screen}, format::Cell,
 };
 
 /// A vertical line across all or part of the screen

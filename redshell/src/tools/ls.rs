@@ -1,9 +1,8 @@
+use tuig::{format::{Text, FormattedExt}, text1, text, Agent};
+
 use crate::{
-    agents::{Agent, Event},
     app::CliState,
-    io::clifmt::{FormattedExt, Text},
-    machine::Entry,
-    text, text1,
+    machine::Entry, event::Event,
 };
 
 use super::{AutocompleteType, BsdArgs, FixedOutput, Tool};

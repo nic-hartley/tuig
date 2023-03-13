@@ -3,10 +3,7 @@
 use std::mem;
 
 use crate::{
-    agents::{Agent, ControlFlow, Event},
-    app::CliState,
-    game::Replies,
-    io::clifmt::Text,
+    app::CliState, event::Event,
 };
 
 mod args;
@@ -20,6 +17,7 @@ mod mkdir;
 pub use mkdir::Mkdir;
 mod cd;
 pub use cd::Cd;
+use tuig::{Agent, Replies, ControlFlow, format::Text};
 
 /// Common interface for all CLI tool.
 pub trait Tool: Send + Sync {

@@ -1,16 +1,11 @@
 use std::time::Duration;
 
 use redshell::{
-    agents::{Agent, ControlFlow, Event},
     app::{App, ChatApp, CliApp},
-    game::{Game, Replies, Response},
-    io::{
-        input::{Action, Key},
-        output::Screen,
-    },
-    runner::Runner,
     tools, GameState,
+    event::Event
 };
+use tuig::{Replies, ControlFlow, Game, Action, Response, Key, Screen, Runner, Agent};
 
 /// A single step in the conversation tree of an [`NPC`]
 struct ChatState {

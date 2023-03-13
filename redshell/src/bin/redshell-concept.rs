@@ -1,17 +1,11 @@
 use std::{env, thread, time::Duration};
 
 use redshell::{
-    agents::Event,
     app::{App, ChatApp},
-    game::Replies,
-    io::{
-        input::{Action, Key},
-        output::{Color, FormattedExt, Screen, Text},
-        sys::{self, IoRunner, IoSystem},
-        XY,
-    },
-    text, GameState,
+    GameState,
+    event::Event,
 };
+use tuig::{IoSystem, IoRunner, sys, Screen, format::{Color, Text, FormattedExt}, text, Action, Key, Replies, XY};
 
 /// Attempt to load a system, or explode and die somewhat cleanly
 pub fn load_or_die() -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
@@ -73,11 +67,12 @@ fn render_demo(io: &mut dyn IoSystem) {
     std::thread::sleep(Duration::from_secs(5));
 }
 
-/// Run the intro cutscene
-fn intro_demo(io: &mut dyn IoSystem) {
-    let size = io.size();
-    redshell::cutscenes::intro(io, &mut Screen::new(size)).expect("Failed to run intro");
-}
+// TODO: #35
+// /// Run the intro cutscene
+// fn intro_demo(io: &mut dyn IoSystem) {
+//     let size = io.size();
+//     redshell::cutscenes::intro(io, &mut Screen::new(size)).expect("Failed to run intro");
+// }
 
 /// Run the demo of the chat app
 fn chat_demo(io: &mut dyn IoSystem) {
@@ -207,7 +202,8 @@ fn main() {
     let arg = env::args().skip(1).next();
     let concept = match arg.as_ref().map(|s| s.as_str()) {
         Some("render") => render_demo,
-        Some("intro") => intro_demo,
+        // TODO: #35
+        // Some("intro") => intro_demo,
         Some("chat") => chat_demo,
         Some("mouse") => mouse_demo,
         _ => {

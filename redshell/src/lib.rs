@@ -2,17 +2,12 @@
 
 use machine::Machine;
 
-pub mod agents;
+pub mod event;
 pub mod app;
 pub mod constants;
 pub mod cutscenes;
-pub mod game;
-pub mod io;
 pub mod machine;
-pub mod runner;
-mod timing;
 pub mod tools;
-mod util;
 
 /// The current state of the game, including the state of the UI.
 #[derive(Default)]

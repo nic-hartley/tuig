@@ -2,16 +2,10 @@
 
 use std::mem;
 
+use tuig::{Replies, Action, Key, Screen, text1, format::{Text, FormattedExt}};
+
 use crate::{
-    agents::Event,
-    constants::{gameplay::MAX_USERNAME, graphics::HEADER_HEIGHT},
-    game::Replies,
-    io::{
-        clifmt::FormattedExt,
-        input::{Action, Key},
-        output::{Screen, Text},
-    },
-    text1, GameState,
+    constants::{gameplay::MAX_USERNAME, graphics::HEADER_HEIGHT}, event::Event, GameState,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -244,7 +238,7 @@ impl super::App for ChatApp {
 
 #[cfg(test)]
 mod tests {
-    use crate::app::{assert_input, App};
+    use crate::app::{App};
 
     #[allow(unused_imports)]
     use super::*;

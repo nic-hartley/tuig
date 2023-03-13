@@ -8,11 +8,9 @@ use fontdue::{Font, FontSettings};
 use rayon::prelude::*;
 use winit::window::Window;
 
-use crate::io::{
-    clifmt::{Color, Formatted},
-    output::Screen,
-    XY,
-};
+use crate::{io::{
+    output::Screen, xy::XY,
+}, format::{Color, Formatted}};
 
 use super::GuiBackend;
 

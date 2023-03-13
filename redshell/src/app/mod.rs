@@ -1,10 +1,9 @@
 //! Common structural code for apps.
 
+use tuig::{Action, Replies, Screen};
+
 use crate::{
-    agents::Event,
-    game::Replies,
-    io::{input::Action, output::Screen},
-    GameState,
+    GameState, event::Event,
 };
 
 /// Each app is a single tab in the game's window view, e.g. chat. They exclusively handle IO: Processing user input
@@ -36,13 +35,9 @@ pub trait App: Send + Sync + 'static {
     fn render(&self, state: &GameState, screen: &mut Screen);
 }
 
-mod chat;
-pub use chat::ChatApp;
-mod cli;
-pub use cli::{CliApp, CliState};
-
 /// Assert things about the outcomes of an `App` receiving input
 #[allow(unused)]
+#[cfg(test)]
 macro_rules! assert_input {
     (
         $app:ident .input ( $($arg:expr),* $(,)? )
@@ -50,11 +45,11 @@ macro_rules! assert_input {
         $( $test:tt )*
     ) => {
         {
-            let mut evs = $crate::game::Replies::default();
+            let mut evs = tuig::Replies::default();
             let taint = $app.input($( $arg ),* , &mut evs);
             $( assert!(!taint, "app tainted unexpectedly"); $( $clean )? )?
             $( assert!(taint, "app didn't taint when expected"); $( $taint )? )?
-            assert_input!(@cmp evs.messages() $( $test )*);
+            assert_input!(@cmp evs._messages() $( $test )*);
         }
     };
     (@cmp $evs:ident == $other:expr) => { assert_eq!($evs, $other) };
@@ -62,5 +57,7 @@ macro_rules! assert_input {
     (@cmp $test:expr) => { assert!($test) };
 }
 
-#[allow(unused)]
-pub(self) use assert_input;
+mod chat;
+pub use chat::ChatApp;
+mod cli;
+pub use cli::{CliApp, CliState};

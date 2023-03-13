@@ -12,33 +12,29 @@ rust-version = "1.64"
 # `__` indicates you should NOT manually set that feature!
 # (though ideally you'd only ever set `plat_` features!)
 
-__sys = []
-sys_nop = ["__sys"]
-sys_cli = ["__sys", "crossterm"]
-__sys_gui = ["__sys", "winit"]
-sys_gui_softbuffer = ["__sys_gui", "fontdue", "softbuffer", "rayon", "winapi/winuser"]
+__io = []
+io_nop = ["__io"]
+io_cli = ["__io", "crossterm"]
+__io_gui = ["__io", "winit"]
+io_gui_softbuffer = ["__io_gui", "fontdue", "softbuffer", "rayon", "winapi/winuser"]
 
 __run = []
 run_orig = ["__run"]
 run_single = ["__run"]
 run_rayon = ["__run", "rayon", "crossbeam"]
 
-plat_ssh = ["sys_cli"]
+plat_ssh = ["io_cli"]
 plat_steam = []
 plat_floppy = []
 plat_wasm = []
 
 [[bin]]
 name = "redshell-concept"
-required-features = ["__sys"]
+required-features = ["__io"]
 
 [[bin]]
 name = "redshell"
-required-features = ["__sys", "__run"]
-
-[[bin]]
-name = "mass-events"
-required-features = ["sys_nop", "__run"]
+required-features = ["__io", "__run"]
 
 # [[bench]]
 # name = "mass-events"
@@ -51,11 +47,11 @@ paste = "1.0.5"
 rand = { version = "0.8.5", features = ["small_rng"] }
 lazy_static = "1.4.0"
 dashmap = "5.4.0"
-# sys_cli
+# io_cli
 crossterm = { version = "0.20.0", optional = true }
-# sys_gui_*
+# io_gui_*
 winit = { version = "0.27.5", optional = true }
-# sys_gui_softbuffer
+# io_gui_softbuffer
 softbuffer = { version = "0.1.1", optional = true }
 fontdue = { version = "0.7.2", optional = true }
 rayon = { version = "1.6.1", optional = true }

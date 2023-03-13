@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use crate::io::{input::Action, output::Screen, XY};
+use crate::io::{input::Action, output::Screen, xy::XY};
 
 use super::{IoRunner, IoSystem};
 

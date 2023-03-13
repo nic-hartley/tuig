@@ -1,9 +1,7 @@
 use crate::{
     cell,
-    io::{
-        clifmt::{Color, FormattedExt},
-        output::{Cell, Screen},
-    },
+    io::{output::Screen
+    }, format::{Cell, Color, FormattedExt},
 };
 
 /// A horizontal line across all or part of the screen

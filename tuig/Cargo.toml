@@ -32,6 +32,12 @@ plat_steam = [
 #     "run_single",
 # ]
 
+test_extras = []
+
+[[bin]]
+name = "mass-events"
+required-features = ["io_nop", "__run"]
+
 [dependencies]
 paste = "1.0.5"
 rand = { version = "0.8.5", features = ["small_rng"] }

@@ -1,9 +1,8 @@
 use crate::{
     io::{
-        clifmt::FormattedExt,
-        output::{Screen, Text}, xy::XY,
+        output::{Screen}, xy::XY,
     },
-    text, text1,
+    text, text1, format::{Text, FormattedExt},
 };
 
 /// The header at the top of the window, which lists tabs, the current time, etc.

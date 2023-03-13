@@ -191,13 +191,13 @@ macro_rules! fmt_type {
         $( #[$($attr),*] )*
         $svis struct $name {
             $( $fvis $field: $type, )*
-            _fmt: $crate::io::clifmt::Format,
+            _fmt: $crate::format::Format,
         }
-        impl $crate::io::clifmt::Formatted for $name {
-            fn get_fmt(&self) -> &$crate::io::clifmt::Format {
+        impl $crate::format::Formatted for $name {
+            fn get_fmt(&self) -> &$crate::format::Format {
                 &self._fmt
             }
-            fn get_fmt_mut(&mut self) -> &mut $crate::io::clifmt::Format {
+            fn get_fmt_mut(&mut self) -> &mut $crate::format::Format {
                 &mut self._fmt
             }
         }
@@ -205,7 +205,7 @@ macro_rules! fmt_type {
             pub const fn of( $($field: $type),* ) -> Self {
                 Self {
                     $( $field, )*
-                    _fmt: $crate::io::clifmt::Format::NONE,
+                    _fmt: $crate::format::Format::NONE,
                 }
             }
             pub fn data(mut self $(, $field: $type)*) -> Self {
@@ -249,8 +249,8 @@ macro_rules! text1 {
     ] => {
         {
             #[allow(unused_imports)]
-            use $crate::io::clifmt::{FormattedExt as _};
-            $crate::io::clifmt::Text::of(
+            use $crate::format::{FormattedExt as _};
+            $crate::format::Text::of(
                 format!( $text $(, $( $arg ),* )? )
             ) $( . $name () )*
         }
@@ -267,10 +267,10 @@ macro_rules! text {
     ),* $(,)? ] => {
         {
             #[allow(unused_imports)]
-            use $crate::io::clifmt::{FormattedExt as _};
+            use $crate::format::{FormattedExt as _};
             vec![
                 $(
-                    $crate::io::clifmt::Text::of(
+                    $crate::format::Text::of(
                         format!( $text $(, $( $arg ),* )? )
                     ) $( . $name () )*
                 ),*
@@ -291,7 +291,7 @@ macro_rules! cell {
     [ $( $name:ident )* $( $char:literal )? ] => {
         {
             #[allow(unused_imports)]
-            use $crate::io::clifmt::{FormattedExt as _};
+            use $crate::format::{FormattedExt as _};
             Cell::of($($char)?) $( .$name() )*
         }
     };

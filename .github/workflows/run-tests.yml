@@ -73,7 +73,7 @@ jobs:
     - uses: actions/checkout@v3
     - name: Deploy events
       run: |
-        cargo run --release --bin mass-events --features sys_nop,run_${{ matrix.run }}
+        cargo run --release --bin mass-events --features io_nop,run_${{ matrix.run }}
 
 
   exhaustive-features:
@@ -82,7 +82,7 @@ jobs:
       matrix:
         run: [orig, single, rayon]  # TODO: std_multi
         sys: [nop, cli, gui_softbuffer]
-    name: Check run_${{ matrix.run }} and sys_${{ matrix.sys }}
+    name: Check run_${{ matrix.run }} and io_${{ matrix.sys }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/cache@v3
@@ -104,4 +104,4 @@ jobs:
     - uses: actions/checkout@v3
     - name: Check feature compatibility
       run: |
-        cargo check --features sys_${{ matrix.sys }},run_${{ matrix.run }} --all-targets
+        cargo check --features io_${{ matrix.sys }},run_${{ matrix.run }} --all-targets

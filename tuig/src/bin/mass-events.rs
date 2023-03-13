@@ -1,11 +1,6 @@
 use std::time::Instant;
 
-use redshell::{
-    agents::{Agent, ControlFlow},
-    game::{Game, Replies, Response},
-    io::{input::Action, output::Screen},
-    runner::Runner,
-};
+use tuig::{ControlFlow, Agent, Replies, Game, Response, Action, Screen, Runner};
 
 const AGENTS: u64 = 10_000;
 

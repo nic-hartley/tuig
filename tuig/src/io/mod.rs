@@ -1,6 +1,5 @@
 //! Common code and types between input and output.
 
-pub mod clifmt;
 pub mod helpers;
 pub mod input;
 pub mod output;

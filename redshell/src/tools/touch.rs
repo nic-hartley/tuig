@@ -1,7 +1,7 @@
+use tuig::{text, Agent};
+
 use crate::{
-    agents::{Agent, Event},
-    app::CliState,
-    text,
+    app::CliState, event::Event,
 };
 
 use super::{AutocompleteType, FixedOutput, Tool};

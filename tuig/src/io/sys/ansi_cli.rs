@@ -23,13 +23,10 @@ use crossterm::{
     },
 };
 
-use crate::io::{
-    clifmt::Formatted,
+use crate::{io::{
     input::{Action, Key, MouseButton},
-    output::Screen,
-    output::{Cell, Color as RedshellColor},
-    XY,
-};
+    output::Screen, xy::XY,
+}, format::{Color as RedshellColor, Cell, Formatted}};
 
 use super::{IoRunner, IoSystem};
 

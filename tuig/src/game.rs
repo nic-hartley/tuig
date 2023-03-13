@@ -23,15 +23,15 @@ pub struct Replies<M: Message> {
 }
 
 impl<M: Message> Replies<M> {
-    #[cfg(test)]
+    #[cfg(feature = "test_extras")]
     /// A **test-only** function, so you can ensure your code queues the correct messages.
-    pub fn messages(&self) -> &[M] {
+    pub fn _messages(&self) -> &[M] {
         &self.messages
     }
 
-    #[cfg(test)]
+    #[cfg(feature = "test_extras")]
     /// A **test-only** function, so you can ensure your code spawns the correct agents.
-    pub fn agents(&self) -> &[Box<dyn Agent<M>>] {
+    pub fn _agents(&self) -> &[Box<dyn Agent<M>>] {
         &self.agents
     }
 }

@@ -2,10 +2,9 @@ use std::{collections::VecDeque, mem};
 
 use crate::{
     io::{
-        clifmt::Text,
         input::{Action, Key},
     },
-    text,
+    text, format::Text,
 };
 
 use super::ModState;

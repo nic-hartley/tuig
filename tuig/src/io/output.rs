@@ -9,7 +9,8 @@ use std::{
     ops::{self, Range},
 };
 
-pub use super::clifmt::*;
+use crate::format::{Cell, Text, FormattedExt};
+
 pub use super::widgets::*;
 use super::xy::XY;
 

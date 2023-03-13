@@ -19,13 +19,12 @@ use winit::{
 
 use crate::io::{
     input::{Action, Key, MouseButton},
-    output::Screen,
-    XY,
+    output::Screen, xy::XY,
 };
 
 use super::{IoRunner, IoSystem};
 
-#[cfg(feature = "sys_gui_softbuffer")]
+#[cfg(feature = "io_gui_softbuffer")]
 pub mod softbuffer;
 
 const REGULAR_TTF: &[u8] = include_bytes!("inconsolata-reg.ttf");

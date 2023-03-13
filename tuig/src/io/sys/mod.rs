@@ -6,13 +6,13 @@ use std::io;
 
 use super::{input::Action, output::Screen, xy::XY};
 
-#[cfg(feature = "sys_cli")]
+#[cfg(feature = "io_cli")]
 pub mod ansi_cli;
 
-#[cfg(feature = "__sys_gui")]
+#[cfg(feature = "__io_gui")]
 pub mod gui;
 
-#[cfg(feature = "sys_nop")]
+#[cfg(feature = "io_nop")]
 pub mod nop;
 
 /// An input/output system.
@@ -78,7 +78,7 @@ pub trait IoRunner {
 /// The callback can be any "function call", up to the parens, e.g. `run` or `self.start`. It will be called as
 /// `$thing(iosys, iorun)`. If it's called, this macro "returns" `Ok(())`. Otherwise, all attempted loads failed, and
 /// this macro "returns" `Err(map)`, where `map` maps `&'static str` feature name to `io::Error` failure.
-#[cfg(feature = "__sys")]
+#[cfg(feature = "__io")]
 #[macro_export]
 macro_rules! load {
     ( @@one $errs:ident { $( [ $( $callback:tt )* ] $feature:literal => $init:expr );* $(;)? } ) => { $(
@@ -94,16 +94,16 @@ macro_rules! load {
         }
     )* };
     ( $( $callback:tt )* ) => { loop {
-        use $crate::io::sys::*;
+        use $crate::sys::*;
         let mut errs = std::collections::HashMap::new();
-        $crate::io::sys::load! { @@one errs {
-            [ $( $callback )* ] "sys_nop" => nop::NopSystem::new();
-            [ $( $callback )* ] "sys_gui_softbuffer" => gui::Gui::<gui::softbuffer::SoftbufferBackend>::new(20.0);
-            [ $( $callback )* ] "sys_cli" => ansi_cli::AnsiIo::get();
+        $crate::sys::load! { @@one errs {
+            [ $( $callback )* ] "io_nop" => nop::NopSystem::new();
+            [ $( $callback )* ] "io_gui_softbuffer" => gui::Gui::<gui::softbuffer::SoftbufferBackend>::new(20.0);
+            [ $( $callback )* ] "io_cli" => ansi_cli::AnsiIo::get();
         } }
         break Err(errs);
     } };
 }
 
-#[cfg(feature = "__sys")]
+#[cfg(feature = "__io")]
 pub use load;
