@@ -1,8 +1,7 @@
 use crate::{
-    io::{
-        output::{Screen}, xy::XY,
-    },
-    text, text1, format::{Text, Formatted, FormattedExt},
+    format::{Formatted, FormattedExt, Text},
+    io::{output::Screen, xy::XY},
+    text, text1,
 };
 
 fn breakable(ch: char) -> bool {
@@ -243,7 +242,8 @@ mod test {
     use std::ops::{Bound, RangeBounds};
 
     use crate::{
-        text1, format::{Cell, Color, FormattedExt},
+        format::{Cell, Color, FormattedExt},
+        text1,
     };
 
     use super::*;

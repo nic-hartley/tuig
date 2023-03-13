@@ -8,9 +8,10 @@ use fontdue::{Font, FontSettings};
 use rayon::prelude::*;
 use winit::window::Window;
 
-use crate::{io::{
-    output::Screen, xy::XY,
-}, format::{Color, Formatted}};
+use crate::{
+    format::{Color, Formatted},
+    io::{output::Screen, xy::XY},
+};
 
 use super::GuiBackend;
 

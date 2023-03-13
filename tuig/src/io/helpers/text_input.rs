@@ -1,10 +1,9 @@
 use std::{collections::VecDeque, mem};
 
 use crate::{
-    io::{
-        input::{Action, Key},
-    },
-    text, format::Text,
+    format::Text,
+    io::input::{Action, Key},
+    text,
 };
 
 use super::ModState;

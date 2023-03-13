@@ -2,10 +2,10 @@
 
 use machine::Machine;
 
-pub mod event;
 pub mod app;
 pub mod constants;
 pub mod cutscenes;
+pub mod event;
 pub mod machine;
 pub mod tools;
 

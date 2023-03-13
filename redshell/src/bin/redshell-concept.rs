@@ -2,10 +2,13 @@ use std::{env, thread, time::Duration};
 
 use redshell::{
     app::{App, ChatApp},
-    GameState,
     event::Event,
+    GameState,
 };
-use tuig::{IoSystem, IoRunner, sys, Screen, format::{Color, Text, FormattedExt}, text, Action, Key, Replies, XY};
+use tuig::{
+    format::{Color, FormattedExt, Text},
+    sys, text, Action, IoRunner, IoSystem, Key, Replies, Screen, XY,
+};
 
 /// Attempt to load a system, or explode and die somewhat cleanly
 pub fn load_or_die() -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {

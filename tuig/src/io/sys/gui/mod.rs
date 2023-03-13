@@ -19,7 +19,8 @@ use winit::{
 
 use crate::io::{
     input::{Action, Key, MouseButton},
-    output::Screen, xy::XY,
+    output::Screen,
+    xy::XY,
 };
 
 use super::{IoRunner, IoSystem};

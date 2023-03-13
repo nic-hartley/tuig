@@ -1,23 +1,27 @@
-mod game;
 mod agent;
+mod game;
 mod io;
-mod util;
 mod runner;
 mod timing;
+mod util;
 
 pub mod format;
 
 // TODO: reorganize the library so these are more naturally exposed
-pub use game::{Game, Message, Replies, Response};
-pub use runner::Runner;
 pub use agent::{Agent, ControlFlow, WaitHandle};
-pub use io::{input::{Action, Key}, output::Screen, helpers::{TextInput, TextInputRequest}, sys::{self, IoSystem, IoRunner}, xy::XY};
+pub use game::{Game, Message, Replies, Response};
+pub use io::{
+    helpers::{TextInput, TextInputRequest},
+    input::{Action, Key},
+    output::Screen,
+    sys::{self, IoRunner, IoSystem},
+    xy::XY,
+};
+pub use runner::Runner;
 
 /// Re-exports you may find useful when using tui-engine; use it like:
-/// 
+///
 /// ```rs
 /// use tuig::prelude::*;
 /// ```
-pub mod prelude {
-
-}
+pub mod prelude {}

@@ -1,8 +1,7 @@
 use crate::{
-    io::{
-        output::{Screen}, xy::XY,
-    },
-    text, text1, format::{Text, FormattedExt},
+    format::{FormattedExt, Text},
+    io::{output::Screen, xy::XY},
+    text, text1,
 };
 
 /// The header at the top of the window, which lists tabs, the current time, etc.

@@ -23,10 +23,14 @@ use crossterm::{
     },
 };
 
-use crate::{io::{
-    input::{Action, Key, MouseButton},
-    output::Screen, xy::XY,
-}, format::{Color as RedshellColor, Cell, Formatted}};
+use crate::{
+    format::{Cell, Color as RedshellColor, Formatted},
+    io::{
+        input::{Action, Key, MouseButton},
+        output::Screen,
+        xy::XY,
+    },
+};
 
 use super::{IoRunner, IoSystem};
 

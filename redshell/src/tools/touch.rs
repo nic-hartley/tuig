@@ -1,8 +1,6 @@
 use tuig::{text, Agent};
 
-use crate::{
-    app::CliState, event::Event,
-};
+use crate::{app::CliState, event::Event};
 
 use super::{AutocompleteType, FixedOutput, Tool};
 

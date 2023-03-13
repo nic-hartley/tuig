@@ -9,7 +9,7 @@ use std::{
     ops::{self, Range},
 };
 
-use crate::format::{Cell, Text, FormattedExt};
+use crate::format::{Cell, FormattedExt, Text};
 
 pub use super::widgets::*;
 use super::xy::XY;

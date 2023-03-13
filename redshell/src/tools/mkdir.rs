@@ -1,8 +1,6 @@
-use tuig::{Agent, text};
+use tuig::{text, Agent};
 
-use crate::{
-    app::CliState, event::Event,
-};
+use crate::{app::CliState, event::Event};
 
 use super::{AutocompleteType, BsdArgs, FixedOutput, NoOutput, Tool};
 

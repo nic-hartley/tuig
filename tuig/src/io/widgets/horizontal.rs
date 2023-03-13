@@ -1,7 +1,7 @@
 use crate::{
     cell,
-    io::{output::Screen
-    }, format::{Cell, Color, FormattedExt},
+    format::{Cell, Color, FormattedExt},
+    io::output::Screen,
 };
 
 /// A horizontal line across all or part of the screen

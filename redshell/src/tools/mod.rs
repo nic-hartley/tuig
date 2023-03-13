@@ -2,9 +2,7 @@
 
 use std::mem;
 
-use crate::{
-    app::CliState, event::Event,
-};
+use crate::{app::CliState, event::Event};
 
 mod args;
 pub use args::{autocomplete, AutocompleteType, BsdArgs};
@@ -17,7 +15,7 @@ mod mkdir;
 pub use mkdir::Mkdir;
 mod cd;
 pub use cd::Cd;
-use tuig::{Agent, Replies, ControlFlow, format::Text};
+use tuig::{format::Text, Agent, ControlFlow, Replies};
 
 /// Common interface for all CLI tool.
 pub trait Tool: Send + Sync {

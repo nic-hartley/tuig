@@ -1,9 +1,9 @@
-use tuig::{format::{Text, FormattedExt}, text1, text, Agent};
-
-use crate::{
-    app::CliState,
-    machine::Entry, event::Event,
+use tuig::{
+    format::{FormattedExt, Text},
+    text, text1, Agent,
 };
+
+use crate::{app::CliState, event::Event, machine::Entry};
 
 use super::{AutocompleteType, BsdArgs, FixedOutput, Tool};
 

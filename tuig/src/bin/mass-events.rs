@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use tuig::{ControlFlow, Agent, Replies, Game, Response, Action, Screen, Runner};
+use tuig::{Action, Agent, ControlFlow, Game, Replies, Response, Runner, Screen};
 
 const AGENTS: u64 = 10_000;
 
