@@ -16,6 +16,7 @@ pub struct ModState {
 impl ModState {
     /// Create a new key state tracker
     #[cfg_attr(coverage, no_coverage)]
+    #[allow(unused)]
     pub fn new() -> Self {
         Default::default()
     }

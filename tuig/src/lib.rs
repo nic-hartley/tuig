@@ -17,6 +17,7 @@ pub use io::{
     sys::{self, IoRunner, IoSystem},
     xy::XY,
 };
+#[cfg(feature = "__run")]
 pub use runner::Runner;
 
 /// Re-exports you may find useful when using tui-engine; use it like:
