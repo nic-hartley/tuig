@@ -1,5 +1,5 @@
 [workspace]
-members = ["tuig", "redshell"]
+members = ["tuig", "tuig-iosys", "tuig-pm", "redshell"]
 
 [profile.release]
 opt-level = 'z'

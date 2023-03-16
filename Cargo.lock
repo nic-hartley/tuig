@@ -1393,16 +1393,17 @@ checksum = "7b3e06c9b9d80ed6b745c7159c40b311ad2916abb34a49e9be2653b90db0d8dd"
 name = "tuig"
 version = "0.0.1"
 dependencies = [
- "crossbeam",
- "crossterm",
- "fontdue",
- "mock_instant",
- "paste",
- "rand",
- "rayon",
- "softbuffer",
- "winit",
+ "tuig-iosys",
+ "tuig-pm",
 ]
+
+[[package]]
+name = "tuig-iosys"
+version = "0.0.1"
+
+[[package]]
+name = "tuig-pm"
+version = "0.0.1"
 
 [[package]]
 name = "unicode-ident"

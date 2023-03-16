@@ -1,0 +1,10 @@
+[package]
+name = "tuig-iosys"
+version = "0.0.1"
+edition = "2021"
+
+[features]
+cli_crossterm = []
+gui_softbuffer = []
+
+[dependencies]
