@@ -10,11 +10,11 @@ use std::{
 
 use crate::{IoRunner, screen::Screen, IoSystem, action::Action, xy::XY};
 
-pub struct NopSystem(NopIoRunner);
+pub struct NopSystem(NopRunner);
 
 impl NopSystem {
     pub fn new() -> crate::Result<(Self, impl IoRunner)> {
-        let run = NopIoRunner::new();
+        let run = NopRunner::new();
         Ok((Self(run.clone()), run))
     }
 }
@@ -42,9 +42,9 @@ impl IoSystem for NopSystem {
 /// An implementation of [`IoRunner`] that doesn't actually do anything except wait for `.stop` to be called. Used by
 /// [`NopSystem`], for benchmarking or testing.
 #[derive(Clone)]
-pub struct NopIoRunner(Arc<(Mutex<bool>, Condvar)>);
+pub struct NopRunner(Arc<(Mutex<bool>, Condvar)>);
 
-impl NopIoRunner {
+impl NopRunner {
     /// Create a [`NopIoRunner`].
     pub fn new() -> Self {
         Self(Arc::new((Mutex::new(false), Condvar::new())))
@@ -57,7 +57,7 @@ impl NopIoRunner {
     }
 }
 
-impl IoRunner for NopIoRunner {
+impl IoRunner for NopRunner {
     fn step(&mut self) -> bool {
         *self.0 .0.lock().unwrap()
     }

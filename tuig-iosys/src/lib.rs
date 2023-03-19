@@ -32,9 +32,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use std::collections::HashMap;
-
 use alloc::borrow::Cow;
+
+/// Re-exported for the [`load!`] macro.
+pub use alloc::collections::BTreeMap;
 
 extern crate alloc;
 
@@ -52,6 +53,7 @@ mod ui;
 mod util;
 
 #[non_exhaustive]
+#[derive(Debug)]
 pub enum Error {
     /// An `io::Error` occurred.
     #[cfg(feature = "std")]
@@ -144,6 +146,25 @@ pub trait IoRunner {
     }
 }
 
+pub use crate::{
+    screen::Screen,
+    xy::XY,
+    action::Action,
+};
+
+pub mod backends {
+    use super::*;
+
+    pub type NopSystem = misc::nop::NopSystem;
+    pub type NopRunner = misc::nop::NopRunner;
+
+    pub type CrosstermSystem = terminal::crossterm::CtSystem;
+    pub type CrosstermRunner = terminal::crossterm::CtRunner;
+
+    pub type SoftbufferSystem = graphical::GuiSystem<graphical::softbuffer::SoftbufferBackend>;
+    pub type SoftbufferRunner = graphical::GuiRunner;
+}
+
 /// Based on IO system features enabled, attempt to initialize an IO system; in order:
 ///
 /// - NOP (`nop`), for benchmarks
@@ -173,11 +194,11 @@ macro_rules! load {
         }
     )* };
     ( $( $callback:tt )* ) => { loop {
-        let mut errs = std::collections::HashMap::new();
+        let mut errs = $crate::BTreeMap::<&'static str, $crate::Error>::new();
         $crate::load! { @@one errs {
-            [ $( $callback )* ] "nop" => $crate::misc::nop::NopSystem::new();
-            [ $( $callback )* ] "gui_softbuffer" => $crate::graphical::Gui::<$crate::graphical::softbuffer::SoftbufferBackend>::new(20.0);
-            [ $( $callback )* ] "cli_crossterm" => $crate::terminal::crossterm::AnsiIo::new();
+            [ $( $callback )* ] "nop" => $crate::backends::NopSystem::new();
+            [ $( $callback )* ] "gui_softbuffer" => $crate::backends::SoftbufferSystem::new(20.0);
+            [ $( $callback )* ] "cli_crossterm" => $crate::backends::CrosstermSystem::new();
         } }
         break Err(errs);
     } };
@@ -187,7 +208,7 @@ macro_rules! load {
 /// 
 /// This returns things boxed so they can be used as trait objects, which provides better ergonomics at the cost of
 /// slightly lower max performance.
-pub fn load() -> std::result::Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), HashMap<&'static str, Error>> {
+pub fn load() -> std::result::Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), BTreeMap<&'static str, Error>> {
     fn cb(sys: impl IoSystem + 'static, run: impl IoRunner + 'static) -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
         (Box::new(sys), Box::new(run))
     }

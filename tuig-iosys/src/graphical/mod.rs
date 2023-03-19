@@ -177,7 +177,7 @@ struct WindowSpawnOutput {
     window: Window,
     action_recv: mpsc::Receiver<Action>,
     kill_send: Arc<Once>,
-    runner: WindowRunner,
+    runner: GuiRunner,
 }
 
 fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
@@ -192,7 +192,7 @@ fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
     let killer = Arc::new(Once::new());
     let kill_recv = killer.clone();
     let kill_send = killer.clone();
-    let runner = WindowRunner {
+    let runner = GuiRunner {
         el,
         rest: WrRest {
             act_send,
@@ -243,15 +243,15 @@ pub trait GuiBackend: Send + Sync + Sized {
 }
 
 /// Provides the common (winit) functionality for a GUI, deferring the actual rendering to a [`GuiBackend`]
-pub struct Gui<B: GuiBackend> {
+pub struct GuiSystem<B: GuiBackend> {
     window: Window,
     inputs: mpsc::Receiver<Action>,
     kill_el: Arc<Once>,
     backend: B,
 }
 
-impl<B: GuiBackend> Gui<B> {
-    pub fn new(font_size: f32) -> crate::Result<(Self, WindowRunner)> {
+impl<B: GuiBackend> GuiSystem<B> {
+    pub fn new(font_size: f32) -> crate::Result<(Self, GuiRunner)> {
         let backend = B::new(font_size)?;
         let char_size = backend.char_size();
         let win_size = char_size * XY(80, 25);
@@ -273,7 +273,7 @@ impl<B: GuiBackend> Gui<B> {
     }
 }
 
-impl<B: GuiBackend> IoSystem for Gui<B> {
+impl<B: GuiBackend> IoSystem for GuiSystem<B> {
     fn draw(&mut self, screen: &Screen) -> crate::Result<()> {
         self.backend.render(&self.window, screen)?;
         Ok(())
@@ -409,12 +409,12 @@ impl WrRest {
 }
 
 /// Runner for the main thread (as required by Windows windowing) to pull and convert events.
-pub struct WindowRunner {
+pub struct GuiRunner {
     el: EventLoop<Action>,
     rest: WrRest,
 }
 
-impl IoRunner for WindowRunner {
+impl IoRunner for GuiRunner {
     fn step(&mut self) -> bool {
         self.el
             .run_return(|ev, _, cf| self.rest.run_return_cb(true, ev, cf))

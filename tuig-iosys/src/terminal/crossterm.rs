@@ -39,12 +39,12 @@ fn io4ct_btn(ct: ct::MouseButton) -> MouseButton {
     }
 }
 
-pub struct CliRunner {
+pub struct CtRunner {
     actions: mpsc::Sender<Action>,
     stop: Arc<AtomicBool>,
 }
 
-impl CliRunner {
+impl CtRunner {
     fn init_term() -> crate::Result<()> {
         terminal::enable_raw_mode()?;
         execute!(
@@ -84,13 +84,13 @@ impl CliRunner {
     }
 }
 
-impl Drop for CliRunner {
+impl Drop for CtRunner {
     fn drop(&mut self) {
         let _ = Self::clean_term();
     }
 }
 
-impl IoRunner for CliRunner {
+impl IoRunner for CtRunner {
     fn step(&mut self) -> bool {
         // check whether we've been told to stop
         if self.stop.load(Ordering::Relaxed) {
@@ -308,16 +308,16 @@ fn render_row(row: &[Cell], out: &mut Vec<u8>) {
     crossterm::execute!(out, MoveDown(1), MoveToColumn(0)).unwrap();
 }
 
-pub struct AnsiIo {
+pub struct CtSystem {
     queue: mpsc::Receiver<Action>,
     stop: Arc<AtomicBool>,
 }
 
-impl AnsiIo {
-    pub fn new() -> crate::Result<(Self, CliRunner)> {
+impl CtSystem {
+    pub fn new() -> crate::Result<(Self, CtRunner)> {
         let (queue_s, queue_r) = mpsc::channel();
         let stop = Arc::new(AtomicBool::new(false));
-        let runner = CliRunner::new(queue_s, stop.clone())?;
+        let runner = CtRunner::new(queue_s, stop.clone())?;
         Ok((
             Self {
                 queue: queue_r,
@@ -328,7 +328,7 @@ impl AnsiIo {
     }
 }
 
-impl IoSystem for AnsiIo {
+impl IoSystem for CtSystem {
     fn size(&self) -> XY {
         let (x, y) = terminal::size().unwrap();
         XY(x as usize, y as usize)
