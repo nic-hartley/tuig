@@ -12,8 +12,8 @@
 //! first, or you can load them yourself. The `IoSystem` can be passed around wherever you like, but its associated
 //! [`IoRunner`] must be run on the main thread, to ensure things work as expected on Windows GUIs. Find systems in:
 //! 
-//! - [`gui`], for graphical IO. These all use `winit` but the pixel pushing backends vary.
-//! - [`cli`], for terminal IO. The only thing they all have in common is writing to `stdout`.
+//! - [`graphical`], for graphical IO. These all use `winit` but the pixel pushing backends vary.
+//! - [`terminal`], for terminal IO. The only thing they all have in common is writing to `stdout`.
 //! - [`misc`], for, uh, well, miscellaneous IO.
 //! 
 //! If you want to implement your own `tuig-iosys` compatible renderer, you should implement the `IoBackend` trait.
@@ -25,14 +25,171 @@
 //! There's one feature to enable each builtin backend; see each backend for details.
 //! 
 //! The `std` feature, on by default, enables `std`. Some backends aren't available without it; you can still turn on
-//! their features but it'll yell at you.
+//! their features but it'll yell at you. All of `fmt` is `no_std` compatible.
 //! 
-//! There are also features controlling what parts of [`fmt`] are available. This doesn't influence the selection of
+//! There are also features controlling what extensions to `fmt` are available. This doesn't influence the selection of
 //! backends, but backends will cheerfully ignore anything they don't understand. See that module for details.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod fmt;
-mod gui;
-mod cli;
+use std::collections::HashMap;
+
+use alloc::borrow::Cow;
+
+extern crate alloc;
+
+mod graphical;
+mod terminal;
 mod misc;
+
+mod fmt;
+mod screen;
+mod action;
+mod xy;
+#[cfg(feature = "ui")]
+mod ui;
+
+mod util;
+
+#[non_exhaustive]
+pub enum Error {
+    /// An `io::Error` occurred.
+    #[cfg(feature = "std")]
+    Io(std::io::Error),
+    /// While a [`graphical`] backend was initializing, `winit` errored out.
+    #[cfg(feature = "gui")]
+    Winit(winit::error::ExternalError),
+    /// Just directly contains an error message.
+    Bare(Cow<'static, str>),
+}
+
+#[cfg(feature = "std")]
+impl From<std::io::Error> for Error {
+    fn from(value: std::io::Error) -> Self {
+        Self::Io(value)
+    }
+}
+
+#[cfg(feature = "gui")]
+impl From<winit::error::ExternalError> for Error {
+    fn from(value: winit::error::ExternalError) -> Self {
+        Self::Winit(value)
+    }
+}
+
+impl From<&'static str> for Error {
+    fn from(value: &'static str) -> Self {
+        Self::Bare(Cow::Borrowed(value))
+    }
+}
+
+impl From<String> for Error {
+    fn from(value: String) -> Self {
+        Self::Bare(Cow::Owned(value))
+    }
+}
+
+type Result<T> = core::result::Result<T, Error>;
+
+/// An input/output system.
+///
+/// The output is called a "display" to distinguish it from the [`Screen`].
+///
+/// This object is meant to be associated with a [`IoRunner`], which will run infinitely on the main thread while this
+/// is called from within the event system.
+pub trait IoSystem: Send {
+    /// Actually render a [`Screen`] to the display.
+    fn draw(&mut self, screen: &screen::Screen) -> Result<()>;
+    /// Get the size of the display, in characters.
+    fn size(&self) -> xy::XY;
+
+    /// Wait for the next user input.
+    fn input(&mut self) -> Result<action::Action>;
+    /// If the next user input is available, return it.
+    fn poll_input(&mut self) -> Result<Option<action::Action>>;
+
+    /// Tells the associated [`IoRunner`] to stop and return control of the main thread, and tell the [`IoSystem`] to
+    /// dispose of any resources it's handling.
+    ///
+    /// This **must** return even if the `IoRunner` isn't done tearing down, to avoid deadlocks in the singlethreaded
+    /// mode.
+    ///
+    /// This will always be the last method called on this object (unless you count `Drop::drop`) so feel free to
+    /// panic in the others if they're called after this one, especially `draw`.
+    fn stop(&mut self);
+}
+
+/// The other half of an [`IoSystem`].
+///
+/// This type exists so that things which need to run on the main thread specifically, can.
+pub trait IoRunner {
+    /// Execute one 'step', which should be quick and must be non-blocking. Returns whether an exit has been requested
+    /// (i.e. by [`IoSystem::stop`]) since the last time `step` was called.
+    /// 
+    /// **Warning**: This function may cause issues, e.g. on graphical targets it might block while the window is
+    /// being resized, [due to the underlying library](https://docs.rs/winit/latest/winit/platform/run_return/trait.EventLoopExtRunReturn.html#caveats).
+    /// Use it with caution, or only with backends you know work well with it.
+    /// 
+    /// Will always be called on the main thread.
+    #[must_use]
+    fn step(&mut self) -> bool;
+
+    /// Run until the paired [`IoSystem`] says to [stop](IoSystem::stop).
+    ///
+    /// Will always be called on the main thread.
+    ///
+    /// The default implementation just runs `while !self.step() { }`.
+    fn run(&mut self) {
+        while !self.step() {}
+    }
+}
+
+/// Based on IO system features enabled, attempt to initialize an IO system; in order:
+///
+/// - NOP (`nop`), for benchmarks
+/// - Vulkan GUI (`gui_vulkan`)
+/// - OpenGL GUI (`gui_opengl`)
+/// - CPU-rendered GUI (`gui_cpu`)
+/// - crossterm CLI (`cli_crossterm`)
+///
+/// This macro takes a function or method to call with the loaded `impl IoSystem`. That structure is weird but it
+/// enables having ownership of the varied types, without needing a `Box`.
+///
+/// The callback can be any "function call", up to the parens, e.g. `run` or `self.start`. It will be called as
+/// `$thing(iosys, iorun)`. If it's called, this macro "returns" `Ok(())`. Otherwise, all attempted loads failed, and
+/// this macro "returns" `Err(map)`, where `map` maps `&'static str` feature name to `io::Error` failure.
+#[macro_export]
+macro_rules! load {
+    ( @@one $errs:ident { $( [ $( $callback:tt )* ] $feature:literal => $init:expr );* $(;)? } ) => { $(
+        #[cfg(feature = $feature)] {
+            match $init {
+                Ok((iosys, iorun)) => {
+                    break Ok($( $callback )* (iosys, iorun));
+                }
+                Err(e) => {
+                    $errs.insert($feature, e);
+                }
+            }
+        }
+    )* };
+    ( $( $callback:tt )* ) => { loop {
+        let mut errs = std::collections::HashMap::new();
+        $crate::load! { @@one errs {
+            [ $( $callback )* ] "nop" => $crate::misc::nop::NopSystem::new();
+            [ $( $callback )* ] "gui_softbuffer" => $crate::graphical::Gui::<$crate::graphical::softbuffer::SoftbufferBackend>::new(20.0);
+            [ $( $callback )* ] "cli_crossterm" => $crate::terminal::crossterm::AnsiIo::new();
+        } }
+        break Err(errs);
+    } };
+}
+
+/// Based on IO system features enabled, attempt to initialize an IO system, in the same manner as [`load!`].
+/// 
+/// This returns things boxed so they can be used as trait objects, which provides better ergonomics at the cost of
+/// slightly lower max performance.
+pub fn load() -> std::result::Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), HashMap<&'static str, Error>> {
+    fn cb(sys: impl IoSystem + 'static, run: impl IoRunner + 'static) -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
+        (Box::new(sys), Box::new(run))
+    }
+    load!(cb)
+}
