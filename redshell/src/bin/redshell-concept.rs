@@ -5,7 +5,13 @@ use redshell::{
     event::Event,
     GameState,
 };
-use tuig::{io::{IoSystem, IoRunner, Screen, text, fmt::{Color, Text, FormattedExt}, Action, Key, XY}, Replies};
+use tuig::{
+    io::{
+        fmt::{Color, FormattedExt, Text},
+        text, Action, IoRunner, IoSystem, Key, Screen, XY,
+    },
+    Replies,
+};
 
 /// Attempt to load a system, or explode and die somewhat cleanly
 pub fn load_or_die() -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {

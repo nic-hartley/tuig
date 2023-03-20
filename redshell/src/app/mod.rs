@@ -1,6 +1,9 @@
 //! Common structural code for apps.
 
-use tuig::{io::{Screen, Action}, Replies};
+use tuig::{
+    io::{Action, Screen},
+    Replies,
+};
 
 use crate::{event::Event, GameState};
 

@@ -5,7 +5,10 @@ use redshell::{
     event::Event,
     tools, GameState,
 };
-use tuig::{ControlFlow, Replies, Agent, Game, io::{Action, Key, Screen}, Response, Runner};
+use tuig::{
+    io::{Action, Key, Screen},
+    Agent, ControlFlow, Game, Replies, Response, Runner,
+};
 
 /// A single step in the conversation tree of an [`NPC`]
 struct ChatState {

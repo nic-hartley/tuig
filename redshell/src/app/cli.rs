@@ -1,6 +1,14 @@
 use std::{collections::VecDeque, sync::Arc};
 
-use tuig::{io::{fmt::Text, ui::helpers::{TextInput, TextInputRequest}, text, Action, Screen}, Replies};
+use tuig::{
+    io::{
+        fmt::Text,
+        text,
+        ui::helpers::{TextInput, TextInputRequest},
+        Action, Screen,
+    },
+    Replies,
+};
 
 use crate::{
     event::Event,

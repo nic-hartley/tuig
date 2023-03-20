@@ -1,4 +1,4 @@
-use crate::{Key, Action};
+use crate::{Action, Key};
 
 /// Tracks and presents the current state of the keyboard's modifiers (Shift/Ctrl/Alt/Super).
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

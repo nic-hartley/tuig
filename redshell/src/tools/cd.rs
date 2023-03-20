@@ -1,6 +1,6 @@
 use std::mem;
 
-use tuig::{Agent, ControlFlow, Replies, io::text};
+use tuig::{io::text, Agent, ControlFlow, Replies};
 
 use crate::{app::CliState, event::Event};
 

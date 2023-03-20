@@ -145,7 +145,11 @@ pub trait IoRunner {
     }
 }
 
-pub use crate::{action::{Action, Key, MouseButton}, screen::Screen, xy::XY};
+pub use crate::{
+    action::{Action, Key, MouseButton},
+    screen::Screen,
+    xy::XY,
+};
 
 /// Available rendering backends. See the [`IoSystem`] and [`IoRunner`] docs for more information.
 pub mod backends {

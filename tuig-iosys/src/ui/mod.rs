@@ -2,5 +2,5 @@
 
 #![cfg(feature = "ui")]
 
-pub mod widgets;
 pub mod helpers;
+pub mod widgets;

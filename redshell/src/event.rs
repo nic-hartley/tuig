@@ -1,7 +1,7 @@
 use core::fmt;
 use std::sync::{Arc, Mutex};
 
-use tuig::{Message, io::fmt::Text};
+use tuig::{io::fmt::Text, Message};
 
 use crate::{app::App, tools::Tool};
 

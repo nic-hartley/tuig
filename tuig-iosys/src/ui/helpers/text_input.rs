@@ -1,8 +1,6 @@
 use std::{collections::VecDeque, mem};
 
-use crate::{
-    text, Key, Action, fmt::Text,
-};
+use crate::{fmt::Text, text, Action, Key};
 
 use super::ModState;
 
