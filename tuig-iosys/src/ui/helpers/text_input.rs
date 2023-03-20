@@ -1,4 +1,5 @@
-use std::{collections::VecDeque, mem};
+use alloc::{collections::VecDeque, string::String, vec::Vec};
+use core::mem;
 
 use crate::{fmt::Text, text, Action, Key};
 

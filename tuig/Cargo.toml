@@ -24,10 +24,11 @@ name = "mass-events"
 required-features = ["io_nop", "__run"]
 
 [dependencies]
-crossbeam = { version = "0.8.2", optional = true }
-rayon = { version = "1.7.0", optional = true }
 tuig-iosys = { path = "../tuig-iosys", features = ["ui"] }
 tuig-pm = { path = "../tuig-pm" }
+
+crossbeam = { version = "0.8.2", optional = true }
+rayon = { version = "1.7.0", optional = true }
 
 [dev-dependencies]
 mock_instant = "0.2.1"
