@@ -10,11 +10,8 @@
 //! 
 //! The second is [`IoSystem`]. You can use `load!` to pick one based on available features and which one succeeds
 //! first, or you can load them yourself. The `IoSystem` can be passed around wherever you like, but its associated
-//! [`IoRunner`] must be run on the main thread, to ensure things work as expected on Windows GUIs. Find systems in:
-//! 
-//! - [`graphical`], for graphical IO. These all use `winit` but the pixel pushing backends vary.
-//! - [`terminal`], for terminal IO. The only thing they all have in common is writing to `stdout`.
-//! - [`misc`], for, uh, well, miscellaneous IO.
+//! [`IoRunner`] must be run on the main thread, to ensure things work as expected on Windows GUIs. Builtin backends
+//! are enabled by features and available in [`backends`].
 //! 
 //! If you want to implement your own `tuig-iosys` compatible renderer, you should implement the `IoBackend` trait.
 //! As a library user, you shouldn't actually use it, but it will ensure you have all the expected functions, named
@@ -35,7 +32,7 @@
 use alloc::borrow::Cow;
 
 /// Re-exported for the [`load!`] macro.
-pub use alloc::collections::BTreeMap;
+pub use alloc::{collections::BTreeMap, boxed::Box, string::String};
 
 extern crate alloc;
 
@@ -43,7 +40,7 @@ mod graphical;
 mod terminal;
 mod misc;
 
-mod fmt;
+pub mod fmt;
 mod screen;
 mod action;
 mod xy;
@@ -129,10 +126,12 @@ pub trait IoRunner {
     /// (i.e. by [`IoSystem::stop`]) since the last time `step` was called.
     /// 
     /// **Warning**: This function may cause issues, e.g. on graphical targets it might block while the window is
-    /// being resized, [due to the underlying library](https://docs.rs/winit/latest/winit/platform/run_return/trait.EventLoopExtRunReturn.html#caveats).
-    /// Use it with caution, or only with backends you know work well with it.
+    /// being resized, [due to the underlying library][1]. Use it with caution, or only with backends you know work
+    /// well with it.
     /// 
     /// Will always be called on the main thread.
+    /// 
+    ///  [1]: https://docs.rs/winit/latest/winit/platform/run_return/trait.EventLoopExtRunReturn.html#caveats
     #[must_use]
     fn step(&mut self) -> bool;
 
@@ -152,63 +151,53 @@ pub use crate::{
     action::Action,
 };
 
+/// Available rendering backends. See the [`IoSystem`] and [`IoRunner`] docs for more information.
 pub mod backends {
+    #[allow(unused)]
     use super::*;
 
+    #[cfg(feature = "nop")]
     pub type NopSystem = misc::nop::NopSystem;
+    #[cfg(feature = "nop")]
     pub type NopRunner = misc::nop::NopRunner;
 
+    #[cfg(feature = "cli_crossterm")]
     pub type CrosstermSystem = terminal::crossterm::CtSystem;
+    #[cfg(feature = "cli_crossterm")]
     pub type CrosstermRunner = terminal::crossterm::CtRunner;
 
+    #[cfg(feature = "gui_softbuffer")]
     pub type SoftbufferSystem = graphical::GuiSystem<graphical::softbuffer::SoftbufferBackend>;
+    #[cfg(feature = "gui_softbuffer")]
     pub type SoftbufferRunner = graphical::GuiRunner;
 }
 
-/// Based on IO system features enabled, attempt to initialize an IO system; in order:
-///
-/// - NOP (`nop`), for benchmarks
-/// - Vulkan GUI (`gui_vulkan`)
-/// - OpenGL GUI (`gui_opengl`)
-/// - CPU-rendered GUI (`gui_cpu`)
-/// - crossterm CLI (`cli_crossterm`)
-///
-/// This macro takes a function or method to call with the loaded `impl IoSystem`. That structure is weird but it
-/// enables having ownership of the varied types, without needing a `Box`.
-///
-/// The callback can be any "function call", up to the parens, e.g. `run` or `self.start`. It will be called as
-/// `$thing(iosys, iorun)`. If it's called, this macro "returns" `Ok(())`. Otherwise, all attempted loads failed, and
-/// this macro "returns" `Err(map)`, where `map` maps `&'static str` feature name to `io::Error` failure.
-#[macro_export]
-macro_rules! load {
-    ( @@one $errs:ident { $( [ $( $callback:tt )* ] $feature:literal => $init:expr );* $(;)? } ) => { $(
-        #[cfg(feature = $feature)] {
-            match $init {
-                Ok((iosys, iorun)) => {
-                    break Ok($( $callback )* (iosys, iorun));
-                }
-                Err(e) => {
-                    $errs.insert($feature, e);
-                }
-            }
-        }
-    )* };
-    ( $( $callback:tt )* ) => { loop {
-        let mut errs = $crate::BTreeMap::<&'static str, $crate::Error>::new();
-        $crate::load! { @@one errs {
-            [ $( $callback )* ] "nop" => $crate::backends::NopSystem::new();
-            [ $( $callback )* ] "gui_softbuffer" => $crate::backends::SoftbufferSystem::new(20.0);
-            [ $( $callback )* ] "cli_crossterm" => $crate::backends::CrosstermSystem::new();
-        } }
-        break Err(errs);
-    } };
+tuig_pm::make_load! {
+    /// Based on IO system features enabled, attempt to initialize an IO system; in order:
+    ///
+    /// - NOP (`nop`), for benchmarks
+    /// - Vulkan GUI (`gui_vulkan`)
+    /// - OpenGL GUI (`gui_opengl`)
+    /// - CPU-rendered GUI (`gui_cpu`)
+    /// - crossterm CLI (`cli_crossterm`)
+    ///
+    /// This macro takes a function or method to call with the loaded `impl IoSystem`. That structure is weird but it
+    /// enables having ownership of the varied types, without needing a `Box`.
+    ///
+    /// The callback can be any "function call", up to the parens, e.g. `run` or `self.start`. It will be called as
+    /// `$thing(iosys, iorun)`. If it's called, this macro "returns" `Ok(())`. Otherwise, all attempted loads failed, and
+    /// this macro "returns" `Err(map)`, where `map` maps `&'static str` feature name to `io::Error` failure.
+    "nop" => $crate::backends::NopSystem::new(),
+    "gui_softbuffer" => $crate::backends::SoftbufferSystem::new(20.0),
+    "cli_crossterm" => $crate::backends::CrosstermSystem::new(),
 }
 
 /// Based on IO system features enabled, attempt to initialize an IO system, in the same manner as [`load!`].
 /// 
 /// This returns things boxed so they can be used as trait objects, which provides better ergonomics at the cost of
 /// slightly lower max performance.
-pub fn load() -> std::result::Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), BTreeMap<&'static str, Error>> {
+pub fn load() -> core::result::Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), BTreeMap<&'static str, Error>> {
+    #[allow(unused)]
     fn cb(sys: impl IoSystem + 'static, run: impl IoRunner + 'static) -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
         (Box::new(sys), Box::new(run))
     }

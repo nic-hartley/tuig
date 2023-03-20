@@ -9,7 +9,7 @@ use core::{
     ops::{self, Range},
 };
 
-use alloc::vec::{Vec};
+use alloc::vec::Vec;
 
 use crate::{fmt::{Cell, FormattedExt, Text}, xy::XY};
 
@@ -78,7 +78,7 @@ impl Screen {
     /// Create a new `Screen` in the given size.
     pub fn new(size: XY) -> Self {
         let mut res = Self {
-            cells: vec![],
+            cells: alloc::vec![],
             size: XY(0, 0),
         };
         res.resize(size);

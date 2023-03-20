@@ -1,3 +1,5 @@
+use alloc::{vec::Vec, string::String};
+
 use crate::{
     text, text1, screen::Screen, util, fmt::{Text, FormattedExt}, xy::XY,
 };

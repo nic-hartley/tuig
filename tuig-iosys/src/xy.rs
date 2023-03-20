@@ -1,4 +1,4 @@
-use std::{
+use core::{
     fmt,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign},
 };
@@ -120,7 +120,7 @@ impl Into<(usize, usize)> for XY {
 }
 
 impl PartialOrd for XY {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         let o0 = self.0.cmp(&other.0);
         let o1 = self.1.cmp(&other.1);
         if o0 == o1 {

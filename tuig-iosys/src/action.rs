@@ -1,5 +1,7 @@
 //! The various data types representing different player to the game.
 
+use alloc::string::String;
+
 use super::xy::XY;
 
 /// A key which can be pressed or released

@@ -12,6 +12,7 @@
 //!   - 16 basic [`Color`]s (blue, green, cyan, red, magenta, yellow, black, and the bright equivalents)
 //!   - Setting foreground and background
 
+use alloc::string::String;
 
 /// The color of a piece of formatted text. Meant to be used through `Text` / `text!`. The numeric values are the ANSI
 /// color codes for each color; that's also where the actual colors are from.
@@ -227,7 +228,7 @@ impl Text {
         Text::of(s.into())
     }
 
-    pub(super) fn with_text(&self, new_text: String) -> Text {
+    pub fn with_text(&self, new_text: String) -> Text {
         let mut res = self.clone();
         res.text = new_text.into();
         res
@@ -246,7 +247,7 @@ macro_rules! text1 {
             #[allow(unused_imports)]
             use $crate::fmt::{FormattedExt as _};
             $crate::fmt::Text::of(
-                format!( $text $(, $( $arg ),* )? )
+                alloc::format!( $text $(, $( $arg ),* )? )
             ) $( . $name () )*
         }
     };
@@ -263,10 +264,10 @@ macro_rules! text {
         {
             #[allow(unused_imports)]
             use $crate::fmt::{FormattedExt as _};
-            vec![
+            alloc::vec![
                 $(
                     $crate::fmt::Text::of(
-                        format!( $text $(, $( $arg ),* )? )
+                        alloc::format!( $text $(, $( $arg ),* )? )
                     ) $( . $name () )*
                 ),*
             ]

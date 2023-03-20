@@ -1,3 +1,7 @@
+use core::mem;
+
+use alloc::{string::String, vec::Vec};
+
 use crate::{
     text, text1, screen::Screen, fmt::{Text, Formatted, FormattedExt}, xy::XY,
 };
@@ -73,7 +77,7 @@ impl<'a> Textbox<'a> {
     }
 
     pub fn render(mut self) -> TextboxData {
-        let screen = match std::mem::replace(&mut self.screen, None) {
+        let screen = match mem::replace(&mut self.screen, None) {
             Some(s) => s,
             None => return TextboxData::EMPTY,
         };
@@ -95,13 +99,13 @@ impl<'a> Textbox<'a> {
         assert!(width > first_indent);
 
         // break the chunks into paragraphs on newlines
-        let mut paragraphs = vec![];
-        let mut cur_para = vec![];
-        for mut chunk in std::mem::replace(&mut self.chunks, vec![]) {
+        let mut paragraphs = alloc::vec![];
+        let mut cur_para = alloc::vec![];
+        for mut chunk in mem::replace(&mut self.chunks, alloc::vec![]) {
             while let Some((line, rest)) = chunk.text.split_once('\n') {
                 cur_para.push(chunk.with_text(line.into()));
                 paragraphs.push(cur_para);
-                cur_para = vec![];
+                cur_para = alloc::vec![];
                 chunk.text = rest.into();
             }
             if !chunk.text.is_empty() {
@@ -111,7 +115,7 @@ impl<'a> Textbox<'a> {
         paragraphs.push(cur_para);
 
         // space out and word-wrap those paragraphs into lines
-        let mut lines = vec![];
+        let mut lines = alloc::vec![];
         for para in paragraphs {
             let mut line: Vec<Text> = text!["{0:1$}"("", first_indent)];
             let mut pos = first_indent;
@@ -142,7 +146,7 @@ impl<'a> Textbox<'a> {
                     } else if space_left > 1 {
                         // break the word with a hyphen, since there's space for it
                         let (pre, post) = chunk.text.split_at(space_left - 1);
-                        line_end = format!("{}-", pre);
+                        line_end = alloc::format!("{}-", pre);
                         rest = post.into();
                     } else if space_left == 1 {
                         // no room for a hyphen, so just pull one letter off
@@ -217,7 +221,7 @@ impl<'a> Drop for Textbox<'a> {
                 // (this dummy textbox has 0 allocations and should trigger a NOP rendering/drop)
                 let dummy = Textbox {
                     screen: None,
-                    chunks: vec![],
+                    chunks: alloc::vec![],
                     pos: XY(0, 0),
                     width: None,
                     height: None,
@@ -226,7 +230,7 @@ impl<'a> Drop for Textbox<'a> {
                     indent: 0,
                     first_indent: None,
                 };
-                let me = std::mem::replace(self, dummy);
+                let me = mem::replace(self, dummy);
                 // ignore the data
                 let _ = me.render();
             }
@@ -341,7 +345,7 @@ mod test {
     #[test]
     fn blank_textbox_renders_nothing() {
         let mut sc = screen(50, 30);
-        sc.textbox(vec![]);
+        sc.textbox(alloc::vec![]);
         screen_assert!(sc: blank.., ..);
     }
 
