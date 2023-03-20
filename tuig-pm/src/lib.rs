@@ -1,5 +1,6 @@
-use proc_macro2::{Span, TokenTree};
-use syn::{parse::ParseStream, parse_macro_input, Attribute, LitStr, Token};
+use itertools::Itertools;
+use proc_macro2::{Span, TokenTree, TokenStream};
+use syn::{parse::{ParseStream, Parser}, Attribute, LitStr, Token};
 
 struct LoadInput {
     attrs: Vec<Attribute>,
@@ -37,30 +38,47 @@ fn parse_load(input: ParseStream) -> syn::Result<LoadInput> {
     Ok(res)
 }
 
-#[proc_macro]
-pub fn make_load(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let LoadInput { attrs, arms } = parse_macro_input!(input with parse_load);
+fn do_make_load(input: TokenStream) -> TokenStream {
+    // parse each of the loaders
+    let LoadInput { attrs, arms } = match parse_load.parse(input.into()) {
+        Ok(li) => li,
+        Err(e) => return e.to_compile_error(),
+    };
+    // figure out the individual `match` chunks for each feature
     let chunks = arms.into_iter().map(|(feat, init)| {
-        quote::quote! {
-            #[cfg(feature = #feat)] {
-                match ( #( #init )* ) {
-                    Ok((iosys, iorun)) => break Ok($callback(iosys, iorun)),
-                    Err(e) => { errs.insert(#feat, e); }
-                }
+        (feat.clone(), quote::quote! {
+            match ( #( #init )* ) {
+                Ok((iosys, iorun)) => break Ok($($callback)* (iosys, iorun)),
+                Err(e) => { errs.insert(#feat, e); }
             }
-        }
-    });
-    quote::quote! {
-        #( #attrs )*
-        #[macro_export]
-        macro_rules! load {
-            ($callback: expr) => { loop {
-                #[allow(unused)]
-                let mut errs = $crate::BTreeMap::<&'static str, $crate::Error>::new();
-                #( #chunks )*
-                break Err(errs);
-            } };
+        })
+    }).collect::<Vec<_>>();
+    // generate each combination of 1 to n
+    let mut options: Vec<TokenStream> = vec![];
+    for n in 1..=chunks.len() {
+        for c in chunks.iter().combinations(n) {
+            let features = c.iter().map(|(f, _)| f).collect::<Vec<_>>();
+            let antifeatures = chunks.iter().map(|(f, _)| f).filter(|f| !features.contains(f));
+            let tokens = c.iter().map(|(_, ts)| ts);
+            options.push(quote::quote! {
+                #[cfg(all(not(any( #( feature = #antifeatures ),* )), #( feature = #features ),* ))]
+                #( #attrs )*
+                #[macro_export]
+                macro_rules! load {
+                    ($($callback:tt)*) => { loop {
+                        #[allow(unused)]
+                        let mut errs = $crate::BTreeMap::<&'static str, $crate::Error>::new();
+                        #( #tokens )*
+                        break Err(errs);
+                    } }
+                }
+            }.into())
         }
     }
-    .into()
+    options.into_iter().collect()
+}
+
+#[proc_macro]
+pub fn make_load(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    do_make_load(input.into()).into()
 }
