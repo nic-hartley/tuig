@@ -4,7 +4,8 @@ use std::{thread, time::Duration};
 
 use crate::{
     app::{App, ChatApp},
-    event::Event, state::GameState,
+    event::Event,
+    state::GameState,
 };
 use tuig::{
     io::{
@@ -198,7 +199,7 @@ fn mouse_demo(io: &mut dyn IoSystem) {
     }
 }
 
-pub fn run(mut args: impl Iterator<Item=String>) {
+pub fn run(mut args: impl Iterator<Item = String>) {
     let arg = args.next();
     let concept = match arg.as_ref().map(|s| s.as_str()) {
         Some("render") => render_demo,

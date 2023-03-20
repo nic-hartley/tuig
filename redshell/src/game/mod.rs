@@ -3,8 +3,9 @@
 use std::time::Duration;
 
 use crate::{
-app::{ChatApp, CliApp, App},
-event::Event, state::GameState,
+    app::{App, ChatApp, CliApp},
+    event::Event,
+    state::GameState,
 };
 
 use tuig::{
@@ -223,7 +224,7 @@ impl Game for Redshell {
     }
 }
 
-pub fn run(mut _args: impl Iterator<Item=String>) {
+pub fn run(mut _args: impl Iterator<Item = String>) {
     let game = Redshell::new();
     Runner::new(game)
         .queue(Event::install(crate::tools::Ls))
@@ -274,4 +275,3 @@ pub fn run(mut _args: impl Iterator<Item=String>) {
         ))
         .load_run();
 }
-

@@ -2,13 +2,13 @@ pub mod app;
 pub mod concept;
 pub mod constants;
 pub mod cutscenes;
-pub mod game;
 pub mod event;
+pub mod game;
 pub mod machine;
 pub mod state;
 pub mod tools;
 
-fn run_game(args: &mut dyn Iterator<Item=String>) -> bool {
+fn run_game(args: &mut dyn Iterator<Item = String>) -> bool {
     if let Some(bin) = args.next() {
         if bin.ends_with("redshell-concept") {
             return false;
