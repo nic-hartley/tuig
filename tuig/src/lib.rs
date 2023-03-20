@@ -7,6 +7,7 @@ pub use {
     agent::{Agent, ControlFlow, WaitHandle},
     game::{Game, Message, Replies, Response},
     runner::Runner,
+    tuig_iosys as io,
 };
 
 /// A shortcut for basic games which only need to be started on the default,

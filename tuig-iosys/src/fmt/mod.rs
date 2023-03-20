@@ -244,6 +244,7 @@ macro_rules! text1 {
         $( ( $( $arg:expr ),* $(,)? ) )?
     ] => {
         {
+            extern crate alloc;
             #[allow(unused_imports)]
             use $crate::fmt::{FormattedExt as _};
             $crate::fmt::Text::of(
@@ -262,6 +263,7 @@ macro_rules! text {
         $( ( $( $arg:expr ),* $(,)? ) )?
     ),* $(,)? ] => {
         {
+            extern crate alloc;
             #[allow(unused_imports)]
             use $crate::fmt::{FormattedExt as _};
             alloc::vec![
