@@ -244,7 +244,7 @@ impl<'a> Drop for Textbox<'a> {
 
 #[cfg(test)]
 mod test {
-    use std::ops::{Bound, RangeBounds};
+    use core::ops::{Bound, RangeBounds};
 
     use crate::{
         fmt::{Cell, Color, Formatted, FormattedExt},

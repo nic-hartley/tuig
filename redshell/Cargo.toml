@@ -27,8 +27,11 @@ plat_wasm = []
 # harness = false
 
 [dependencies]
-tuig = { path = "../tuig" }
+tuig = { version = "0.0.1", path = "../tuig" }
 
 paste = "1.0.5"
 lazy_static = "1.4.0"
 dashmap = "5.4.0"
+
+[dev-dependencies]
+tuig = { path = "../tuig", features = [ "test_extras" ] }

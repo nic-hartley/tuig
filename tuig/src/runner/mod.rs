@@ -1,5 +1,7 @@
 //! Contains the "main loop" of the engine, in all its various incarnations based on the `run_` feature selected.
 
+#![cfg_attr(not(feature = "__run"), allow(unused))]
+
 use std::{mem, thread, time::Duration};
 
 use tuig_iosys::{Action, IoRunner, IoSystem, Screen};
