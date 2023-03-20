@@ -1,13 +1,4 @@
-#![cfg_attr(coverage, feature(no_coverage))]
-
-use machine::Machine;
-
-pub mod app;
-pub mod constants;
-pub mod cutscenes;
-pub mod event;
-pub mod machine;
-pub mod tools;
+use crate::machine::Machine;
 
 /// The current state of the game, including the state of the UI.
 #[derive(Default)]

@@ -12,8 +12,7 @@ use tuig::{
 
 use crate::{
     constants::{gameplay::MAX_USERNAME, graphics::HEADER_HEIGHT},
-    event::Event,
-    GameState,
+    event::Event, state::GameState,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]

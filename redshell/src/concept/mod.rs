@@ -1,9 +1,10 @@
-use std::{env, thread, time::Duration};
+//! Contains miscellaneous concept art and a "main function"
 
-use redshell::{
+use std::{thread, time::Duration};
+
+use crate::{
     app::{App, ChatApp},
-    event::Event,
-    GameState,
+    event::Event, state::GameState,
 };
 use tuig::{
     io::{
@@ -14,7 +15,7 @@ use tuig::{
 };
 
 /// Attempt to load a system, or explode and die somewhat cleanly
-pub fn load_or_die() -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
+fn load_or_die() -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
     let errs = match tuig::io::load() {
         Ok(pair) => return pair,
         Err(e) => e,
@@ -197,8 +198,8 @@ fn mouse_demo(io: &mut dyn IoSystem) {
     }
 }
 
-fn main() {
-    let arg = env::args().skip(1).next();
+pub fn run(mut args: impl Iterator<Item=String>) {
+    let arg = args.next();
     let concept = match arg.as_ref().map(|s| s.as_str()) {
         Some("render") => render_demo,
         // TODO: #35

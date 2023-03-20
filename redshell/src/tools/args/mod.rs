@@ -104,8 +104,9 @@ impl AutocompleteType {
 
 #[cfg(test)]
 mod test {
-    use crate::Machine;
     use std::sync::Arc;
+
+    use crate::machine::Machine;
 
     use super::*;
 

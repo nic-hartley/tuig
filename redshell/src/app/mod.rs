@@ -5,7 +5,7 @@ use tuig::{
     Replies,
 };
 
-use crate::{event::Event, GameState};
+use crate::{event::Event, state::GameState};
 
 /// Each app is a single tab in the game's window view, e.g. chat. They exclusively handle IO: Processing user input
 /// and rendering (part of) game state.

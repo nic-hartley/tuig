@@ -12,8 +12,7 @@ use tuig::{
 
 use crate::{
     event::Event,
-    tools::{autocomplete, Tool},
-    GameState, Machine,
+    tools::{autocomplete, Tool}, machine::Machine, state::GameState,
 };
 
 use super::App;

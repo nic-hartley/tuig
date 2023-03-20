@@ -28,14 +28,6 @@ plat_steam = []
 plat_floppy = []
 plat_wasm = []
 
-[[bin]]
-name = "redshell-concept"
-required-features = ["__io"]
-
-[[bin]]
-name = "redshell"
-required-features = ["__io", "__run"]
-
 # [[bench]]
 # name = "mass-events"
 # harness = false

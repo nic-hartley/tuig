@@ -1,10 +1,12 @@
+//! Contains the [`tuig::Game`] implementation and "main function" for the game itself
+
 use std::time::Duration;
 
-use redshell::{
-    app::{App, ChatApp, CliApp},
-    event::Event,
-    tools, GameState,
+use crate::{
+app::{ChatApp, CliApp, App},
+event::Event, state::GameState,
 };
+
 use tuig::{
     io::{Action, Key, Screen},
     Agent, ControlFlow, Game, Replies, Response, Runner,
@@ -221,13 +223,13 @@ impl Game for Redshell {
     }
 }
 
-fn main() {
+pub fn run(mut _args: impl Iterator<Item=String>) {
     let game = Redshell::new();
     Runner::new(game)
-        .queue(Event::install(tools::Ls))
-        .queue(Event::install(tools::Touch))
-        .queue(Event::install(tools::Mkdir))
-        .queue(Event::install(tools::Cd))
+        .queue(Event::install(crate::tools::Ls))
+        .queue(Event::install(crate::tools::Touch))
+        .queue(Event::install(crate::tools::Mkdir))
+        .queue(Event::install(crate::tools::Cd))
         .spawn(npc!(
             "admin",
             [
@@ -272,3 +274,4 @@ fn main() {
         ))
         .load_run();
 }
+
