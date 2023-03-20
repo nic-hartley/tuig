@@ -94,6 +94,8 @@ jobs:
           std: "std"
         - run: rayon
           std: "std"
+        - sys: nop
+          std: "std"
         - sys: cli_crossterm
           std: "std"
         - sys: gui_softbuffer
