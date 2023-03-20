@@ -1,7 +1,5 @@
 //! Contains the "main loop" of the engine, in all its various incarnations based on the `run_` feature selected.
 
-#![cfg(feature = "__run")]
-
 use std::{mem, thread, time::Duration};
 
 use tuig_iosys::{Action, IoRunner, IoSystem, Screen};
@@ -384,7 +382,6 @@ impl<G: Game + 'static> Runner<G> {
     ///
     /// This function only exits when [`Game::event`] or [`Game::input`] returns [`Response::Quit`]. It returns the
     /// [`Game`], primarily for testing purposes.
-    #[cfg(feature = "__run")]
     #[allow(unreachable_code)] // for `cargo check --all-features`
     pub fn run(self, iosys: impl IoSystem + 'static, iorun: impl IoRunner) -> G {
         use crate::util::macros::feature_switch;
@@ -402,7 +399,6 @@ impl<G: Game + 'static> Runner<G> {
     ///
     /// This function only exits when [`Game::event`] or [`Game::input`] returns [`Response::Quit`]. It returns the
     /// [`Game`], primarily for testing purposes. If loading fails, it panics.
-    #[cfg(all(feature = "__run"))]
     pub fn load_run(self) -> G {
         tuig_iosys::load!(self.run).unwrap()
     }

@@ -2,6 +2,8 @@
 name = "tuig-iosys"
 version = "0.0.1"
 edition = "2021"
+description = "Multi-backend terminal-like text grid rendering."
+license = "BSD-3-Clause"
 
 [features]
 std = []

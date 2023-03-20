@@ -952,7 +952,7 @@ dependencies = [
 
 [[package]]
 name = "redshell"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "dashmap",
  "lazy_static",
