@@ -1,6 +1,9 @@
 use itertools::Itertools;
-use proc_macro2::{Span, TokenTree, TokenStream};
-use syn::{parse::{ParseStream, Parser}, Attribute, LitStr, Token};
+use proc_macro2::{Span, TokenStream, TokenTree};
+use syn::{
+    parse::{ParseStream, Parser},
+    Attribute, LitStr, Token,
+};
 
 struct LoadInput {
     attrs: Vec<Attribute>,
@@ -45,20 +48,29 @@ fn do_make_load(input: TokenStream) -> TokenStream {
         Err(e) => return e.to_compile_error(),
     };
     // figure out the individual `match` chunks for each feature
-    let chunks = arms.into_iter().map(|(feat, init)| {
-        (feat.clone(), quote::quote! {
-            match ( #( #init )* ) {
-                Ok((iosys, iorun)) => break Ok($($callback)* (iosys, iorun)),
-                Err(e) => { errs.insert(#feat, e); }
-            }
+    let chunks = arms
+        .into_iter()
+        .map(|(feat, init)| {
+            (
+                feat.clone(),
+                quote::quote! {
+                    match ( #( #init )* ) {
+                        Ok((iosys, iorun)) => break Ok($($callback)* (iosys, iorun)),
+                        Err(e) => { errs.insert(#feat, e); }
+                    }
+                },
+            )
         })
-    }).collect::<Vec<_>>();
+        .collect::<Vec<_>>();
     // generate each combination of 1 to n
     let mut options: Vec<TokenStream> = vec![];
     for n in 1..=chunks.len() {
         for c in chunks.iter().combinations(n) {
             let features = c.iter().map(|(f, _)| f).collect::<Vec<_>>();
-            let antifeatures = chunks.iter().map(|(f, _)| f).filter(|f| !features.contains(f));
+            let antifeatures = chunks
+                .iter()
+                .map(|(f, _)| f)
+                .filter(|f| !features.contains(f));
             let tokens = c.iter().map(|(_, ts)| ts);
             options.push(quote::quote! {
                 #[cfg(all(not(any( #( feature = #antifeatures ),* )), #( feature = #features ),* ))]
