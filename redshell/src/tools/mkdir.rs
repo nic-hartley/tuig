@@ -1,4 +1,4 @@
-use tuig::{text, Agent};
+use tuig::{Agent, io::text};
 
 use crate::{app::CliState, event::Event};
 

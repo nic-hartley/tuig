@@ -2,10 +2,7 @@
 
 use std::mem;
 
-use tuig::{
-    format::{FormattedExt, Text},
-    text1, Action, Key, Replies, Screen,
-};
+use tuig::{io::{Action, Key, Screen, fmt::{Text, FormattedExt}, text1}, Replies};
 
 use crate::{
     constants::{gameplay::MAX_USERNAME, graphics::HEADER_HEIGHT},

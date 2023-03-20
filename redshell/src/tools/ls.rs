@@ -1,6 +1,5 @@
 use tuig::{
-    format::{FormattedExt, Text},
-    text, text1, Agent,
+    Agent, io::{text1, text, fmt::{Text, FormattedExt}},
 };
 
 use crate::{app::CliState, event::Event, machine::Entry};

@@ -15,7 +15,7 @@ mod mkdir;
 pub use mkdir::Mkdir;
 mod cd;
 pub use cd::Cd;
-use tuig::{format::Text, Agent, ControlFlow, Replies};
+use tuig::{Agent, ControlFlow, Replies, io::fmt::Text};
 
 /// Common interface for all CLI tool.
 pub trait Tool: Send + Sync {
