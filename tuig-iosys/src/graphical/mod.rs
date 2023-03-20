@@ -3,7 +3,7 @@
 #![cfg(feature = "gui")]
 
 #[cfg(not(feature = "std"))]
-compile_error!("enable std to use cli_crossterm");
+compile_error!("enable std to use gui backends");
 
 use std::{
     io,

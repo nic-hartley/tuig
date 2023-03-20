@@ -1,7 +1,7 @@
 #![cfg(feature = "nop")]
 
 #[cfg(not(feature = "std"))]
-compile_error!("enable std to use cli_crossterm");
+compile_error!("enable std to use nop");
 
 use std::{
     sync::{Arc, Condvar, Mutex},
