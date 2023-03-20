@@ -1,10 +1,8 @@
 use std::fmt;
 
-use tuig_iosys::{Screen, Action};
+use tuig_iosys::{Action, Screen};
 
-use crate::{
-    agent::Agent,
-};
+use crate::agent::Agent;
 
 pub trait Message: Clone + Send + Sync {
     /// The message to send agents when there aren't any other messages queued for processing, to ensure every awake

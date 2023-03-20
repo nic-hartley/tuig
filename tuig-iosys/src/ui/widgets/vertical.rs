@@ -1,4 +1,4 @@
-use crate::{cell, screen::Screen, fmt::Cell};
+use crate::{cell, fmt::Cell, screen::Screen};
 
 /// A vertical line across all or part of the screen
 pub struct Vertical<'a> {

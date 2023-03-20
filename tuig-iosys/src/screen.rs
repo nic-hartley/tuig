@@ -11,7 +11,10 @@ use core::{
 
 use alloc::vec::Vec;
 
-use crate::{fmt::{Cell, FormattedExt, Text}, xy::XY};
+use crate::{
+    fmt::{Cell, FormattedExt, Text},
+    xy::XY,
+};
 
 /// An iterator over the rows of cells in a [`Screen`].
 pub struct ScreenRows<'s> {

@@ -1,5 +1,5 @@
 use proc_macro2::{Span, TokenTree};
-use syn::{Attribute, parse_macro_input, parse::ParseStream, Token, LitStr};
+use syn::{parse::ParseStream, parse_macro_input, Attribute, LitStr, Token};
 
 struct LoadInput {
     attrs: Vec<Attribute>,
@@ -7,7 +7,10 @@ struct LoadInput {
 }
 
 fn parse_load(input: ParseStream) -> syn::Result<LoadInput> {
-    let mut res = LoadInput { attrs: vec![], arms: vec![] };
+    let mut res = LoadInput {
+        attrs: vec![],
+        arms: vec![],
+    };
     while let Ok(attr) = input.call(Attribute::parse_outer) {
         if attr.is_empty() {
             break;
@@ -26,7 +29,10 @@ fn parse_load(input: ParseStream) -> syn::Result<LoadInput> {
         res.arms.push((feat, body));
     }
     if !input.is_empty() {
-        return Err(syn::Error::new(Span::call_site().into(), "unexpected extras after match arms"));
+        return Err(syn::Error::new(
+            Span::call_site().into(),
+            "unexpected extras after match arms",
+        ));
     }
     Ok(res)
 }
@@ -55,5 +61,6 @@ pub fn make_load(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                 break Err(errs);
             } };
         }
-    }.into()
+    }
+    .into()
 }

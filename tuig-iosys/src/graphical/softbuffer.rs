@@ -13,7 +13,11 @@ use fontdue::{Font, FontSettings};
 use rayon::prelude::*;
 use winit::window::Window;
 
-use crate::{fmt::{Color, Formatted}, xy::XY, screen::Screen};
+use crate::{
+    fmt::{Color, Formatted},
+    screen::Screen,
+    xy::XY,
+};
 
 use super::GuiBackend;
 

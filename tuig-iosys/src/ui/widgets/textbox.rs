@@ -3,7 +3,10 @@ use core::mem;
 use alloc::{string::String, vec::Vec};
 
 use crate::{
-    text, text1, screen::Screen, fmt::{Text, Formatted, FormattedExt}, xy::XY,
+    fmt::{Formatted, FormattedExt, Text},
+    screen::Screen,
+    text, text1,
+    xy::XY,
 };
 
 fn breakable(ch: char) -> bool {
@@ -244,7 +247,7 @@ mod test {
     use std::ops::{Bound, RangeBounds};
 
     use crate::{
-        fmt::{Cell, Color, FormattedExt, Formatted},
+        fmt::{Cell, Color, Formatted, FormattedExt},
         text1,
     };
 

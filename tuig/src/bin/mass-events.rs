@@ -1,7 +1,7 @@
 use std::time::Instant;
 
-use tuig::{Agent, Replies, ControlFlow, Response, Game, Runner};
-use tuig_iosys::{Screen, Action};
+use tuig::{Agent, ControlFlow, Game, Replies, Response, Runner};
+use tuig_iosys::{Action, Screen};
 
 const AGENTS: u64 = 10_000;
 

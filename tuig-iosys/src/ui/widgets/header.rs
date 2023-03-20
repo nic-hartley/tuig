@@ -1,7 +1,10 @@
-use alloc::{vec::Vec, string::String};
+use alloc::{string::String, vec::Vec};
 
 use crate::{
-    text, text1, screen::Screen, util, fmt::{Text, FormattedExt}, xy::XY,
+    fmt::{FormattedExt, Text},
+    screen::Screen,
+    text, text1, util,
+    xy::XY,
 };
 
 /// The header at the top of the window, which lists tabs, the current time, etc.

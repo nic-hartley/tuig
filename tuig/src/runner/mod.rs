@@ -4,11 +4,12 @@
 
 use std::{mem, thread, time::Duration};
 
-use tuig_iosys::{IoSystem, Screen, Action, IoRunner};
+use tuig_iosys::{Action, IoRunner, IoSystem, Screen};
 
 use crate::{
     agent::{Agent, ControlFlow},
-    game::{Game, Message, Replies, Response}, util::timing::Timer,
+    game::{Game, Message, Replies, Response},
+    util::timing::Timer,
 };
 
 struct AgentRunner<M: Message> {

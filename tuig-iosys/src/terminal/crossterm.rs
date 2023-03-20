@@ -29,7 +29,13 @@ use crossterm::{
     },
 };
 
-use crate::{action::{MouseButton, Action, Key}, IoRunner, fmt::{Color as RsColor, Cell, Formatted}, xy::XY, IoSystem, screen::Screen};
+use crate::{
+    action::{Action, Key, MouseButton},
+    fmt::{Cell, Color as RsColor, Formatted},
+    screen::Screen,
+    xy::XY,
+    IoRunner, IoSystem,
+};
 
 fn io4ct_btn(ct: ct::MouseButton) -> MouseButton {
     match ct {
@@ -141,7 +147,9 @@ impl IoRunner for CtRunner {
         };
         // process the event into a redshell `Event`
         match ev {
-            ct::Event::Key(ct::KeyEvent { code, modifiers, .. }) => {
+            ct::Event::Key(ct::KeyEvent {
+                code, modifiers, ..
+            }) => {
                 mods!(modifiers, KeyPress);
                 if code == ct::KeyCode::BackTab {
                     try_send!(KeyPress {

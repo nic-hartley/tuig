@@ -8,7 +8,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{IoRunner, screen::Screen, IoSystem, action::Action, xy::XY};
+use crate::{action::Action, screen::Screen, xy::XY, IoRunner, IoSystem};
 
 pub struct NopSystem(NopRunner);
 

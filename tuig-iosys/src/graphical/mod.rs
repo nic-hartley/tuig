@@ -22,7 +22,11 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-use crate::{action::{Key, MouseButton, Action}, xy::XY, screen::Screen};
+use crate::{
+    action::{Action, Key, MouseButton},
+    screen::Screen,
+    xy::XY,
+};
 
 use super::{IoRunner, IoSystem};
 
@@ -292,7 +296,8 @@ impl<B: GuiBackend> IoSystem for GuiSystem<B> {
             io::Error::new(
                 io::ErrorKind::BrokenPipe,
                 "input loop has terminated unexpectedly",
-            ).into()
+            )
+            .into()
         })
     }
 
