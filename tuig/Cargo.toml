@@ -4,6 +4,7 @@ version = "0.0.1"
 edition = "2021"
 description = "Flexible, portable, and fast game engine for textmode games."
 license = "BSD-3-Clause"
+repository = "https://github.com/nic-hartley/redshell/"
 
 [features]
 # See tuig::docs::features for crucial information.
