@@ -57,11 +57,11 @@ jobs:
     - uses: actions/checkout@v3
     - name: Run tests
       env:
-        FEATURES: run_${{ matrix.run }},io_${{ matrix.sys }},${{ matrix.std }}
+        features: run_${{ matrix.run }},io_${{ matrix.sys }},${{ matrix.std }}
       run: |
         cargo fmt --check
-        cargo check --features "$FEATURES" --all-targets
-        cargo test --features "$FEATURES" --all-targets
+        cargo check --features "${{ env.features }}" --all-targets
+        cargo test --features "${{ env.features }}" --all-targets
 
 
   mass-events:
@@ -99,6 +99,6 @@ jobs:
     - uses: actions/checkout@v3
     - name: Deploy events
       env:
-        FEATURES: run_${{ matrix.run }},io_${{ matrix.sys }},${{ matrix.std }}
+        features: run_${{ matrix.run }},io_nop,${{ matrix.std }}
       run: |
-        cargo run --release --bin mass-events --features "$FEATURES"
+        cargo run --release --bin mass-events --features "${{ env.features }}"
