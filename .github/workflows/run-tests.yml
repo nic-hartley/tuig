@@ -22,8 +22,6 @@ jobs:
         sys: [nop, cli_crossterm, gui_softbuffer]
         include:
         - std: ""
-        - run: orig
-          std: "std"
         - run: single
           std: "std"
         - run: rayon
