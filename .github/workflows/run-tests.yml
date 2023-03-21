@@ -1,4 +1,4 @@
-name: Tests
+name: Pre-merge tests
 run-name: Testing ${{github.ref_name}}
 # no permission for the token, this runs on pull requests
 permissions: {}
@@ -77,7 +77,7 @@ jobs:
           std: "std"
         - run: rayon
           std: "std"
-    name: Runner ${{ matrix.run }}
+    name: mass-events on runner ${{ matrix.run }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/cache@v3
