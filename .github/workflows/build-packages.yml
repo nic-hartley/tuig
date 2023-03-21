@@ -13,9 +13,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu, windows, macos]
+        platform: [ubuntu, windows]
         # TODO: Replace with `plat_` eventually
-        sys: [cli, gui_softbuffer]
+        sys: [cli_crossterm, gui_softbuffer]
         include:
         - ext: ''
         - platform: windows

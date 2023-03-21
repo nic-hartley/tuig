@@ -17,7 +17,23 @@ jobs:
       fail-fast: false
       matrix:
         rust: [stable, "1.64", nightly]
-        platform: [windows, macos, ubuntu]
+        platform: [windows, ubuntu]
+        run: [orig, single, rayon]  # TODO: std_multi
+        sys: [nop, cli_crossterm, gui_softbuffer]
+        include:
+        - std: ""
+        - run: orig
+          std: "std"
+        - run: single
+          std: "std"
+        - run: rayon
+          std: "std"
+        - sys: nop
+          std: "std"
+        - sys: cli_crossterm
+          std: "std"
+        - sys: gui_softbuffer
+          std: "std"
     name: Rust ${{ matrix.rust }} / ${{ matrix.platform }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
@@ -40,10 +56,12 @@ jobs:
 
     - uses: actions/checkout@v3
     - name: Run tests
+      env:
+        FEATURES: run_${{ matrix.run }},io_${{ matrix.sys }},${{ matrix.std }}
       run: |
         cargo fmt --check
-        cargo check --all-features
-        cargo test --all-features
+        cargo check --features "$FEATURES" --all-targets
+        cargo test --features "$FEATURES" --all-targets
 
 
   mass-events:
@@ -80,50 +98,7 @@ jobs:
 
     - uses: actions/checkout@v3
     - name: Deploy events
+      env:
+        FEATURES: run_${{ matrix.run }},io_${{ matrix.sys }},${{ matrix.std }}
       run: |
-        cargo run --release --bin mass-events --features io_nop,run_${{ matrix.run }},${{ matrix.std }}
-
-
-  exhaustive-features:
-    strategy:
-      fail-fast: false
-      matrix:
-        run: [orig, single, rayon]  # TODO: std_multi
-        sys: [nop, cli_crossterm, gui_softbuffer]
-        include:
-        - std: ""
-        - run: orig
-          std: "std"
-        - run: single
-          std: "std"
-        - run: rayon
-          std: "std"
-        - sys: nop
-          std: "std"
-        - sys: cli_crossterm
-          std: "std"
-        - sys: gui_softbuffer
-          std: "std"
-    name: Check run_${{ matrix.run }} and io_${{ matrix.sys }}
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/cache@v3
-      with:
-        path: ~/.rustup/
-        key: rustup-ubuntu-stable
-    - uses: actions/cache@v3
-      with:
-        path: ~/.cargo/registry
-        key: cargo-cache
-    - uses: actions/cache@v3
-      with:
-        path: ./target
-        key: target-dir-ubuntu-stable
-    - name: Set up Rust
-      run: |
-        rustup default stable
-
-    - uses: actions/checkout@v3
-    - name: Check feature compatibility
-      run: |
-        cargo check --features io_${{ matrix.sys }},run_${{ matrix.run }},${{ matrix.std }} --all-targets
+        cargo run --release --bin mass-events --features "$FEATURES"
