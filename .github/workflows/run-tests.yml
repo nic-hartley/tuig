@@ -1,4 +1,4 @@
-name: Tests
+name: Pre-merge tests
 run-name: Testing ${{github.ref_name}}
 # no permission for the token, this runs on pull requests
 permissions: {}
@@ -16,9 +16,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [stable, "1.60", nightly]
-        platform: [windows, macos, ubuntu]
-    name: Rust ${{ matrix.rust }} / ${{ matrix.platform }}
+        rust: [stable, "1.64", nightly]
+        platform: [windows, ubuntu]
+        run: [single, rayon]  # TODO: std_multi
+        sys: [nop, cli_crossterm, gui_softbuffer]
+        include:
+        - std: ""
+        - run: single
+          std: "std"
+        - run: rayon
+          std: "std"
+        - sys: nop
+          std: "std"
+        - sys: cli_crossterm
+          std: "std"
+        - sys: gui_softbuffer
+          std: "std"
+    name: Rust ${{ matrix.rust }} on ${{ matrix.platform }}, runner ${{ matrix.run }}, IO ${{ matrix.sys }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
     - uses: actions/cache@v3
@@ -40,10 +54,12 @@ jobs:
 
     - uses: actions/checkout@v3
     - name: Run tests
+      env:
+        features: run_${{ matrix.run }},io_${{ matrix.sys }},${{ matrix.std }}
       run: |
         cargo fmt --check
-        cargo check --all-features
-        cargo test --all-features
+        cargo check --features "${{ env.features }}" --all-targets
+        cargo test --features "${{ env.features }}" --all-targets
 
 
   mass-events:
@@ -51,7 +67,15 @@ jobs:
       fail-fast: false
       matrix:
         run: [orig, single, rayon]
-    name: Runner ${{ matrix.run }}
+        include:
+        - std: ""
+        - run: orig
+          std: "std"
+        - run: single
+          std: "std"
+        - run: rayon
+          std: "std"
+    name: mass-events on runner ${{ matrix.run }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/cache@v3
@@ -72,36 +96,7 @@ jobs:
 
     - uses: actions/checkout@v3
     - name: Deploy events
+      env:
+        features: run_${{ matrix.run }},io_nop,${{ matrix.std }}
       run: |
-        cargo run --release --bin mass-events --features sys_nop,run_${{ matrix.run }}
-
-
-  exhaustive-features:
-    strategy:
-      fail-fast: false
-      matrix:
-        run: [orig, single, rayon]  # TODO: std_multi
-        sys: [nop, cli, gui_softbuffer]
-    name: Check run_${{ matrix.run }} and sys_${{ matrix.sys }}
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/cache@v3
-      with:
-        path: ~/.rustup/
-        key: rustup-ubuntu-stable
-    - uses: actions/cache@v3
-      with:
-        path: ~/.cargo/registry
-        key: cargo-cache
-    - uses: actions/cache@v3
-      with:
-        path: ./target
-        key: target-dir-ubuntu-stable
-    - name: Set up Rust
-      run: |
-        rustup default stable
-
-    - uses: actions/checkout@v3
-    - name: Check feature compatibility
-      run: |
-        cargo check --features sys_${{ matrix.sys }},run_${{ matrix.run }} --all-targets
+        cargo run --release --bin mass-events --features "${{ env.features }}"

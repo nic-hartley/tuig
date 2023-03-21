@@ -1,0 +1,15 @@
+[package]
+name = "tuig-pm"
+version = "0.0.1"
+edition = "2021"
+description = "Procedural macro crate for tuig and tuig-iosys"
+license = "BSD-3-Clause"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+itertools = "0.10.5"
+proc-macro2 = "1.0.52"
+quote = "1.0.26"
+syn = { version = "2.0.2", features = ["parsing", "full"] }

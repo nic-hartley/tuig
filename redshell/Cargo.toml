@@ -1,0 +1,37 @@
+[package]
+name = "redshell"
+version = "0.0.6"
+edition = "2021"
+description = "A console-based hacking game. Currently building the engine to support dual TUI/GUI interfaces."
+license = "BSD-3-Clause"
+
+# if bumping this, be sure to edit run-tests as well!
+rust-version = "1.64"
+
+[features]
+io_nop = ["tuig/io_nop"]
+io_cli_crossterm = ["tuig/io_cli_crossterm"]
+io_gui_softbuffer = ["tuig/io_gui_softbuffer"]
+
+run_orig = ["tuig/run_orig"]
+run_single = ["tuig/run_single"]
+run_rayon = ["tuig/run_rayon"]
+
+plat_ssh = ["io_cli_crossterm"]
+plat_steam = []
+plat_floppy = []
+plat_wasm = []
+
+# [[bench]]
+# name = "mass-events"
+# harness = false
+
+[dependencies]
+tuig = { version = "0.0.1", path = "../tuig" }
+
+paste = "1.0.5"
+lazy_static = "1.4.0"
+dashmap = "5.4.0"
+
+[dev-dependencies]
+tuig = { path = "../tuig", features = [ "test_extras" ] }

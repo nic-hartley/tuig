@@ -25,8 +25,8 @@ Eventually, this crate will contain:
 
 This will make extremely heavy use of features, so I'll explain my intended setup here:
 
-- `sys_*` are the IO subsystems available. At least one must be selected.
-  - `sys_gui_*` are the various flavors of GUI rendering backend.
+- `io_*` are the IO subsystems available. At least one must be selected.
+  - `io_gui_*` are the various flavors of GUI rendering backend.
   - If several are selected, they're chosen from at runtime; see `redshell::io::sys::load`.
 - `run_*` are the agent runners. Exactly one must be selected.
   - These decide how agents, the `Game`, and the IO system are run, e.g. what type of multithreading is used.
