@@ -18,7 +18,7 @@ jobs:
       matrix:
         rust: [stable, "1.64", nightly]
         platform: [windows, ubuntu]
-        run: [orig, single, rayon]  # TODO: std_multi
+        run: [single, rayon]  # TODO: std_multi
         sys: [nop, cli_crossterm, gui_softbuffer]
         include:
         - std: ""
