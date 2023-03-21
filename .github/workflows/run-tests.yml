@@ -34,7 +34,7 @@ jobs:
           std: "std"
         - sys: gui_softbuffer
           std: "std"
-    name: Rust ${{ matrix.rust }} / ${{ matrix.platform }}
+    name: Rust ${{ matrix.rust }} on ${{ matrix.platform }}, runner ${{ matrix.run }}, IO ${{ matrix.sys }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
     - uses: actions/cache@v3
