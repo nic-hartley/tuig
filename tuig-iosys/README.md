@@ -13,7 +13,9 @@ cargo add tuig-iosys
 
 And then [the docs](https://crates.io/crates/tuig-iosys), especially the [`docs` module](https://docs.rs/tuig-iosys/latest/tuig_iosys/docs), will tell you how to use the library.
 
-## What's textmode?
+## FAQ
+
+### What's textmode?
 
 Textmode, text UI, or text-based interfaces are those whose output is exclusively a grid of typical text characters.
 Think `nmtui`, or Dwarf Fortress, and contrast it with a GUI or a webpage -- which might only have text *content*, but can render more complex shapes than 
@@ -23,7 +25,7 @@ Can it run in a terminal?
 
 There's some hidden technical complexity underlying that intuition, but mostly it lines up.
 
-### What hidden technical complexity?
+#### What hidden technical complexity?
 
 First, you can actually do a lot with traditional "textmode" systems. For example, custom character sets can allow for extremely complex graphics, even pixel-perfect rendering.
 Check out your local demo scene sometime; they do really cool stuff.
@@ -45,7 +47,7 @@ Finally: Terminals have differing behavior on special characters.
 `tuig-iosys` usually tries to normalize to the lowest common denominator.
 It might not behave how you expect if you write an ASCII BEL, for example.
 
-## Do I want this or `tuig`?
+### Do I want this or `tuig`?
 
 That depends.
 
@@ -62,3 +64,11 @@ You want `tuig` for a game engine with:
 - And more!
 
 And you want *neither* if you're trying to general-purpose GUI things, or simple console output.
+
+### How does `tuig-iosys` do versioning?
+
+`tuig-iosys` tries to follow semantic versioning, but the line between "bugfix", "feature", and "breaking change" can be difficult to draw.
+In short:
+- If it's undocumented, I can change it however I like and count it as a bugfix.
+- If it's documented, *just adding things* is never a breaking change, only a feature -- even if I forgot to add `#[non_exhaustive]` to that enum. (Though I'll try very hard to make sure your code works without changes for minor version bumps, regardless.)
+- Changing documented things is almost certainly breaking regardless of the change.
