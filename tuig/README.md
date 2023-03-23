@@ -22,7 +22,7 @@ And if you're just interested in watching, keep an eye on the [issue list], in p
 
 ## What's textmode?
 
-Textmode, text UI, or text-based games are video games whose output is based on typical text characters.
+Textmode, text UI, or text-based games are video games whose output is exclusively a grid of typical text characters.
 The quintessential example of a textmode game is Dwarf Fortress, but things like Zork and Rogue count too.
 
 It's usually used in contrast with "graphical" games -- the ones most people think of when they think video games.
