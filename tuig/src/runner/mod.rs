@@ -401,6 +401,7 @@ impl<G: Game + 'static> Runner<G> {
     ///
     /// This function only exits when [`Game::event`] or [`Game::input`] returns [`Response::Quit`]. It returns the
     /// [`Game`], primarily for testing purposes. If loading fails, it panics.
+    #[cfg(feature = "__io")]
     pub fn load_run(self) -> G {
         tuig_iosys::load!(self.run).unwrap()
     }

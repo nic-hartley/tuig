@@ -59,12 +59,13 @@ mod util;
 
 pub use crate::{
     error::{Error, Result},
-    graphical::{GuiSystem, GuiBackend, GuiRunner},
     traits::{IoSystem, IoRunner},
     action::{Action, Key, MouseButton},
     screen::Screen,
     xy::XY,
 };
+#[cfg(feature = "__gui")]
+pub use graphical::{GuiSystem, GuiBackend, GuiRunner};
 
 /// Available rendering backends. See the [`IoSystem`] and [`IoRunner`] docs for more information.
 pub mod backends {
@@ -105,20 +106,4 @@ tuig_pm::make_load! {
     "nop" => $crate::backends::NopSystem::new(),
     "gui_softbuffer" => $crate::backends::SoftbufferSystem::new(20.0),
     "cli_crossterm" => $crate::backends::CrosstermSystem::new(),
-}
-
-/// Based on IO system features enabled, attempt to initialize an IO system, in the same manner as [`load!`].
-///
-/// This returns things boxed so they can be used as trait objects, which provides better ergonomics at the cost of
-/// slightly lower max performance.
-pub fn load(
-) -> core::result::Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), BTreeMap<&'static str, Error>> {
-    #[allow(unused)]
-    fn cb(
-        sys: impl IoSystem + 'static,
-        run: impl IoRunner + 'static,
-    ) -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
-        (Box::new(sys), Box::new(run))
-    }
-    load!(cb)
 }

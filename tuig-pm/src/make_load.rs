@@ -49,7 +49,7 @@ pub fn do_make_load(input: TokenStream) -> TokenStream {
     };
     // figure out the individual `match` chunks for each feature
     let chunks = arms
-        .into_iter()
+        .iter()
         .map(|(feat, init)| {
             (
                 feat.clone(),
@@ -62,8 +62,33 @@ pub fn do_make_load(input: TokenStream) -> TokenStream {
             )
         })
         .collect::<Vec<_>>();
+    let all_feats = arms.into_iter().map(|(f, _)| f).collect::<Vec<_>>();
     // generate each combination of 1 to n
-    let mut options: Vec<TokenStream> = vec![];
+    let mut options: Vec<TokenStream> = vec![quote::quote! {
+        /// Based on IO system features enabled, attempt to initialize an IO system, in the same manner as [`load!`].
+        ///
+        /// This returns things boxed so they can be used as trait objects, which provides better ergonomics at the
+        /// cost of slightly lower max performance.
+        #[cfg(any( #( feature = #all_feats ),* ))]
+        pub fn load() -> core::result::Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), BTreeMap<&'static str, Error>> {
+            #[allow(unused)]
+            fn cb(
+                sys: impl IoSystem + 'static,
+                run: impl IoRunner + 'static,
+            ) -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
+                (Box::new(sys), Box::new(run))
+            }
+            load!(cb)
+        }
+
+        #[cfg(not(any( #( feature = #all_feats ),* )))]
+        #[macro_export]
+        macro_rules! load {
+            ($($callback:tt)*) => {
+                compile_error!("select an IO system to use tuig_iosys::load");
+            }
+        }
+    }];
     for n in 1..=chunks.len() {
         for c in chunks.iter().combinations(n) {
             let features = c.iter().map(|(f, _)| f).collect::<Vec<_>>();

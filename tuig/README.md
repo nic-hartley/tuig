@@ -55,10 +55,10 @@ You can see the roadmap in the [issue list] and [v0.1 milestone].
 
 ### How does tuig do versioning?
 
-tuig tries to follow semantic versioning, but the line between "bugfix", "feature", and "breaking change" can be difficult to draw.
+tuig tries to follow semantic versioning, but the line between "bugfix", "new feature", and "breaking change" can be difficult to draw.
 In short:
 - If it's undocumented, I can change it however I like and count it as a bugfix.
-- If it's documented, *just adding things* is never a breaking change, only a feature -- even if I forgot to add `#[non_exhaustive]` to that enum. (Though I'll try very hard to make sure your code works without changes for minor version bumps, regardless.)
+- If it's documented, *just adding things* is never a breaking change, only a new feature -- even if I forgot to add `#[non_exhaustive]` to that enum. (Though I'll try very hard to make sure your code works without changes for minor version bumps, regardless.)
 - Changing documented things is almost certainly breaking regardless of the change.
 
   [tuig-iosys]: https://docs.rs/tuig-iosys

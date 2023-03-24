@@ -10,22 +10,10 @@ repository = "https://github.com/nic-hartley/redshell/"
 rust-version = "1.64"
 
 [features]
-io_nop = ["tuig/io_nop"]
-io_cli_crossterm = ["tuig/io_cli_crossterm"]
-io_gui_softbuffer = ["tuig/io_gui_softbuffer"]
-
-run_orig = ["tuig/run_orig"]
-run_single = ["tuig/run_single"]
-run_rayon = ["tuig/run_rayon"]
-
-plat_ssh = ["io_cli_crossterm"]
-plat_steam = []
-plat_floppy = []
-plat_wasm = []
-
-# [[bench]]
-# name = "mass-events"
-# harness = false
+plat_ssh = ["tuig/io_cli_crossterm", "tuig/run_rayon"]
+plat_steam = ["tuig/io_gui_softbuffer", "tuig/run_rayon"]
+# plat_floppy = []
+# plat_wasm = []
 
 [dependencies]
 tuig = { version = "0.0.1", path = "../tuig" }

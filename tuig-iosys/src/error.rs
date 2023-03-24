@@ -1,4 +1,4 @@
-use alloc::borrow::Cow;
+use alloc::{borrow::Cow, string::String};
 
 #[non_exhaustive]
 #[derive(Debug)]
