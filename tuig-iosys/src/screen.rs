@@ -126,7 +126,7 @@ impl Screen {
 
     /// Write some formatted text to the position on screen.
     ///
-    /// This **does not** handle newlines or anything else. If you want that, see [`Textbox`].
+    /// This **does not** handle newlines or anything else. If you want that, use a UI widget.
     pub fn write(&mut self, pos: XY, text: Vec<Text>) {
         let XY(mut x, y) = pos;
         for chunk in text {

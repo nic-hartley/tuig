@@ -395,7 +395,7 @@ impl<G: Game + 'static> Runner<G> {
         )
     }
 
-    /// Use [`sys::load`] to intelligently pick an iosystem, load it, and [`Self::run`].
+    /// Use [`crate::io::load!`] to intelligently pick an iosystem, load it, and [`Self::run`].
     ///
     /// This **must** be run on the main thread. Ideally, you'd run it from `main` directly.
     ///

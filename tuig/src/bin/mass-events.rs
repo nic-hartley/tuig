@@ -1,3 +1,5 @@
+//! A very simple "`Game`" which just spawns a bajillion events and agents. Used for sorta-benchmarking.
+
 use std::time::Instant;
 
 use tuig::{Agent, ControlFlow, Game, Replies, Response, Runner};

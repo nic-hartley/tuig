@@ -6,7 +6,7 @@ pub enum Error {
     /// An `io::Error` occurred.
     #[cfg(feature = "std")]
     Io(std::io::Error),
-    /// While a [`graphical`] backend was initializing, `winit` errored out.
+    /// While a [graphical backend][crate::GuiSystem] was initializing, `winit` errored out.
     #[cfg(feature = "gui")]
     Winit(winit::error::ExternalError),
     /// Just directly contains an error message.

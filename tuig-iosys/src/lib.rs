@@ -64,7 +64,7 @@ pub use crate::{
     screen::Screen,
     xy::XY,
 };
-#[cfg(feature = "__gui")]
+#[cfg(feature = "gui")]
 pub use graphical::{GuiSystem, GuiBackend, GuiRunner};
 
 /// Available rendering backends. See the [`IoSystem`] and [`IoRunner`] docs for more information.
