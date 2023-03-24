@@ -42,6 +42,8 @@
 //! intelligently pick "the best it can" given the ones you've turned on, but if you very reasonably disagree, you can
 //! load your preferred system and use [`Runner::run`] instead.
 
+#![cfg_attr(doc, feature(doc_auto_cfg))]
+
 mod agent;
 mod game;
 mod runner;

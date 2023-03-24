@@ -33,6 +33,7 @@
 //! [`GuiRunner`] -- it uses `winit` to generate a graphical context and will ensure your GUI system handles input in
 //! the exact same way as every other.
 
+#![cfg_attr(doc, feature(doc_auto_cfg))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 /// Re-exported for the [`load!`] macro.
