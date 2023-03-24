@@ -1,6 +1,6 @@
-//! This crate was designed and built with [`tuig`](https://crates.io/crates/tuig) in mind. Most of the time you use
-//! this, you'll probably use it indirectly, by implementing `tuig::Game` and using a `tuig::Runner`.
-//!
+//! > *This crate was designed and built with [`tuig`](https://crates.io/crates/tuig) in mind. If you're using tuig,
+//! see its documentation for information.*
+//! 
 //! That said, `tuig-iosys` tries to be somewhat more broadly useful. If you want to use it yourself, there are two
 //! central parts to familiarize yourself with.
 //!
@@ -13,10 +13,6 @@
 //! [`IoRunner`] must be run on the main thread, to ensure things work as expected on Windows GUIs. Builtin backends
 //! are enabled by features and available in [`backends`].
 //!
-//! If you want to implement your own `tuig-iosys` compatible renderer, you should implement the `IoBackend` trait.
-//! As a library user, you shouldn't actually use it, but it will ensure you have all the expected functions, named
-//! the expected things with the expected function signatures.
-//!
 //! # Features
 //!
 //! There's one feature to enable each builtin backend; see each backend for details.
@@ -26,15 +22,27 @@
 //!
 //! There are also features controlling what extensions to `fmt` are available. This doesn't influence the selection of
 //! backends, but backends will cheerfully ignore anything they don't understand. See that module for details.
+//!
+//! # Custom backends
+//! 
+//! If you want to implement your own `tuig-iosys` compatible renderer, you'll need an implementation of each of those
+//! traits. `IoSystem` is the `Send`/`Sync` handle with which to do the IO, and `IoRunner` occupies the main thread in
+//! case you need that, e.g. for GUI targets.
+//! 
+//! If you're implementing a GUI backend, though, consider implementing [`GuiBackend`] and using [`GuiSystem`] and
+//! [`GuiRunner`] -- it uses `winit` to generate a graphical context and will ensure your GUI system handles input in
+//! the exact same way as every other.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use alloc::borrow::Cow;
-
 /// Re-exported for the [`load!`] macro.
+#[doc(hidden)]
 pub use alloc::{boxed::Box, collections::BTreeMap, string::String};
 
 extern crate alloc;
+
+mod traits;
+mod error;
 
 mod graphical;
 mod misc;
@@ -49,103 +57,10 @@ mod xy;
 
 mod util;
 
-#[non_exhaustive]
-#[derive(Debug)]
-pub enum Error {
-    /// An `io::Error` occurred.
-    #[cfg(feature = "std")]
-    Io(std::io::Error),
-    /// While a [`graphical`] backend was initializing, `winit` errored out.
-    #[cfg(feature = "gui")]
-    Winit(winit::error::ExternalError),
-    /// Just directly contains an error message.
-    Bare(Cow<'static, str>),
-}
-
-#[cfg(feature = "std")]
-impl From<std::io::Error> for Error {
-    fn from(value: std::io::Error) -> Self {
-        Self::Io(value)
-    }
-}
-
-#[cfg(feature = "gui")]
-impl From<winit::error::ExternalError> for Error {
-    fn from(value: winit::error::ExternalError) -> Self {
-        Self::Winit(value)
-    }
-}
-
-impl From<&'static str> for Error {
-    fn from(value: &'static str) -> Self {
-        Self::Bare(Cow::Borrowed(value))
-    }
-}
-
-impl From<String> for Error {
-    fn from(value: String) -> Self {
-        Self::Bare(Cow::Owned(value))
-    }
-}
-
-type Result<T> = core::result::Result<T, Error>;
-
-/// An input/output system.
-///
-/// The output is called a "display" to distinguish it from the [`Screen`].
-///
-/// This object is meant to be associated with a [`IoRunner`], which will run infinitely on the main thread while this
-/// is called from within the event system.
-pub trait IoSystem: Send {
-    /// Actually render a [`Screen`] to the display.
-    fn draw(&mut self, screen: &screen::Screen) -> Result<()>;
-    /// Get the size of the display, in characters.
-    fn size(&self) -> xy::XY;
-
-    /// Wait for the next user input.
-    fn input(&mut self) -> Result<action::Action>;
-    /// If the next user input is available, return it.
-    fn poll_input(&mut self) -> Result<Option<action::Action>>;
-
-    /// Tells the associated [`IoRunner`] to stop and return control of the main thread, and tell the [`IoSystem`] to
-    /// dispose of any resources it's handling.
-    ///
-    /// This **must** return even if the `IoRunner` isn't done tearing down, to avoid deadlocks in the singlethreaded
-    /// mode.
-    ///
-    /// This will always be the last method called on this object (unless you count `Drop::drop`) so feel free to
-    /// panic in the others if they're called after this one, especially `draw`.
-    fn stop(&mut self);
-}
-
-/// The other half of an [`IoSystem`].
-///
-/// This type exists so that things which need to run on the main thread specifically, can.
-pub trait IoRunner {
-    /// Execute one 'step', which should be quick and must be non-blocking. Returns whether an exit has been requested
-    /// (i.e. by [`IoSystem::stop`]) since the last time `step` was called.
-    ///
-    /// **Warning**: This function may cause issues, e.g. on graphical targets it might block while the window is
-    /// being resized, [due to the underlying library][1]. Use it with caution, or only with backends you know work
-    /// well with it.
-    ///
-    /// Will always be called on the main thread.
-    ///
-    ///  [1]: https://docs.rs/winit/latest/winit/platform/run_return/trait.EventLoopExtRunReturn.html#caveats
-    #[must_use]
-    fn step(&mut self) -> bool;
-
-    /// Run until the paired [`IoSystem`] says to [stop](IoSystem::stop).
-    ///
-    /// Will always be called on the main thread.
-    ///
-    /// The default implementation just runs `while !self.step() { }`.
-    fn run(&mut self) {
-        while !self.step() {}
-    }
-}
-
 pub use crate::{
+    error::{Error, Result},
+    graphical::{GuiSystem, GuiBackend, GuiRunner},
+    traits::{IoSystem, IoRunner},
     action::{Action, Key, MouseButton},
     screen::Screen,
     xy::XY,

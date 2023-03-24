@@ -1,6 +1,6 @@
 # tuig
 
-tuig is a game engine hyperfocused on textmode systemic games.
+tuig is a game engine hyperfocused on systemic textmode games.
 
 ## I want to make a game with tuig.
 
