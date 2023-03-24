@@ -1,4 +1,4 @@
-use crate::{Result, Action, Screen, XY};
+use crate::{Action, Result, Screen, XY};
 
 /// An input/output system.
 ///

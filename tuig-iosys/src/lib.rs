@@ -1,6 +1,6 @@
 //! > *This crate was designed and built with [`tuig`](https://crates.io/crates/tuig) in mind. If you're using tuig,
 //! see its documentation for information.*
-//! 
+//!
 //! That said, `tuig-iosys` tries to be somewhat more broadly useful. If you want to use it yourself, there are two
 //! central parts to familiarize yourself with.
 //!
@@ -24,11 +24,11 @@
 //! backends, but backends will cheerfully ignore anything they don't understand. See that module for details.
 //!
 //! # Custom backends
-//! 
+//!
 //! If you want to implement your own `tuig-iosys` compatible renderer, you'll need an implementation of each of those
 //! traits. `IoSystem` is the `Send`/`Sync` handle with which to do the IO, and `IoRunner` occupies the main thread in
 //! case you need that, e.g. for GUI targets.
-//! 
+//!
 //! If you're implementing a GUI backend, though, consider implementing [`GuiBackend`] and using [`GuiSystem`] and
 //! [`GuiRunner`] -- it uses `winit` to generate a graphical context and will ensure your GUI system handles input in
 //! the exact same way as every other.
@@ -42,8 +42,8 @@ pub use alloc::{boxed::Box, collections::BTreeMap, string::String};
 
 extern crate alloc;
 
-mod traits;
 mod error;
+mod traits;
 
 mod graphical;
 mod misc;
@@ -59,14 +59,14 @@ mod xy;
 mod util;
 
 pub use crate::{
-    error::{Error, Result},
-    traits::{IoSystem, IoRunner},
     action::{Action, Key, MouseButton},
+    error::{Error, Result},
     screen::Screen,
+    traits::{IoRunner, IoSystem},
     xy::XY,
 };
 #[cfg(feature = "gui")]
-pub use graphical::{GuiSystem, GuiBackend, GuiRunner};
+pub use graphical::{GuiBackend, GuiRunner, GuiSystem};
 
 /// Available rendering backends. See the [`IoSystem`] and [`IoRunner`] docs for more information.
 pub mod backends {
