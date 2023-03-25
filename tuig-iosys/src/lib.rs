@@ -33,9 +33,8 @@
 //! [`GuiRunner`] -- it uses `winit` to generate a graphical context and will ensure your GUI system handles input in
 //! the exact same way as every other.
 
-#![cfg_attr(doc, feature(doc_auto_cfg), feature(doc_cfg))]
 #![cfg_attr(not(feature = "std"), no_std)]
-
+#![cfg_attr(doc, feature(doc_cfg, doc_auto_cfg))]
 tuig_pm::force_docs_nightly!();
 
 /// Re-exported for the [`load!`] macro.

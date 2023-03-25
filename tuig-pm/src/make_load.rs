@@ -98,7 +98,7 @@ pub fn make_load(input: TokenStream) -> TokenStream {
                 .filter(|f| !features.contains(f));
             let tokens = c.iter().map(|(_, ts)| ts);
             let doc_cfg = if super::is_nightly() {
-                quote::quote! { #[doc(cfg(any( #( feature = #all_feats ),* )))] }
+                quote::quote! { #[cfg_attr(doc, doc(cfg(any( #( feature = #all_feats ),* ))))] }
             } else {
                 quote::quote! {}
             };
