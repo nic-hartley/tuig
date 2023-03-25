@@ -19,6 +19,12 @@ mod_fn! {
 }
 
 fn is_nightly() -> bool {
-    use rustc_version::{VersionMeta, Channel, version_meta};
-    matches!(version_meta(), Ok(VersionMeta { channel: Channel::Nightly, .. }))
+    use rustc_version::{version_meta, Channel, VersionMeta};
+    matches!(
+        version_meta(),
+        Ok(VersionMeta {
+            channel: Channel::Nightly,
+            ..
+        })
+    )
 }
