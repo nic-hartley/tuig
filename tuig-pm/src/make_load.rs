@@ -97,14 +97,9 @@ pub fn make_load(input: TokenStream) -> TokenStream {
                 .map(|(f, _)| f)
                 .filter(|f| !features.contains(f));
             let tokens = c.iter().map(|(_, ts)| ts);
-            let doc_cfg = if super::is_nightly() {
-                quote::quote! { #[cfg_attr(doc, doc(cfg(any( #( feature = #all_feats ),* ))))] }
-            } else {
-                quote::quote! {}
-            };
             options.push(quote::quote! {
                 #[cfg(all(not(any( #( feature = #antifeatures ),* )), #( feature = #features ),* ))]
-                #doc_cfg
+                #[cfg_attr(doc, doc(cfg(any( #( feature = #all_feats ),* ))))]
                 #( #attrs )*
                 #[macro_export]
                 macro_rules! load {
