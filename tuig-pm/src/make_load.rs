@@ -41,7 +41,7 @@ fn parse_load(input: ParseStream) -> syn::Result<LoadInput> {
     Ok(res)
 }
 
-pub fn do_make_load(input: TokenStream) -> TokenStream {
+pub fn make_load(input: TokenStream) -> TokenStream {
     // parse each of the loaders
     let LoadInput { attrs, arms } = match parse_load.parse(input.into()) {
         Ok(li) => li,
@@ -97,8 +97,14 @@ pub fn do_make_load(input: TokenStream) -> TokenStream {
                 .map(|(f, _)| f)
                 .filter(|f| !features.contains(f));
             let tokens = c.iter().map(|(_, ts)| ts);
+            let doc_cfg = if super::is_nightly() {
+                quote::quote! { #[doc(cfg(any( #( feature = #all_feats ),* )))] }
+            } else {
+                quote::quote! {}
+            };
             options.push(quote::quote! {
                 #[cfg(all(not(any( #( feature = #antifeatures ),* )), #( feature = #features ),* ))]
+                #doc_cfg
                 #( #attrs )*
                 #[macro_export]
                 macro_rules! load {

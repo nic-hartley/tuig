@@ -33,8 +33,10 @@
 //! [`GuiRunner`] -- it uses `winit` to generate a graphical context and will ensure your GUI system handles input in
 //! the exact same way as every other.
 
-#![cfg_attr(doc, feature(doc_auto_cfg))]
+#![cfg_attr(doc, feature(doc_auto_cfg), feature(doc_cfg))]
 #![cfg_attr(not(feature = "std"), no_std)]
+
+tuig_pm::force_docs_nightly!();
 
 /// Re-exported for the [`load!`] macro.
 #[doc(hidden)]
@@ -95,7 +97,7 @@ tuig_pm::make_load! {
     /// - NOP (`nop`), for benchmarks
     /// - Vulkan GUI (`gui_vulkan`)
     /// - OpenGL GUI (`gui_opengl`)
-    /// - CPU-rendered GUI (`gui_cpu`)
+    /// - CPU-rendered GUI (`gui_softbuffer`)
     /// - crossterm CLI (`cli_crossterm`)
     ///
     /// This macro takes a function or method to call with the loaded `impl IoSystem`. That structure is weird but it

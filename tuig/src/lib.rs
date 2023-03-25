@@ -42,7 +42,9 @@
 //! intelligently pick "the best it can" given the ones you've turned on, but if you very reasonably disagree, you can
 //! load your preferred system and use [`Runner::run`] instead.
 
-#![cfg_attr(doc, feature(doc_auto_cfg))]
+#![cfg_attr(doc, feature(doc_auto_cfg), feature(doc_cfg))]
+
+tuig_pm::force_docs_nightly!();
 
 mod agent;
 #[cfg(doc)]
