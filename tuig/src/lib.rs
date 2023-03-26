@@ -28,12 +28,12 @@
 //!
 //! # Architecture
 //!
-//! tuig is built around a shared event bus. Everything that happens in the game is represented by a single type 
+//! tuig is built around a shared event bus. Everything that happens in the game is represented by a single type
 //! <code>M: [Message]</code>. You'll also have a variety of of [`Agent<M>`]s, which do all of your actual simulation
 //! and event processing. The thing the player actually interacts with is the [`Game<M>`], which processes user input
 //! and renders the output, and communicates with agents by spawning events. Click those links for more details on
 //! each specific trait.
-//! 
+//!
 //! Events passed around are loosely organized into "rounds". As events are passed to agents, their [`Replies`] are
 //! collected, then applied only after each agent has seen the current round of events. However, agents **aren't
 //! necessarily** running in lockstep. They don't even all necessarily see the same rounds! You'll occasionally see
@@ -53,9 +53,9 @@ mod agent;
 #[cfg(doc)]
 pub mod docs;
 mod game;
+mod message;
 mod runner;
 mod util;
-mod message;
 
 pub use {
     agent::{Agent, ControlFlow, WaitHandle},

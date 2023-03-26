@@ -5,11 +5,11 @@ use std::fmt;
 use crate::Agent;
 
 /// A message that [`Agent`]s and [`Game`](crate::Game)s will be passing around.
-/// 
+///
 /// The relevant agents and games will be taking this as a generic parameter, not using it as a trait object, and you
 /// should do the same. Usually you'll implement this in an enum. If you *want* a trait object, use `Message` as a
 /// supertrait for yours.
-/// 
+///
 /// This trait requires `Clone`, `Send`, and `Sync`, to ensure it can be properly shared across all threads.
 pub trait Message: Clone + Send + Sync {
     /// The message to send agents when there aren't any other messages queued for processing, to ensure every awake
@@ -26,7 +26,7 @@ impl<T: Clone + Send + Sync + Default> Message for T {
 }
 
 /// Allows a [`Game`](crate::Game) or [`Agent`] to make things happen in the engine in response to events or input.
-/// 
+///
 /// Remember that none of these will be acted on immediately -- only once the round ends.
 pub struct Replies<M: Message> {
     pub(crate) agents: Vec<Box<dyn Agent<M>>>,
@@ -53,7 +53,7 @@ impl<M: Message> fmt::Debug for Replies<M> {
 
 impl<M: Message> Replies<M> {
     /// Have an agent spawned into the next round of events or so.
-    /// 
+    ///
     /// tuig will try to spawn the agent in to the immediately next round, but that's not always guaranteed, and in
     /// particular if the game is lagging it may be some time before new agents are spawned. If you need to ensure
     /// something happens when the agent starts, implement [`Agent::start`]. If one agent needs to synchronize with
@@ -63,7 +63,7 @@ impl<M: Message> Replies<M> {
     }
 
     /// The same as [`Replies::spawn`], but with a boxed agent.
-    /// 
+    ///
     /// Generally, you should use `spawn`; it reduces boilerplate. But if you happen to be passing around trait
     /// objects in Boxes *anyway*, then you should use this.
     pub fn spawn_boxed(&mut self, agent: Box<dyn Agent<M>>) -> &mut Self {
@@ -72,9 +72,9 @@ impl<M: Message> Replies<M> {
     }
 
     /// Queues up a message to be sent out in the next round.
-    /// 
+    ///
     /// Queued messages are guaranteed to be processed in the next round after this one. So:
-    /// 
+    ///
     /// - Other running agents won't see this event until next round
     /// - Agents [`Self::spawn`]ed this round **might not** see it (see that method for why)
     pub fn queue(&mut self, msg: M) -> &mut Self {

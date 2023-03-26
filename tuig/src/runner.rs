@@ -9,7 +9,8 @@ use tuig_iosys::{Action, IoRunner, IoSystem, Screen};
 use crate::{
     agent::{Agent, ControlFlow},
     game::{Game, Response},
-    util::timing::Timer, Replies, Message,
+    util::timing::Timer,
+    Message, Replies,
 };
 
 struct AgentRunner<M: Message> {

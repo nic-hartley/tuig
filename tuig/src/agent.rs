@@ -1,5 +1,4 @@
 /// The `Agent` trait and its `ControlFlow`
-
 use core::fmt;
 use std::{
     sync::{
@@ -14,7 +13,7 @@ use mock_instant::Instant;
 #[cfg(not(test))]
 use std::time::Instant;
 
-use crate::{Replies, Message};
+use crate::{Message, Replies};
 
 /// See [`ControlFlow::Handle`].
 #[derive(Clone)]
