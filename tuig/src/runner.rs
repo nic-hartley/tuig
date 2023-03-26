@@ -234,38 +234,42 @@ pub struct Runner<G: Game + 'static> {
 }
 
 impl<G: Game + 'static> Runner<G> {
-    /// Prepare a game to be run
+    /// Prepare a game to be run.
     pub fn new(game: G) -> Self {
         Self {
             game,
             events: vec![],
             agents: vec![],
-            input_tick: 0.25,
+            input_tick: 0.1,
         }
     }
 
-    /// Set an agent to be running at game startup, to process the first tick of events
+    /// Set an agent to be running at game startup, to process the first round of messages.
     pub fn spawn(mut self, agent: impl Agent<G::Message> + 'static) -> Self {
         self.agents.push(Box::new(agent));
         self
     }
 
-    /// Add a message to be handled on the first tick, by the first crop of [`spawn`][Self::spawn]ed agents.
+    /// Add a message to be handled in the first round, by the first crop of [`Self::spawn`]ed agents.
     pub fn queue(mut self, event: G::Message) -> Self {
         self.events.push(event);
         self
     }
 
-    /// Set the target time between rounds of events.
-    ///
-    /// Note that rounds may take longer, if it just takes longer to handle all the events in a round.
+    /// Set the desired time between rounds of events.
+    /// 
+    /// If processing a round takes longer than this, the game is considered to be "lagging". If it takes less time,
+    /// then the runner will sit around, just processing input until the round is done.
+    /// 
+    /// The exact mechanics of round timing in laggy games is deliberately left unspecified so I can fiddle with it to
+    /// make it "work nicer". Broadly, though: If it lags a little and sporadically, the rounds tick over immediately
+    /// until it "catches up" to approximately match realtime. If it properly *lags out*, getting too far behind, then
+    /// the timer resets and starts ticking relative to the end of the lag.
     pub fn input_tick(mut self, tick: f32) -> Self {
         self.input_tick = tick;
         self
     }
 
-    /// Implementation of [`Self::run`] for `run_orig`: Monopolizes the main thread for the IoRunner, and spins off
-    /// another thread to handle the game and all agents.
     #[cfg(feature = "run_orig")]
     fn run_orig(self, iosys: impl IoSystem + 'static, mut iorun: impl IoRunner) -> G {
         let Self {
@@ -403,6 +407,7 @@ impl<G: Game + 'static> Runner<G> {
     /// This function only exits when [`Game::event`] or [`Game::input`] returns [`Response::Quit`]. It returns the
     /// [`Game`], primarily for testing purposes. If loading fails, it panics.
     #[cfg(feature = "__io")]
+    #[cfg_attr(doc, doc(cfg(feature = "io_*")))]
     pub fn load_run(self) -> G {
         tuig_iosys::load!(self.run).unwrap()
     }

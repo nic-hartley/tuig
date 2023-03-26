@@ -19,6 +19,8 @@ pub trait Message: Clone + Send + Sync {
     fn tick() -> Self;
 }
 
+/// Primarly so you can use basic integer types as messages in tests like `mass-events`, automatically implement
+/// `Message` for `Default` types. `Message::tick()` returns `Default::default()`.
 impl<T: Clone + Send + Sync + Default> Message for T {
     fn tick() -> Self {
         Self::default()

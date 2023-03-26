@@ -71,6 +71,7 @@ pub use {
 /// If you need more control, e.g. selecting a specific backend or queueing initial agents, use [`Runner`]. Many real
 /// games won't, as they won't be doing anything until after some user input asks them to.
 #[cfg(feature = "__io")]
+#[cfg_attr(doc, doc(cfg(feature = "io_*")))]
 pub fn run<G: Game + 'static>(game: G) -> G {
     Runner::new(game).load_run()
 }
