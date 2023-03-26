@@ -1,3 +1,5 @@
+//! A backend that does nothing, for when you need a backend to do nothing.
+
 #![cfg(feature = "nop")]
 
 #[cfg(not(feature = "std"))]

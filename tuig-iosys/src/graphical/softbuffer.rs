@@ -1,6 +1,6 @@
 //! Implements CPU-based rendering for GUIs.
 //!
-//! This should be available on more or less all platforms.
+//! This should be quite widely available and compatible.
 
 #![cfg(feature = "gui_softbuffer")]
 

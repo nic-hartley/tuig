@@ -1,3 +1,5 @@
+//! Just the `XY` type.
+
 use core::{
     fmt,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign},

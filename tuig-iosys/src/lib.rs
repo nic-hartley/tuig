@@ -1,8 +1,9 @@
-//! > *This crate was designed and built with [`tuig`](../tuig/index.html) in mind. If you're using tuig, see its
-//! documentation for information.*
+//! This crate was designed and built with [`tuig`](../tuig/index.html) in mind. If you're using tuig, see its docs,
+//! too, for how it uses this crate.
 //!
-//! That said, `tuig-iosys` tries to be somewhat more broadly useful. If you want to use it yourself, there are two
-//! central parts to familiarize yourself with.
+//! That said, `tuig-iosys` tries to be somewhat more broadly useful. It's still hyperfocused on textmode outputs, but
+//! it doesn't have all the extra "game engine" stuff. If you want to use it yourself, there are two central parts to
+//! familiarize yourself with.
 //!
 //! The first is [`Screen`]. It's a grid of formatted characters you can freely draw to. With the `ui` feature, it
 //! also has a small, modular UI system; see [`ui`] for more information. The formatting is in [`fmt`]; see that for

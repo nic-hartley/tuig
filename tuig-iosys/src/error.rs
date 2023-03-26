@@ -1,3 +1,5 @@
+//! The many ways something can go wrong while using an IoSystem.
+
 use alloc::{borrow::Cow, string::String};
 
 #[non_exhaustive]

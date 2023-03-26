@@ -1,4 +1,4 @@
-//! Implements GUI rendering of the screen, and contains all the rendering backends.
+//! Implements all the common window management stuff and delegates the rendering to a `GuiBackend`.
 
 #![cfg(feature = "gui")]
 

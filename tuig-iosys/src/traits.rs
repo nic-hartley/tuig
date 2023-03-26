@@ -1,3 +1,5 @@
+//! The IO system/backend traits themselves.
+
 use crate::{Action, Result, Screen, XY};
 
 /// An input/output system.

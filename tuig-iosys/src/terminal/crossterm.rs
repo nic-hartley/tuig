@@ -1,4 +1,4 @@
-//! Implements the (crossterm-based) rendering to CLI.
+//! Implements the crossterm-based CLI backend.
 
 #![cfg(feature = "cli_crossterm")]
 
