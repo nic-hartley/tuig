@@ -34,17 +34,18 @@
 //! and renders the output, and communicates with agents by spawning events. Click those links for more details on
 //! each specific trait.
 //!
-//! Events passed around are loosely organized into "rounds". As events are passed to agents, their [`Replies`] are
-//! collected, then applied only after each agent has seen the current round of events. However, agents **aren't
-//! necessarily** running in lockstep. They don't even all necessarily see the same rounds! You'll occasionally see
-//! them mentioned because that's how the engine works internally, and it explains why certain things happen or don't.
-//!
 //! `Agent`s and the `Game` (coincidentally the name of my new ska band) can inject new agents or messages through
 //! [`Replies`], which is the general handle into the game's internals for most things. An `Agent` can put itself to
-//! sleep -- including metaphorically -- by returning different [`ControlFlow`]s, which is useful for boosting
-//! performance by reducing how many agents need to be considered but shouldn't be relied on for anything too serious.
-//! `Game`s have a similar option in [`Response`], though they're gonna get called constantly anyway, so their
-//! responses are about re-rendering the text or exiting the game entirely.
+//! sleep -- including foreever -- by returning different [`ControlFlow`]s, which is useful for boosting performance
+//! by reducing how many agents need to be considered but shouldn't be relied on for anything too serious. `Game`s
+//! have a similar option in [`Response`], though they're gonna get called constantly anyway, so their responses are
+//! about re-rendering the text or exiting the game entirely.
+//!
+//! Messages being passed around are loosely organized into "rounds". As messages are passed to agents, their replies
+//! are collected, then applied only after each agent has seen the full current round. However, agents **don't** run
+//! in lockstep. They don't even all necessarily see the same rounds! You'll occasionally see them mentioned because
+//! that's how the engine works internally, and it explains why certain things happen or don't. But in short: Don't
+//! count on queued events or spawned agents to be *immediate*, just vaguely "soon".
 
 #![cfg_attr(doc, feature(doc_cfg, doc_auto_cfg))]
 tuig_pm::force_docs_nightly!();
