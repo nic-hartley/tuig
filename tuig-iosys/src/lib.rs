@@ -1,5 +1,5 @@
-//! > *This crate was designed and built with [`tuig`](https://crates.io/crates/tuig) in mind. If you're using tuig,
-//! see its documentation for information.*
+//! > *This crate was designed and built with [`tuig`](../tuig/index.html) in mind. If you're using tuig, see its
+//! documentation for information.*
 //!
 //! That said, `tuig-iosys` tries to be somewhat more broadly useful. If you want to use it yourself, there are two
 //! central parts to familiarize yourself with.

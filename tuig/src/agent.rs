@@ -1,4 +1,4 @@
-use crate::game::{Message, Replies};
+/// The `Agent` trait and its `ControlFlow`
 
 use core::fmt;
 use std::{
@@ -13,6 +13,8 @@ use std::{
 use mock_instant::Instant;
 #[cfg(not(test))]
 use std::time::Instant;
+
+use crate::{Replies, Message};
 
 /// See [`ControlFlow::Handle`].
 #[derive(Clone)]

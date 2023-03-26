@@ -8,8 +8,8 @@ use tuig_iosys::{Action, IoRunner, IoSystem, Screen};
 
 use crate::{
     agent::{Agent, ControlFlow},
-    game::{Game, Message, Replies, Response},
-    util::timing::Timer,
+    game::{Game, Response},
+    util::timing::Timer, Replies, Message,
 };
 
 struct AgentRunner<M: Message> {
