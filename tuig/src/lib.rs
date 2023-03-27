@@ -28,11 +28,11 @@
 //!
 //! # Architecture
 //!
-//! tuig is built around a shared event bus. Everything that happens in the game is represented by a single type
+//! tuig is built around a shared message bus. Everything that happens in the game is represented by a single type
 //! <code>M: [Message]</code>. You'll also have a variety of of [`Agent<M>`]s, which do all of your actual simulation
-//! and event processing. The thing the player actually interacts with is the [`Game<M>`], which processes user input
-//! and renders the output, and communicates with agents by spawning events. Click those links for more details on
-//! each specific trait.
+//! and message processing. The thing the player actually interacts with is the [`Game<M>`], which processes user
+//! input and renders the output, and communicates with agents by spawning messages. Click those links for more
+//! details on each specific trait.
 //!
 //! `Agent`s and the `Game` (coincidentally the name of my new ska band) can inject new agents or messages through
 //! [`Replies`], which is the general handle into the game's internals for most things. An `Agent` can put itself to
@@ -45,7 +45,7 @@
 //! are collected, then applied only after each agent has seen the full current round. However, agents **don't** run
 //! in lockstep. They don't even all necessarily see the same rounds! You'll occasionally see them mentioned because
 //! that's how the engine works internally, and it explains why certain things happen or don't. But in short: Don't
-//! count on queued events or spawned agents to be *immediate*, just vaguely "soon".
+//! count on queued messages or spawned agents to be *immediate*, just vaguely "soon".
 
 #![cfg_attr(doc, feature(doc_cfg, doc_auto_cfg))]
 tuig_pm::force_docs_nightly!();

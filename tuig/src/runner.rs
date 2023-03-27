@@ -26,32 +26,32 @@ impl<M: Message> AgentRunner<M> {
         }
     }
 
-    /// Perform one round of event processing.
+    /// Perform one round of message processing.
     ///
-    /// `agents` and `events` are both input and output:
+    /// `agents` and `messages` are both input and output:
     ///
-    /// - `agents` and `events` passed in are the agents/events for this runner to run
-    /// - `agents` and `events` coming out are the agents that this round spawned
+    /// - `agents` and `messages` passed in are the agents/messages for this runner to run
+    /// - `agents` and `messages` coming out are the agents that this round spawned
     ///
-    /// Notably the vecs *will be cleared* and old events *will not be available*!
+    /// Notably the vecs *will be cleared* and old messages *will not be available*!
     #[cfg_attr(feature = "run_rayon", allow(unused))]
-    fn step(&mut self, events: &mut Vec<M>, agents: &mut Vec<Box<dyn Agent<M>>>) {
+    fn step(&mut self, messages: &mut Vec<M>, agents: &mut Vec<Box<dyn Agent<M>>>) {
         self.agents.extend(
             agents
                 .drain(..)
                 .map(|mut a| (a.start(&mut self.replies), a)),
         );
 
-        if events.is_empty() {
-            events.push(M::tick());
+        if messages.is_empty() {
+            messages.push(M::tick());
         }
 
         for (cf, agent) in self.agents.iter_mut() {
             if !cf.is_ready() {
                 continue;
             }
-            for event in events.iter() {
-                *cf = agent.react(event, &mut self.replies);
+            for msg in messages.iter() {
+                *cf = agent.react(msg, &mut self.replies);
                 if !cf.is_ready() {
                     break;
                 }
@@ -68,32 +68,32 @@ impl<M: Message> AgentRunner<M> {
             _ => true,
         });
 
-        // we're done with the old events now
-        events.clear();
+        // we're done with the old messages now
+        messages.clear();
         // pragmatically this just outputs self.replies.messages and clears it, but this reuses allocations
-        mem::swap(&mut self.replies.messages, events);
+        mem::swap(&mut self.replies.messages, messages);
         // ditto but for agents (no clear needed because we drained earlier)
         mem::swap(&mut self.replies.agents, agents);
     }
 
-    /// Perform one round of event processing, using rayon.
+    /// Perform one round of message processing, using rayon.
     ///
-    /// `agents` and `events` are both input and output:
+    /// `agents` and `messages` are both input and output:
     ///
-    /// - `agents` and `events` passed in are the agents/events for this runner to run
-    /// - `agents` and `events` coming out are the agents that this round spawned
+    /// - `agents` and `messages` passed in are the agents/messages for this runner to run
+    /// - `agents` and `messages` coming out are the agents that this round spawned
     ///
-    /// Notably the vecs *will be cleared* and old events *will not be available*!
+    /// Notably the vecs *will be cleared* and old messages *will not be available*!
     #[cfg(feature = "run_rayon")]
-    fn step_rayon(&mut self, events: &mut Vec<M>, agents: &mut Vec<Box<dyn Agent<M>>>) {
+    fn step_rayon(&mut self, messages: &mut Vec<M>, agents: &mut Vec<Box<dyn Agent<M>>>) {
         use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
         let mut replies = Replies::default();
         self.agents
             .extend(agents.drain(..).map(|mut a| (a.start(&mut replies), a)));
 
-        if events.is_empty() {
-            events.push(M::tick());
+        if messages.is_empty() {
+            messages.push(M::tick());
         }
 
         let agent_replies = self
@@ -104,8 +104,8 @@ impl<M: Message> AgentRunner<M> {
                 if !cf.is_ready() {
                     return replies;
                 }
-                for event in events.iter() {
-                    *cf = agent.react(event, &mut replies);
+                for msg in messages.iter() {
+                    *cf = agent.react(msg, &mut replies);
                     if !cf.is_ready() {
                         break;
                     }
@@ -131,7 +131,7 @@ impl<M: Message> AgentRunner<M> {
         });
 
         // no attempt to reuse allocations because we can't anyway in parallel
-        *events = replies.messages;
+        *messages = replies.messages;
         *agents = replies.agents;
     }
 }
@@ -157,16 +157,16 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
         }
     }
 
-    /// Feed a list of events to the associated `Game`.
+    /// Feed a list of messages to the associated `Game`.
     ///
     /// Returns whether a stop was requested.
-    fn feed(&mut self, events: &[G::Message]) -> bool {
-        if events.is_empty() {
+    fn feed(&mut self, messages: &[G::Message]) -> bool {
+        if messages.is_empty() {
             return self.feed(&[G::Message::tick()]);
         }
 
-        for event in events {
-            match self.game.event(event) {
+        for msg in messages {
+            match self.game.message(msg) {
                 Response::Nothing => (),
                 Response::Redraw => self.tainted = true,
                 Response::Quit => return true,
@@ -180,12 +180,12 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
     /// Returns whether a stop was requested.
     fn io(
         &mut self,
-        events: &mut Vec<G::Message>,
+        messages: &mut Vec<G::Message>,
         agents: &mut Vec<Box<dyn Agent<G::Message>>>,
     ) -> bool {
         let mut replies = Replies {
             agents: mem::take(agents),
-            messages: mem::take(events),
+            messages: mem::take(messages),
         };
         while let Ok(Some(action)) = self.iosys.poll_input() {
             match action {
@@ -199,7 +199,7 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
             }
         }
         *agents = replies.agents;
-        *events = replies.messages;
+        *messages = replies.messages;
         false
     }
 
@@ -227,7 +227,7 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
 /// Handles starting up and running a `Game`.
 #[must_use]
 pub struct Runner<G: Game + 'static> {
-    events: Vec<G::Message>,
+    messages: Vec<G::Message>,
     agents: Vec<Box<dyn Agent<G::Message>>>,
     game: G,
     input_tick: f32,
@@ -238,7 +238,7 @@ impl<G: Game + 'static> Runner<G> {
     pub fn new(game: G) -> Self {
         Self {
             game,
-            events: vec![],
+            messages: vec![],
             agents: vec![],
             input_tick: 0.1,
         }
@@ -251,12 +251,12 @@ impl<G: Game + 'static> Runner<G> {
     }
 
     /// Add a message to be handled in the first round, by the first crop of [`Self::spawn`]ed agents.
-    pub fn queue(mut self, event: G::Message) -> Self {
-        self.events.push(event);
+    pub fn queue(mut self, msg: G::Message) -> Self {
+        self.messages.push(msg);
         self
     }
 
-    /// Set the desired time between rounds of events.
+    /// Set the desired time between rounds of messages.
     ///
     /// If processing a round takes longer than this, the game is considered to be "lagging". If it takes less time,
     /// then the runner will sit around, just processing input until the round is done.
@@ -274,7 +274,7 @@ impl<G: Game + 'static> Runner<G> {
     fn run_orig(self, iosys: impl IoSystem + 'static, mut iorun: impl IoRunner) -> G {
         let Self {
             game,
-            mut events,
+            mut messages,
             mut agents,
             input_tick,
         } = self;
@@ -287,7 +287,7 @@ impl<G: Game + 'static> Runner<G> {
             'mainloop: loop {
                 loop {
                     gr.render();
-                    if gr.io(&mut events, &mut agents) {
+                    if gr.io(&mut messages, &mut agents) {
                         break 'mainloop;
                     }
                     if input_timer.tick_ready() {
@@ -296,10 +296,10 @@ impl<G: Game + 'static> Runner<G> {
                     thread::sleep(input_timer.remaining().min(Duration::from_millis(2)));
                 }
                 gr.render();
-                if gr.feed(&events) {
+                if gr.feed(&messages) {
                     break 'mainloop;
                 }
-                ar.step(&mut events, &mut agents);
+                ar.step(&mut messages, &mut agents);
             }
             gr.iosys.stop();
             gr.game
@@ -312,7 +312,7 @@ impl<G: Game + 'static> Runner<G> {
     fn run_single(self, iosys: impl IoSystem + 'static, mut iorun: impl IoRunner) -> G {
         let Self {
             game,
-            mut events,
+            mut messages,
             mut agents,
             input_tick,
         } = self;
@@ -327,7 +327,7 @@ impl<G: Game + 'static> Runner<G> {
                 if iorun.step() {
                     break 'mainloop;
                 }
-                if gr.io(&mut events, &mut agents) {
+                if gr.io(&mut messages, &mut agents) {
                     break 'mainloop;
                 }
                 if input_timer.tick_ready() {
@@ -336,10 +336,10 @@ impl<G: Game + 'static> Runner<G> {
                 thread::sleep(input_timer.remaining().min(Duration::from_millis(2)));
             }
             gr.render();
-            if gr.feed(&events) {
+            if gr.feed(&messages) {
                 break 'mainloop;
             }
-            ar.step(&mut events, &mut agents);
+            ar.step(&mut messages, &mut agents);
         }
         gr.iosys.stop();
         iorun.run();
@@ -352,7 +352,7 @@ impl<G: Game + 'static> Runner<G> {
         rayon::spawn(move || {
             let Self {
                 game,
-                mut events,
+                mut messages,
                 mut agents,
                 input_tick,
             } = self;
@@ -364,7 +364,7 @@ impl<G: Game + 'static> Runner<G> {
             'mainloop: loop {
                 loop {
                     gr.render();
-                    if gr.io(&mut events, &mut agents) {
+                    if gr.io(&mut messages, &mut agents) {
                         break 'mainloop;
                     }
                     if input_timer.tick_ready() {
@@ -373,10 +373,10 @@ impl<G: Game + 'static> Runner<G> {
                     thread::sleep(input_timer.remaining().min(Duration::from_millis(2)));
                 }
                 gr.render();
-                if gr.feed(&events) {
+                if gr.feed(&messages) {
                     break 'mainloop;
                 }
-                ar.step_rayon(&mut events, &mut agents);
+                ar.step_rayon(&mut messages, &mut agents);
             }
             gr.iosys.stop();
             send.send(gr.game).unwrap();
@@ -387,7 +387,7 @@ impl<G: Game + 'static> Runner<G> {
 
     /// Start the game running, according to the feature-selected runner.
     ///
-    /// This function only exits when [`Game::event`] or [`Game::input`] returns [`Response::Quit`]. It returns the
+    /// This function only exits when [`Game::message`] or [`Game::input`] returns [`Response::Quit`]. It returns the
     /// [`Game`], primarily for testing purposes.
     #[allow(unreachable_code)] // for `cargo check --all-features`
     pub fn run(self, iosys: impl IoSystem + 'static, iorun: impl IoRunner) -> G {
@@ -404,7 +404,7 @@ impl<G: Game + 'static> Runner<G> {
     ///
     /// This **must** be run on the main thread. Ideally, you'd run it from `main` directly.
     ///
-    /// This function only exits when [`Game::event`] or [`Game::input`] returns [`Response::Quit`]. It returns the
+    /// This function only exits when [`Game::message`] or [`Game::input`] returns [`Response::Quit`]. It returns the
     /// [`Game`], primarily for testing purposes. If loading fails, it panics.
     #[cfg(feature = "__io")]
     #[cfg_attr(doc, doc(cfg(feature = "io_*")))]

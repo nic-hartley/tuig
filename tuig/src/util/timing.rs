@@ -1,4 +1,4 @@
-//! Miscellaneous helper types around controlling the timing of events.
+//! Miscellaneous helper types around controlling the timing of messages.
 
 // Not everything here is used under every feature combination; we silence the warnings rather than trying to define
 // under exactly what conditions any given function is expected to be used.

@@ -7,7 +7,7 @@ use crate::{Action, Result, Screen, XY};
 /// The output is called a "display" to distinguish it from the [`Screen`].
 ///
 /// This object is meant to be associated with a [`IoRunner`], which will run infinitely on the main thread while this
-/// is called from within the event system.
+/// is called from within the message system.
 pub trait IoSystem: Send {
     /// Actually render a [`Screen`] to the display.
     ///

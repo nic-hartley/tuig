@@ -179,7 +179,7 @@ impl Game for Redshell {
         }
     }
 
-    fn event(&mut self, event: &Event) -> Response {
+    fn message(&mut self, event: &Event) -> Response {
         match event {
             Event::AddTab(b) => {
                 let app = b

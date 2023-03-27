@@ -23,7 +23,7 @@ std = ["tuig-iosys/std"]
 test_extras = []
 
 [[bin]]
-name = "mass-events"
+name = "mass-messages"
 required-features = ["io_nop", "__run"]
 
 [dependencies]

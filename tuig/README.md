@@ -45,7 +45,7 @@ COD:MW2 and Portal aren't.
 A good rule of thumb is that the more solutions there are to any given in-game problem, the more systemic the game is.
 
 There isn't as clear a line as with textmode vs. graphical games.
-In tuig's case, it's enabled through the event system, which has agents listening for events they're interested in rather than being reached out to.
+In tuig's case, it's enabled through the message system, which has agents listening for messages they're interested in rather than being reached out to.
 It's designed to more cleanly represent a *world*, whose components can interact in a variety of ways.
 
 ### What else does tuig offer?

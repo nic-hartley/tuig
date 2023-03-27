@@ -60,7 +60,7 @@ You want `tuig-iosys` for an IO system with:
 You want `tuig` for a game engine with:
 
 - A hyperfocus on textmode games
-- An agent-and-event structure that enables systemic games
+- An agent-and-message structure that enables systemic games
 - And more!
 
 And you want *neither* if you're trying to general-purpose GUI things, or simple console output.

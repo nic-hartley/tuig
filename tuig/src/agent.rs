@@ -62,7 +62,7 @@ impl fmt::Debug for WaitHandle {
 ///
 /// This only says when [`Agent::react`][super::Agent::react] *should* start being called again. The associated agent
 /// won't skip a round it should have seen, but it may see rounds it wasn't supposed to. Treat this like an easy
-/// optimization: if you report it accurately, you can save the engine a bit of time when it processes events.
+/// optimization: if you report it accurately, you can save the engine a bit of time when it processes messages.
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum ControlFlow {
     /// Stay awake for next round.
@@ -170,7 +170,7 @@ pub trait Agent<M: Message>: Send + Sync {
     /// By default, does nothing and returns [`ControlFlow::Kill`], under the assumption that you'd have implemented
     /// `react` if you wanted your agent to stay alive and do things.
     #[cfg_attr(coverage, no_coverage)]
-    fn react(&mut self, _event: &M, _replies: &mut Replies<M>) -> ControlFlow {
+    fn react(&mut self, _msg: &M, _replies: &mut Replies<M>) -> ControlFlow {
         ControlFlow::Kill
     }
 }

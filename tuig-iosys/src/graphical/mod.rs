@@ -264,7 +264,7 @@ pub trait GuiRenderer: Send + Sync + Sized {
 /// of the windowing, e.g.:
 ///
 /// - Window creation and management through winit
-/// - Input handling, i.e. converting `winit`'s events to [`Action`]
+/// - Input handling, i.e. converting `winit`'s events to [`Action`]s
 /// - Closing the window when `stop` is called
 /// - Calling the `GuiBackend` when appropriate
 pub struct GuiSystem<B: GuiRenderer> {

@@ -99,7 +99,7 @@ pub mod backends {
         /// An [`IoSystem`] that does nothing at all.
         ///
         /// Rendering is a no-op, input never comes, and the runner just waits forever for `stop`. Meant primarily for
-        /// testing, e.g. `mass-events`.
+        /// testing, e.g. `mass-messages`.
         "nop", Nop => misc::nop::NopSystem, misc::nop::NopRunner;
         /// Crossterm-based CLI IO system.
         ///
