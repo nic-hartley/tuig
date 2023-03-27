@@ -75,7 +75,7 @@ jobs:
           std: "std"
         - run: rayon
           std: "std"
-    name: mass-events on runner ${{ matrix.run }}
+    name: mass-messages on runner ${{ matrix.run }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/cache@v3
@@ -95,8 +95,8 @@ jobs:
         rustup default stable
 
     - uses: actions/checkout@v3
-    - name: Deploy events
+    - name: Run mass-messages
       env:
         features: run_${{ matrix.run }},io_nop,${{ matrix.std }}
       run: |
-        cargo run --release --bin mass-events --features "${{ env.features }}"
+        cargo run --release --bin mass-messages --features "${{ env.features }}"
