@@ -1,8 +1,9 @@
-//! This crate was designed and built with [`tuig`](https://crates.io/crates/tuig) in mind. Most of the time you use
-//! this, you'll probably use it indirectly, by implementing `tuig::Game` and using a `tuig::Runner`.
+//! This crate was designed and built with [`tuig`](../tuig/index.html) in mind. If you're using tuig, see its docs,
+//! too, for how it uses this crate.
 //!
-//! That said, `tuig-iosys` tries to be somewhat more broadly useful. If you want to use it yourself, there are two
-//! central parts to familiarize yourself with.
+//! That said, `tuig-iosys` tries to be somewhat more broadly useful. It's still hyperfocused on textmode outputs, but
+//! it doesn't have all the extra "game engine" stuff. If you want to use it yourself, there are two central parts to
+//! familiarize yourself with.
 //!
 //! The first is [`Screen`]. It's a grid of formatted characters you can freely draw to. With the `ui` feature, it
 //! also has a small, modular UI system; see [`ui`] for more information. The formatting is in [`fmt`]; see that for
@@ -13,28 +14,39 @@
 //! [`IoRunner`] must be run on the main thread, to ensure things work as expected on Windows GUIs. Builtin backends
 //! are enabled by features and available in [`backends`].
 //!
-//! If you want to implement your own `tuig-iosys` compatible renderer, you should implement the `IoBackend` trait.
-//! As a library user, you shouldn't actually use it, but it will ensure you have all the expected functions, named
-//! the expected things with the expected function signatures.
-//!
 //! # Features
 //!
-//! There's one feature to enable each builtin backend; see each backend for details.
+//! There's one feature to enable each builtin backend; see each backend for details. (When you see "available on
+//! has_backend only" in these docs, it refers to enabling at least one builtin.)
 //!
 //! The `std` feature, on by default, enables `std`. Some backends aren't available without it; you can still turn on
 //! their features but it'll yell at you. All of `fmt` is `no_std` compatible.
 //!
 //! There are also features controlling what extensions to `fmt` are available. This doesn't influence the selection of
 //! backends, but backends will cheerfully ignore anything they don't understand. See that module for details.
+//!
+//! # Custom backends
+//!
+//! If you want to implement your own `tuig-iosys` compatible renderer, you'll need an implementation of each of those
+//! traits. `IoSystem` is the `Send`/`Sync` handle with which to do the IO, and `IoRunner` occupies the main thread in
+//! case you need that, e.g. for GUI targets.
+//!
+//! If you're making a GUI backend, though, consider implementing [`im::GuiRenderer`] and using [`im::GuiSystem`] and
+//! [`im::GuiRunner`] -- it uses `winit` to generate a graphical context and will ensure your GUI system handles input
+//! in the exact same way as every other.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-
-use alloc::borrow::Cow;
+#![cfg_attr(doc, feature(doc_cfg, doc_auto_cfg))]
+tuig_pm::force_docs_nightly!();
 
 /// Re-exported for the [`load!`] macro.
+#[doc(hidden)]
 pub use alloc::{boxed::Box, collections::BTreeMap, string::String};
 
 extern crate alloc;
+
+mod error;
+mod traits;
 
 mod graphical;
 mod misc;
@@ -49,136 +61,81 @@ mod xy;
 
 mod util;
 
-#[non_exhaustive]
-#[derive(Debug)]
-pub enum Error {
-    /// An `io::Error` occurred.
-    #[cfg(feature = "std")]
-    Io(std::io::Error),
-    /// While a [`graphical`] backend was initializing, `winit` errored out.
-    #[cfg(feature = "gui")]
-    Winit(winit::error::ExternalError),
-    /// Just directly contains an error message.
-    Bare(Cow<'static, str>),
-}
-
-#[cfg(feature = "std")]
-impl From<std::io::Error> for Error {
-    fn from(value: std::io::Error) -> Self {
-        Self::Io(value)
-    }
-}
-
-#[cfg(feature = "gui")]
-impl From<winit::error::ExternalError> for Error {
-    fn from(value: winit::error::ExternalError) -> Self {
-        Self::Winit(value)
-    }
-}
-
-impl From<&'static str> for Error {
-    fn from(value: &'static str) -> Self {
-        Self::Bare(Cow::Borrowed(value))
-    }
-}
-
-impl From<String> for Error {
-    fn from(value: String) -> Self {
-        Self::Bare(Cow::Owned(value))
-    }
-}
-
-type Result<T> = core::result::Result<T, Error>;
-
-/// An input/output system.
-///
-/// The output is called a "display" to distinguish it from the [`Screen`].
-///
-/// This object is meant to be associated with a [`IoRunner`], which will run infinitely on the main thread while this
-/// is called from within the event system.
-pub trait IoSystem: Send {
-    /// Actually render a [`Screen`] to the display.
-    fn draw(&mut self, screen: &screen::Screen) -> Result<()>;
-    /// Get the size of the display, in characters.
-    fn size(&self) -> xy::XY;
-
-    /// Wait for the next user input.
-    fn input(&mut self) -> Result<action::Action>;
-    /// If the next user input is available, return it.
-    fn poll_input(&mut self) -> Result<Option<action::Action>>;
-
-    /// Tells the associated [`IoRunner`] to stop and return control of the main thread, and tell the [`IoSystem`] to
-    /// dispose of any resources it's handling.
-    ///
-    /// This **must** return even if the `IoRunner` isn't done tearing down, to avoid deadlocks in the singlethreaded
-    /// mode.
-    ///
-    /// This will always be the last method called on this object (unless you count `Drop::drop`) so feel free to
-    /// panic in the others if they're called after this one, especially `draw`.
-    fn stop(&mut self);
-}
-
-/// The other half of an [`IoSystem`].
-///
-/// This type exists so that things which need to run on the main thread specifically, can.
-pub trait IoRunner {
-    /// Execute one 'step', which should be quick and must be non-blocking. Returns whether an exit has been requested
-    /// (i.e. by [`IoSystem::stop`]) since the last time `step` was called.
-    ///
-    /// **Warning**: This function may cause issues, e.g. on graphical targets it might block while the window is
-    /// being resized, [due to the underlying library][1]. Use it with caution, or only with backends you know work
-    /// well with it.
-    ///
-    /// Will always be called on the main thread.
-    ///
-    ///  [1]: https://docs.rs/winit/latest/winit/platform/run_return/trait.EventLoopExtRunReturn.html#caveats
-    #[must_use]
-    fn step(&mut self) -> bool;
-
-    /// Run until the paired [`IoSystem`] says to [stop](IoSystem::stop).
-    ///
-    /// Will always be called on the main thread.
-    ///
-    /// The default implementation just runs `while !self.step() { }`.
-    fn run(&mut self) {
-        while !self.step() {}
-    }
-}
-
 pub use crate::{
     action::{Action, Key, MouseButton},
+    error::{Error, Result},
     screen::Screen,
+    traits::{IoRunner, IoSystem},
     xy::XY,
 };
+
+/// Helper types for implementing your own (primarily graphical) IO systems.
+pub mod im {
+    #[cfg(feature = "gui")]
+    pub use super::graphical::{GuiRenderer, GuiRunner, GuiSystem, BOLD_TTF, REGULAR_TTF};
+}
 
 /// Available rendering backends. See the [`IoSystem`] and [`IoRunner`] docs for more information.
 pub mod backends {
     #[allow(unused)]
     use super::*;
 
-    #[cfg(feature = "nop")]
-    pub type NopSystem = misc::nop::NopSystem;
-    #[cfg(feature = "nop")]
-    pub type NopRunner = misc::nop::NopRunner;
+    macro_rules! backends {
+        ( $(
+            $( #[ $( $attr:meta ),* ] )*
+            $feat:literal, $name:ident => $sys:ty, $run:ty
+        );* $(;)? ) => { paste::paste! { $(
+            #[cfg(feature = $feat)]
+            $( #[ $( $attr ),* ] )*
+            pub type [< $name System >] = $sys;
 
-    #[cfg(feature = "cli_crossterm")]
-    pub type CrosstermSystem = terminal::crossterm::CtSystem;
-    #[cfg(feature = "cli_crossterm")]
-    pub type CrosstermRunner = terminal::crossterm::CtRunner;
+            #[cfg(feature = $feat)]
+            #[doc = concat!("[`IoRunner`] for [`", stringify!($name), "System`].")]
+            pub type [< $name Runner >] = $run;
+        )* } }
+    }
 
-    #[cfg(feature = "gui_softbuffer")]
-    pub type SoftbufferSystem = graphical::GuiSystem<graphical::softbuffer::SoftbufferBackend>;
-    #[cfg(feature = "gui_softbuffer")]
-    pub type SoftbufferRunner = graphical::GuiRunner;
+    backends! {
+        /// An [`IoSystem`] that does nothing at all.
+        ///
+        /// Rendering is a no-op, input never comes, and the runner just waits forever for `stop`. Meant primarily for
+        /// testing, e.g. `mass-messages`.
+        "nop", Nop => misc::nop::NopSystem, misc::nop::NopRunner;
+        /// Crossterm-based CLI IO system.
+        ///
+        /// This uses an actual terminal to do its input/output. That means it should also work over SSH, Telnet, and
+        /// the like. It'll probably also work without even having a desktop environment, in a bare VTTY.
+        "cli_crossterm", Crossterm => terminal::crossterm::CtSystem, terminal::crossterm::CtRunner;
+        /// Window-based IO system, with CPU rendering.
+        ///
+        /// Because this is backed by [`softbuffer`](https://crates.io/crates/softbuffer), it should be more or less
+        /// as widely compatible as any graphical system can possibly be. And it should only get better with time and
+        /// updates to the dependencies.
+        "gui_softbuffer", Softbuffer => graphical::GuiSystem<graphical::softbuffer::SoftbufferBackend>, graphical::GuiRunner;
+    }
 }
 
 tuig_pm::make_load! {
+    /// Based on IO system features enabled, attempt to initialize an IO system, in the same manner as [`load!`].
+    ///
+    /// This returns things boxed so they can be used as trait objects, which provides nicer ergonomics at the
+    /// cost of slightly lower max performance.
+    pub fn load() -> core::result::Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), BTreeMap<&'static str, Error>> {
+        #[allow(unused)]
+        fn cb(
+            sys: impl IoSystem + 'static,
+            run: impl IoRunner + 'static,
+        ) -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
+            (Box::new(sys), Box::new(run))
+        }
+        load!(cb)
+    }
     /// Based on IO system features enabled, attempt to initialize an IO system; in order:
     ///
     /// - NOP (`nop`), for benchmarks
     /// - Vulkan GUI (`gui_vulkan`)
     /// - OpenGL GUI (`gui_opengl`)
-    /// - CPU-rendered GUI (`gui_cpu`)
+    /// - CPU-rendered GUI (`gui_softbuffer`)
     /// - crossterm CLI (`cli_crossterm`)
     ///
     /// This macro takes a function or method to call with the loaded `impl IoSystem`. That structure is weird but it
@@ -190,20 +147,4 @@ tuig_pm::make_load! {
     "nop" => $crate::backends::NopSystem::new(),
     "gui_softbuffer" => $crate::backends::SoftbufferSystem::new(20.0),
     "cli_crossterm" => $crate::backends::CrosstermSystem::new(),
-}
-
-/// Based on IO system features enabled, attempt to initialize an IO system, in the same manner as [`load!`].
-///
-/// This returns things boxed so they can be used as trait objects, which provides better ergonomics at the cost of
-/// slightly lower max performance.
-pub fn load(
-) -> core::result::Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), BTreeMap<&'static str, Error>> {
-    #[allow(unused)]
-    fn cb(
-        sys: impl IoSystem + 'static,
-        run: impl IoRunner + 'static,
-    ) -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
-        (Box::new(sys), Box::new(run))
-    }
-    load!(cb)
 }

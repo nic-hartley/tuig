@@ -1,4 +1,4 @@
-//! Miscellaneous stuff (especially macros) which are used across the project and needed a home
+//! Miscellaneous internal-only utilities.
 
 #![allow(unused)]
 

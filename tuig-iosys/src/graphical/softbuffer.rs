@@ -1,6 +1,6 @@
 //! Implements CPU-based rendering for GUIs.
 //!
-//! This should be available on more or less all platforms.
+//! This should be quite widely available and compatible.
 
 #![cfg(feature = "gui_softbuffer")]
 
@@ -19,7 +19,7 @@ use crate::{
     xy::XY,
 };
 
-use super::GuiBackend;
+use super::GuiRenderer;
 
 fn ioe4fe(e: &'static str) -> io::Error {
     io::Error::new(io::ErrorKind::Other, e)
@@ -113,7 +113,7 @@ pub struct SoftbufferBackend {
     underline_top: usize,
 }
 
-impl GuiBackend for SoftbufferBackend {
+impl GuiRenderer for SoftbufferBackend {
     fn new(scale: f32) -> io::Result<Self> {
         let regular = Font::from_bytes(
             super::REGULAR_TTF,

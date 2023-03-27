@@ -1,8 +1,4 @@
-//! This module handles all of the output, both abstractions and implementations.
-//!
-//! If you want to add more implementations, you need to:
-//! - Add the relevant implementation of `Screen`, in a new submodule
-//! - Modify `Screen::get` to properly detect and handle the new screen type, with `cfg!` or runtime checks
+//! Contains the miscellaneous types that `Screen` uses.
 
 use core::{
     iter::FusedIterator,
@@ -126,7 +122,7 @@ impl Screen {
 
     /// Write some formatted text to the position on screen.
     ///
-    /// This **does not** handle newlines or anything else. If you want that, see [`Textbox`].
+    /// This **does not** handle newlines or anything else. If you want that, use a UI widget.
     pub fn write(&mut self, pos: XY, text: Vec<Text>) {
         let XY(mut x, y) = pos;
         for chunk in text {

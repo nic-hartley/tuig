@@ -1,3 +1,5 @@
+//! A very simple "`Game`" which just spawns a bajillion messages and agents. Used for sorta-benchmarking.
+
 use std::time::Instant;
 
 use tuig::{Agent, ControlFlow, Game, Replies, Response, Runner};
@@ -17,14 +19,14 @@ impl Agent<TinyMessage> for TinyAgent {
         ControlFlow::Continue
     }
 
-    fn react(&mut self, event: &TinyMessage, replies: &mut Replies<TinyMessage>) -> ControlFlow {
-        if *event <= 1 {
+    fn react(&mut self, msg: &TinyMessage, replies: &mut Replies<TinyMessage>) -> ControlFlow {
+        if *msg <= 1 {
             // ignore it: collatz ended
-        } else if *event % AGENTS == self.factor % AGENTS {
-            let next = if *event % 2 == 0 {
-                *event / 2
+        } else if *msg % AGENTS == self.factor % AGENTS {
+            let next = if *msg % 2 == 0 {
+                *msg / 2
             } else {
-                *event * 3 + 1
+                *msg * 3 + 1
             };
             replies.queue(next);
         }
@@ -41,19 +43,19 @@ struct TinyGame {
 
 impl Game for TinyGame {
     type Message = TinyMessage;
-    fn event(&mut self, event: &Self::Message) -> Response {
-        if event != &0 {
+    fn message(&mut self, msg: &Self::Message) -> Response {
+        if msg != &0 {
             self.count += 1;
         }
-        if *event == 1 {
+        if *msg == 1 {
             self.complete += 1;
             if self.complete == AGENTS {
                 Response::Quit
             } else {
                 Response::Redraw
             }
-        } else if *event > self.max {
-            self.max = *event;
+        } else if *msg > self.max {
+            self.max = *msg;
             Response::Redraw
         } else {
             if self.count % (AGENTS / 100) == 0 {
