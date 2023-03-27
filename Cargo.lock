@@ -968,7 +968,7 @@ dependencies = [
 
 [[package]]
 name = "redshell"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "dashmap",
  "lazy_static",
@@ -1218,7 +1218,7 @@ checksum = "0609f771ad9c6155384897e1df4d948e692667cc0588548b68eb44d052b27633"
 
 [[package]]
 name = "tuig"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "crossbeam",
  "mock_instant",
@@ -1229,7 +1229,7 @@ dependencies = [
 
 [[package]]
 name = "tuig-iosys"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "crossterm",
  "fontdue",
@@ -1242,7 +1242,7 @@ dependencies = [
 
 [[package]]
 name = "tuig-pm"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "itertools",
  "proc-macro2",
