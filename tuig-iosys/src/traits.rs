@@ -10,20 +10,28 @@ use crate::{Action, Result, Screen, XY};
 /// is called from within the event system.
 pub trait IoSystem: Send {
     /// Actually render a [`Screen`] to the display.
+    /// 
+    /// Please don't `clone` the screen to send it to the `IoRunner` unless you *really really* have to. The reason
+    /// this takes a reference is so allocations can be reused.
     fn draw(&mut self, screen: &Screen) -> Result<()>;
     /// Get the size of the display, in characters.
+    /// 
+    /// This is the size of the actual renderable space. If there's extra room, e.g. a few pixels but not enough for a
+    /// whole column of characters, it doesn't count. (And it's up to the IoSystem to decide what to do with it --
+    /// usually, paint it a reasonable background color.)
     fn size(&self) -> XY;
 
     /// Wait for the next user input.
     fn input(&mut self) -> Result<Action>;
-    /// If the next user input is available, return it.
+    /// If the next user input is available, return it. Otherwise, return `None`.
+    /// 
+    /// Basically a non-blocking [`Self::input`].
     fn poll_input(&mut self) -> Result<Option<Action>>;
 
     /// Tells the associated [`IoRunner`] to stop and return control of the main thread, and tell the [`IoSystem`] to
     /// dispose of any resources it's handling.
     ///
-    /// This **must** return even if the `IoRunner` isn't done tearing down, to avoid deadlocks in the singlethreaded
-    /// mode.
+    /// This **must not** wait for the runner to finish tearing down, to avoid deadlocks in the singlethreaded mode.
     ///
     /// This will always be the last method called on this object (unless you count `Drop::drop`) so feel free to
     /// panic in the others if they're called after this one, especially `draw`.
@@ -31,8 +39,8 @@ pub trait IoSystem: Send {
 }
 
 /// The other half of an [`IoSystem`].
-///
-/// This type exists so that things which need to run on the main thread specifically, can.
+/// 
+/// This is used to do any processing that has to be done on the main thread.
 pub trait IoRunner {
     /// Execute one 'step', which should be quick and must be non-blocking. Returns whether an exit has been requested
     /// (i.e. by [`IoSystem::stop`]) since the last time `step` was called.

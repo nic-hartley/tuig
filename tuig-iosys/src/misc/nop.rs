@@ -41,8 +41,7 @@ impl IoSystem for NopSystem {
     }
 }
 
-/// An implementation of [`IoRunner`] that doesn't actually do anything except wait for `.stop` to be called. Used by
-/// [`NopSystem`], for benchmarking or testing.
+/// [`NopSystem`]'s runner.
 #[derive(Clone)]
 pub struct NopRunner(Arc<(Mutex<bool>, Condvar)>);
 

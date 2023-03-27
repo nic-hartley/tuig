@@ -2,13 +2,14 @@
 
 use alloc::{borrow::Cow, string::String};
 
+/// An error happened while trying to run an IO system.
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum Error {
     /// An `io::Error` occurred.
     #[cfg(feature = "std")]
     Io(std::io::Error),
-    /// While a [graphical backend][crate::GuiSystem] was initializing, `winit` errored out.
+    /// While a [graphical backend][crate::im::GuiSystem] was initializing or rendering, `winit` errored out.
     #[cfg(feature = "gui")]
     Winit(winit::error::ExternalError),
     /// Just directly contains an error message.
@@ -41,4 +42,5 @@ impl From<String> for Error {
     }
 }
 
+/// Alias for [`std::result::Result`] with the error always being [`Error`].
 pub type Result<T> = core::result::Result<T, Error>;

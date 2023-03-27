@@ -4,7 +4,7 @@ use alloc::string::String;
 
 use super::xy::XY;
 
-/// A key which can be pressed or released
+/// A key which can be pressed or released in an [`Action`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Key {
     Char(char),
@@ -52,7 +52,7 @@ impl Key {
     }
 }
 
-/// A mouse button which can be pressed or released
+/// A mouse button which can be pressed or released in an [`Action`].
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum MouseButton {
     Left,
@@ -62,24 +62,25 @@ pub enum MouseButton {
     ScrollDown,
 }
 
-/// An action the player has taken in the window.
+/// An action the player has taken in the [`IoSystem`][super::IoSystem].
 #[derive(Clone, PartialEq, Eq, Debug)]
+#[non_exhaustive]
 pub enum Action {
     /// A key was pressed. Note this theoretically handles modifiers by sending them when they're pressed, but
     /// depending on the input mechanism it may only be able to send them when a non-modifier key is pressed.
     KeyPress { key: Key },
     /// A key was let go. Note this theoretically handles modifiers by sending them when they're let go, but
-    /// depending on the input mechanism it may only be able to send them when a non-modifier key is pressed.
+    /// depending on the input mechanism it may only be able to send them when a non-modifier key is released.
     KeyRelease { key: Key },
-    /// A mouse button was pressed at the given location.
+    /// A mouse button was pressed.
     MousePress { button: MouseButton },
-    /// A mouse button was released at the given location.
+    /// A mouse button was released.
     MouseRelease { button: MouseButton },
     /// The mouse has moved to a new location, possibly while holding a button
     MouseMove { pos: XY },
-    /// Allows pushing redraw notifications, rather than having to update constantly and risk missing it
+    /// The render target requested that a redraw happen, maybe without direct user input.
     Redraw,
-    /// User requested the program end externally, e.g. clicking the X button in the window
+    /// User requested the program end externally, e.g. clicking the X button in a window
     Closed,
     /// User requested that the program pause temporarily
     Paused,

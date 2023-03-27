@@ -16,7 +16,8 @@
 //!
 //! # Features
 //!
-//! There's one feature to enable each builtin backend; see each backend for details.
+//! There's one feature to enable each builtin backend; see each backend for details. (When you see "available on
+//! has_backend only" in these docs, it refers to enabling at least one builtin.)
 //!
 //! The `std` feature, on by default, enables `std`. Some backends aren't available without it; you can still turn on
 //! their features but it'll yell at you. All of `fmt` is `no_std` compatible.
@@ -30,9 +31,9 @@
 //! traits. `IoSystem` is the `Send`/`Sync` handle with which to do the IO, and `IoRunner` occupies the main thread in
 //! case you need that, e.g. for GUI targets.
 //!
-//! If you're implementing a GUI backend, though, consider implementing [`GuiBackend`] and using [`GuiSystem`] and
-//! [`GuiRunner`] -- it uses `winit` to generate a graphical context and will ensure your GUI system handles input in
-//! the exact same way as every other.
+//! If you're making a GUI backend, though, consider implementing [`im::GuiRenderer`] and using [`im::GuiSystem`] and
+//! [`im::GuiRunner`] -- it uses `winit` to generate a graphical context and will ensure your GUI system handles input
+//! in the exact same way as every other.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(doc, feature(doc_cfg, doc_auto_cfg))]
@@ -67,31 +68,68 @@ pub use crate::{
     traits::{IoRunner, IoSystem},
     xy::XY,
 };
-#[cfg(feature = "gui")]
-pub use graphical::{GuiBackend, GuiRunner, GuiSystem};
+
+/// Helper types for implementing your own (primarily graphical) IO systems.
+pub mod im {
+    #[cfg(feature = "gui")]
+    pub use super::graphical::{GuiRenderer, GuiRunner, GuiSystem, REGULAR_TTF, BOLD_TTF};
+}
 
 /// Available rendering backends. See the [`IoSystem`] and [`IoRunner`] docs for more information.
 pub mod backends {
     #[allow(unused)]
     use super::*;
 
-    #[cfg(feature = "nop")]
-    pub type NopSystem = misc::nop::NopSystem;
-    #[cfg(feature = "nop")]
-    pub type NopRunner = misc::nop::NopRunner;
+    macro_rules! backends {
+        ( $(
+            $( #[ $( $attr:meta ),* ] )*
+            $feat:literal, $name:ident => $sys:ty, $run:ty
+        );* $(;)? ) => { paste::paste! { $(
+            #[cfg(feature = $feat)]
+            $( #[ $( $attr ),* ] )*
+            pub type [< $name System >] = $sys;
 
-    #[cfg(feature = "cli_crossterm")]
-    pub type CrosstermSystem = terminal::crossterm::CtSystem;
-    #[cfg(feature = "cli_crossterm")]
-    pub type CrosstermRunner = terminal::crossterm::CtRunner;
+            #[cfg(feature = $feat)]
+            #[doc = concat!("[`IoRunner`] for [`", stringify!($name), "System`].")]
+            pub type [< $name Runner >] = $run;
+        )* } }
+    }
 
-    #[cfg(feature = "gui_softbuffer")]
-    pub type SoftbufferSystem = graphical::GuiSystem<graphical::softbuffer::SoftbufferBackend>;
-    #[cfg(feature = "gui_softbuffer")]
-    pub type SoftbufferRunner = graphical::GuiRunner;
+    backends! {
+        /// An [`IoSystem`] that does nothing at all.
+        /// 
+        /// Rendering is a no-op, input never comes, and the runner just waits forever for `stop`. Meant primarily for
+        /// testing, e.g. `mass-events`.
+        "nop", Nop => misc::nop::NopSystem, misc::nop::NopRunner;
+        /// Crossterm-based CLI IO system.
+        /// 
+        /// This uses an actual terminal to do its input/output. That means it should also work over SSH, Telnet, and
+        /// the like. It'll probably also work without even having a desktop environment, in a bare VTTY.
+        "cli_crossterm", Crossterm => terminal::crossterm::CtSystem, terminal::crossterm::CtRunner;
+        /// Window-based IO system, with CPU rendering.
+        /// 
+        /// Because this is backed by [`softbuffer`](https://crates.io/crates/softbuffer), it should be more or less
+        /// as widely compatible as any graphical system can possibly be. And it should only get better with time and
+        /// updates to the dependencies.
+        "gui_softbuffer", Softbuffer => graphical::GuiSystem<graphical::softbuffer::SoftbufferBackend>, graphical::GuiRunner;
+    }
 }
 
 tuig_pm::make_load! {
+    /// Based on IO system features enabled, attempt to initialize an IO system, in the same manner as [`load!`].
+    ///
+    /// This returns things boxed so they can be used as trait objects, which provides nicer ergonomics at the
+    /// cost of slightly lower max performance.
+    pub fn load() -> core::result::Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), BTreeMap<&'static str, Error>> {
+        #[allow(unused)]
+        fn cb(
+            sys: impl IoSystem + 'static,
+            run: impl IoRunner + 'static,
+        ) -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
+            (Box::new(sys), Box::new(run))
+        }
+        load!(cb)
+    }
     /// Based on IO system features enabled, attempt to initialize an IO system; in order:
     ///
     /// - NOP (`nop`), for benchmarks

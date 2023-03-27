@@ -1,26 +1,20 @@
 use itertools::Itertools;
 use proc_macro2::{Span, TokenStream, TokenTree};
 use syn::{
-    parse::{ParseStream, Parser},
-    Attribute, LitStr, Token,
+    parse::{ParseStream, Parser, Parse},
+    Attribute, LitStr, Token, ItemFn,
 };
 
 struct LoadInput {
     attrs: Vec<Attribute>,
     arms: Vec<(String, Vec<TokenTree>)>,
+    load_fn: ItemFn,
 }
 
 fn parse_load(input: ParseStream) -> syn::Result<LoadInput> {
-    let mut res = LoadInput {
-        attrs: vec![],
-        arms: vec![],
-    };
-    while let Ok(attr) = input.call(Attribute::parse_outer) {
-        if attr.is_empty() {
-            break;
-        }
-        res.attrs.extend(attr);
-    }
+    let load_fn = input.call(ItemFn::parse)?;
+    let attrs = input.call(Attribute::parse_outer)?;
+    let mut arms = vec![];
     while !input.is_empty() {
         let feat = input.parse::<LitStr>()?.value();
         input.parse::<Token![=>]>()?;
@@ -30,7 +24,7 @@ fn parse_load(input: ParseStream) -> syn::Result<LoadInput> {
         }
         // extract if it's available, otherwise we exit on the next loop anyway
         let _ = input.parse::<Token![,]>();
-        res.arms.push((feat, body));
+        arms.push((feat, body));
     }
     if !input.is_empty() {
         return Err(syn::Error::new(
@@ -38,12 +32,12 @@ fn parse_load(input: ParseStream) -> syn::Result<LoadInput> {
             "unexpected extras after match arms",
         ));
     }
-    Ok(res)
+    Ok(LoadInput { attrs, arms, load_fn })
 }
 
 pub fn make_load(input: TokenStream) -> TokenStream {
     // parse each of the loaders
-    let LoadInput { attrs, arms } = match parse_load.parse(input.into()) {
+    let LoadInput { attrs, arms, load_fn } = match parse_load.parse(input.into()) {
         Ok(li) => li,
         Err(e) => return e.to_compile_error(),
     };
@@ -65,22 +59,6 @@ pub fn make_load(input: TokenStream) -> TokenStream {
     let all_feats = arms.into_iter().map(|(f, _)| f).collect::<Vec<_>>();
     // generate each combination of 1 to n
     let mut options: Vec<TokenStream> = vec![quote::quote! {
-        /// Based on IO system features enabled, attempt to initialize an IO system, in the same manner as [`load!`].
-        ///
-        /// This returns things boxed so they can be used as trait objects, which provides better ergonomics at the
-        /// cost of slightly lower max performance.
-        #[cfg(any( #( feature = #all_feats ),* ))]
-        pub fn load() -> core::result::Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), BTreeMap<&'static str, Error>> {
-            #[allow(unused)]
-            fn cb(
-                sys: impl IoSystem + 'static,
-                run: impl IoRunner + 'static,
-            ) -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
-                (Box::new(sys), Box::new(run))
-            }
-            load!(cb)
-        }
-
         #[cfg(not(any( #( feature = #all_feats ),* )))]
         #[macro_export]
         macro_rules! load {
@@ -96,10 +74,16 @@ pub fn make_load(input: TokenStream) -> TokenStream {
                 .iter()
                 .map(|(f, _)| f)
                 .filter(|f| !features.contains(f));
+            let cfgs = quote::quote! {
+                #[cfg(all(not(any( #( feature = #antifeatures ),* )), #( feature = #features ),* ))]
+                #[cfg_attr(doc, doc(cfg(has_backend)))]
+            };
             let tokens = c.iter().map(|(_, ts)| ts);
             options.push(quote::quote! {
-                #[cfg(all(not(any( #( feature = #antifeatures ),* )), #( feature = #features ),* ))]
-                #[cfg_attr(doc, doc(cfg(any( #( feature = #all_feats ),* ))))]
+                #cfgs
+                #load_fn
+
+                #cfgs
                 #( #attrs )*
                 #[macro_export]
                 macro_rules! load {

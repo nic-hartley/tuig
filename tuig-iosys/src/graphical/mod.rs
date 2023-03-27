@@ -32,8 +32,14 @@ use super::{IoRunner, IoSystem};
 
 pub mod softbuffer;
 
-const REGULAR_TTF: &[u8] = include_bytes!("inconsolata-reg.ttf");
-const BOLD_TTF: &[u8] = include_bytes!("inconsolata-bold.ttf");
+/// The default font, as a TTF file.
+/// 
+/// The default font is Inconsolata, a beautiful monospace font with many characters and released under an open,
+/// permissive license. You can replace it with any other you have the rights to, as long as you have the .ttf file.
+/// If you do pick another, *make sure it's monospace*; non-monospace fonts will look very ugly.
+pub const REGULAR_TTF: &[u8] = include_bytes!("inconsolata-reg.ttf");
+/// The default font, but bold.
+pub const BOLD_TTF: &[u8] = include_bytes!("inconsolata-bold.ttf");
 
 /// Convert a winit [`VirtualKeyCode`] to a Redshell [`Key`]
 fn key4vkc(vkc: Option<VirtualKeyCode>) -> Option<Key> {
@@ -214,15 +220,20 @@ fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
     })
 }
 
-/// Common interface for all of the GUI backends.
-///
-/// This is deliberately not a trait object. Unlike most of the other interfaces in Redshell, we're only gonna have
-/// one GUI backend at a time and won't need to be able to swap them on the fly. If we *do*, that will happen at a
-/// higher level -- replacing the current [`IoSystem`] with another.
-pub trait GuiBackend: Send + Sync + Sized {
-    /// Create a new rendering backend with the given font size. The font size is `fontdue`'s understanding of it: The
-    /// (approximate) width of the `m` character. In Inconsolata, or really any monospace font, that should also be
-    /// the width of every other character.
+/// Common interface for all of the GUI rendering backends.
+/// 
+/// [`GuiSystem`] / [`GuiRunner`] use (implementations of) this trait to do the actual rendering. A `GuiBackend` takes
+/// a `winit::window::Window`, renders a [`Screen`] to it however it wants, and that's it. `GuiSystem` and `GuiRunner`
+/// handle the window creation, input processing, etc.
+/// 
+/// If you need a font, the default is available (as a TTF file in `&[u8]` form) as [`REGULAR_TTF`] and [`BOLD_TTF`].
+/// 
+/// To use a `MyBackend: GuiBackend`, make a `GuiSystem` with [`GuiSystem::<MyBackend>::new`].
+pub trait GuiRenderer: Send + Sync + Sized {
+    /// Create a new backend with the given font size.
+    /// 
+    /// The font size is `fontdue`'s understanding of it: The (approximate) width in pixels of the `m` character. In
+    /// any monospace font, that should also be the width of every other character.
     fn new(font_size: f32) -> io::Result<Self>;
 
     /// Reset the renderer to use a new font size.
@@ -230,7 +241,7 @@ pub trait GuiBackend: Send + Sync + Sized {
     /// The default implementation simply destroys the old renderer and replaces it in-place with a new one, but there
     /// may be more efficient implementations for any given backend.
     ///
-    /// This doesn't need to re-render anything, but it cannot break the current window.
+    /// This doesn't need to re-render anything, but it *cannot* break the current window.
     fn renew(&mut self, font_size: f32) -> io::Result<()> {
         let new = Self::new(font_size)?;
         *self = new;
@@ -239,22 +250,32 @@ pub trait GuiBackend: Send + Sync + Sized {
 
     /// Render a screen onto the window.
     ///
-    /// This must only return when the rendering is as definitively complete as the backend can easily determine.
+    /// This should only return once the rendering is *actually complete*, not just queued. Or at the very least, once
+    /// it's in the OS's hands.
     fn render(&self, window: &Window, screen: &Screen) -> io::Result<()>;
 
     /// Return the bounding box dimensions of the characters being used in the font being used.
     fn char_size(&self) -> XY;
 }
 
-/// Provides the common (winit) functionality for a GUI, deferring the actual rendering to a [`GuiBackend`]
-pub struct GuiSystem<B: GuiBackend> {
+/// Provides a winit-based GUI [`IoSystem`].
+/// 
+/// This defers the actual rendering to a [`GuiRenderer`] passed as a generic parameter, but otherwise handles the rest
+/// of the windowing, e.g.:
+/// 
+/// - Window creation and management through winit
+/// - Input handling, i.e. converting `winit`'s events to [`Action`]
+/// - Closing the window when `stop` is called
+/// - Calling the `GuiBackend` when appropriate
+pub struct GuiSystem<B: GuiRenderer> {
     window: Window,
     inputs: mpsc::Receiver<Action>,
     kill_el: Arc<Once>,
     backend: B,
 }
 
-impl<B: GuiBackend> GuiSystem<B> {
+impl<B: GuiRenderer> GuiSystem<B> {
+    /// Create a new GuiSystem with its chosen GuiRenderer.
     pub fn new(font_size: f32) -> crate::Result<(Self, GuiRunner)> {
         let backend = B::new(font_size)?;
         let char_size = backend.char_size();
@@ -277,7 +298,7 @@ impl<B: GuiBackend> GuiSystem<B> {
     }
 }
 
-impl<B: GuiBackend> IoSystem for GuiSystem<B> {
+impl<B: GuiRenderer> IoSystem for GuiSystem<B> {
     fn draw(&mut self, screen: &Screen) -> crate::Result<()> {
         self.backend.render(&self.window, screen)?;
         Ok(())
@@ -314,10 +335,13 @@ impl<B: GuiBackend> IoSystem for GuiSystem<B> {
     }
 }
 
-// This struct is a little bit of a hack. We want `run_return_cb` to be its own function, so that `IoRunner::step` and
-// `IoRunner::run` can share the same code, but there's a *lot* of fields being accessed, so we want to pass `self`.
-// But if we do that, we hit lifetime issues (`self.object.thing(|...| self.callback(...))` doesn't work great) and
-// Rust can't tell that we don't need `self.el` in the mean time. So we manually split it out into its own struct.
+/// Everything in a `WindowRunner` except the winit `EventLoop`.
+/// 
+/// This struct is a little bit of a hack. We want `run_return_cb` to be its own function, so that `IoRunner::step`
+/// and `IoRunner::run` can share the same code, but there's a *lot* of fields being accessed, so we want to pass
+/// `self`. But if we do that, we hit lifetime issues (`self.object.thing(|...| self.callback(...))` doesn't work
+/// great) and Rust can't tell that we don't need `self.el` in the mean time. So we manually split it out into its own
+/// struct.
 struct WrRest {
     act_send: mpsc::Sender<Action>,
     kill_recv: Arc<Once>,
@@ -413,7 +437,7 @@ impl WrRest {
     }
 }
 
-/// Runner for the main thread (as required by Windows windowing) to pull and convert events.
+/// Runner for a [`GuiSystem`].
 pub struct GuiRunner {
     el: EventLoop<Action>,
     rest: WrRest,

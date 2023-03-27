@@ -8,14 +8,19 @@
 //!
 //! This entire module is `#![no_std]` compatible. See the crate root for more info.
 //!
-//! - By default:
-//!   - 16 basic [`Color`]s (blue, green, cyan, red, magenta, yellow, black, and the bright equivalents)
-//!   - Setting foreground and background
+//! -   By default:
+//!     -   16 basic [`Color`]s (blue, green, cyan, red, magenta, yellow, black, and the bright equivalents)
+//!     -   Setting foreground and background
+//!     -   Underline and bold
+//! 
+//! And uh. Eventually there'll be others!
 
 use alloc::string::String;
 
-/// The color of a piece of formatted text. Meant to be used through `Text` / `text!`. The numeric values are the ANSI
-/// color codes for each color; that's also where the actual colors are from.
+/// The color of a piece of formatted text.
+/// 
+/// Meant to be used through the [`FormattedExt`] methods. The numeric values are the ANSI color codes for each color;
+/// that's also where the actual colors are from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Color {
     Black = 0,
@@ -131,7 +136,7 @@ macro_rules! fmt_fn {
     )* };
 }
 
-/// Trait implemented by all formattable items (`Text` and `Cell`).
+/// Trait implemented by all formattable items ([`Text`] and [`Cell`]) for common functionality.
 pub trait Formatted {
     fn get_fmt(&self) -> &Format;
     fn get_fmt_mut(&mut self) -> &mut Format;
@@ -215,8 +220,9 @@ macro_rules! fmt_type {
 }
 
 fmt_type!(
-    /// A single bit of formatted text. Note this isn't really meant to be used on its own, though it can be; the API
-    /// is designed to be used through `text!`, i.e. as a `Vec<Text>`.
+    /// A single bit of formatted text.
+    /// 
+    /// You can use this directly, but most APIs are oriented around `Vec`s of `Text`.
     #[derive(Clone, Debug, PartialEq, Eq)]
     pub struct Text {
         pub text: String,
@@ -268,9 +274,7 @@ macro_rules! text {
             use $crate::fmt::{FormattedExt as _};
             alloc::vec![
                 $(
-                    $crate::fmt::Text::of(
-                        alloc::format!( $text $(, $( $arg ),* )? )
-                    ) $( . $name () )*
+                    $crate::text1!($( $name )* $text $( ( $( $arg ),* ) )?)
                 ),*
             ]
         }
@@ -278,7 +282,7 @@ macro_rules! text {
 }
 
 fmt_type! {
-    /// A single character that's been formatted. This is really only meant to be used in `Screen`.
+    /// A single character with associated formatting.
     #[derive(Clone, Debug, PartialEq, Eq)]
     pub struct Cell { pub ch: char }
 }
