@@ -72,7 +72,7 @@ pub use crate::{
 /// Helper types for implementing your own (primarily graphical) IO systems.
 pub mod im {
     #[cfg(feature = "gui")]
-    pub use super::graphical::{GuiRenderer, GuiRunner, GuiSystem, REGULAR_TTF, BOLD_TTF};
+    pub use super::graphical::{GuiRenderer, GuiRunner, GuiSystem, BOLD_TTF, REGULAR_TTF};
 }
 
 /// Available rendering backends. See the [`IoSystem`] and [`IoRunner`] docs for more information.
@@ -97,17 +97,17 @@ pub mod backends {
 
     backends! {
         /// An [`IoSystem`] that does nothing at all.
-        /// 
+        ///
         /// Rendering is a no-op, input never comes, and the runner just waits forever for `stop`. Meant primarily for
         /// testing, e.g. `mass-events`.
         "nop", Nop => misc::nop::NopSystem, misc::nop::NopRunner;
         /// Crossterm-based CLI IO system.
-        /// 
+        ///
         /// This uses an actual terminal to do its input/output. That means it should also work over SSH, Telnet, and
         /// the like. It'll probably also work without even having a desktop environment, in a bare VTTY.
         "cli_crossterm", Crossterm => terminal::crossterm::CtSystem, terminal::crossterm::CtRunner;
         /// Window-based IO system, with CPU rendering.
-        /// 
+        ///
         /// Because this is backed by [`softbuffer`](https://crates.io/crates/softbuffer), it should be more or less
         /// as widely compatible as any graphical system can possibly be. And it should only get better with time and
         /// updates to the dependencies.

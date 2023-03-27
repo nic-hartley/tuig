@@ -10,12 +10,12 @@ use crate::{Action, Result, Screen, XY};
 /// is called from within the event system.
 pub trait IoSystem: Send {
     /// Actually render a [`Screen`] to the display.
-    /// 
+    ///
     /// Please don't `clone` the screen to send it to the `IoRunner` unless you *really really* have to. The reason
     /// this takes a reference is so allocations can be reused.
     fn draw(&mut self, screen: &Screen) -> Result<()>;
     /// Get the size of the display, in characters.
-    /// 
+    ///
     /// This is the size of the actual renderable space. If there's extra room, e.g. a few pixels but not enough for a
     /// whole column of characters, it doesn't count. (And it's up to the IoSystem to decide what to do with it --
     /// usually, paint it a reasonable background color.)
@@ -24,7 +24,7 @@ pub trait IoSystem: Send {
     /// Wait for the next user input.
     fn input(&mut self) -> Result<Action>;
     /// If the next user input is available, return it. Otherwise, return `None`.
-    /// 
+    ///
     /// Basically a non-blocking [`Self::input`].
     fn poll_input(&mut self) -> Result<Option<Action>>;
 
@@ -39,7 +39,7 @@ pub trait IoSystem: Send {
 }
 
 /// The other half of an [`IoSystem`].
-/// 
+///
 /// This is used to do any processing that has to be done on the main thread.
 pub trait IoRunner {
     /// Execute one 'step', which should be quick and must be non-blocking. Returns whether an exit has been requested

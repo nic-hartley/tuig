@@ -13,7 +13,7 @@ use core::{
 /// `XY`s aren't totally ordered because the components can be ordered differently, e.g. `XY(1, 5)` and `XY(2, 3)`,
 /// the x is less but the y is greater. However, some methods (where it makes sense) are provided separately from
 /// [`Ord`], and they operate elementwise, e.g. [`Self::clamp`].
-/// 
+///
 /// When used as a position, `XY(0, 0)` is at the top left of the screen, and `XY(0, 1)` is just below it -- the usual
 /// "graphics axes".
 #[derive(Clone, Copy, PartialEq, Eq)]

@@ -33,7 +33,7 @@ use super::{IoRunner, IoSystem};
 pub mod softbuffer;
 
 /// The default font, as a TTF file.
-/// 
+///
 /// The default font is Inconsolata, a beautiful monospace font with many characters and released under an open,
 /// permissive license. You can replace it with any other you have the rights to, as long as you have the .ttf file.
 /// If you do pick another, *make sure it's monospace*; non-monospace fonts will look very ugly.
@@ -221,17 +221,17 @@ fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
 }
 
 /// Common interface for all of the GUI rendering backends.
-/// 
+///
 /// [`GuiSystem`] / [`GuiRunner`] use (implementations of) this trait to do the actual rendering. A `GuiBackend` takes
 /// a `winit::window::Window`, renders a [`Screen`] to it however it wants, and that's it. `GuiSystem` and `GuiRunner`
 /// handle the window creation, input processing, etc.
-/// 
+///
 /// If you need a font, the default is available (as a TTF file in `&[u8]` form) as [`REGULAR_TTF`] and [`BOLD_TTF`].
-/// 
+///
 /// To use a `MyBackend: GuiBackend`, make a `GuiSystem` with [`GuiSystem::<MyBackend>::new`].
 pub trait GuiRenderer: Send + Sync + Sized {
     /// Create a new backend with the given font size.
-    /// 
+    ///
     /// The font size is `fontdue`'s understanding of it: The (approximate) width in pixels of the `m` character. In
     /// any monospace font, that should also be the width of every other character.
     fn new(font_size: f32) -> io::Result<Self>;
@@ -259,10 +259,10 @@ pub trait GuiRenderer: Send + Sync + Sized {
 }
 
 /// Provides a winit-based GUI [`IoSystem`].
-/// 
+///
 /// This defers the actual rendering to a [`GuiRenderer`] passed as a generic parameter, but otherwise handles the rest
 /// of the windowing, e.g.:
-/// 
+///
 /// - Window creation and management through winit
 /// - Input handling, i.e. converting `winit`'s events to [`Action`]
 /// - Closing the window when `stop` is called
@@ -336,7 +336,7 @@ impl<B: GuiRenderer> IoSystem for GuiSystem<B> {
 }
 
 /// Everything in a `WindowRunner` except the winit `EventLoop`.
-/// 
+///
 /// This struct is a little bit of a hack. We want `run_return_cb` to be its own function, so that `IoRunner::step`
 /// and `IoRunner::run` can share the same code, but there's a *lot* of fields being accessed, so we want to pass
 /// `self`. But if we do that, we hit lifetime issues (`self.object.thing(|...| self.callback(...))` doesn't work

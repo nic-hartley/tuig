@@ -12,13 +12,13 @@
 //!     -   16 basic [`Color`]s (blue, green, cyan, red, magenta, yellow, black, and the bright equivalents)
 //!     -   Setting foreground and background
 //!     -   Underline and bold
-//! 
+//!
 //! And uh. Eventually there'll be others!
 
 use alloc::string::String;
 
 /// The color of a piece of formatted text.
-/// 
+///
 /// Meant to be used through the [`FormattedExt`] methods. The numeric values are the ANSI color codes for each color;
 /// that's also where the actual colors are from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -221,7 +221,7 @@ macro_rules! fmt_type {
 
 fmt_type!(
     /// A single bit of formatted text.
-    /// 
+    ///
     /// You can use this directly, but most APIs are oriented around `Vec`s of `Text`.
     #[derive(Clone, Debug, PartialEq, Eq)]
     pub struct Text {

@@ -257,10 +257,10 @@ impl<G: Game + 'static> Runner<G> {
     }
 
     /// Set the desired time between rounds of events.
-    /// 
+    ///
     /// If processing a round takes longer than this, the game is considered to be "lagging". If it takes less time,
     /// then the runner will sit around, just processing input until the round is done.
-    /// 
+    ///
     /// The exact mechanics of round timing in laggy games is deliberately left unspecified so I can fiddle with it to
     /// make it "work nicer". Broadly, though: If it lags a little and sporadically, the rounds tick over immediately
     /// until it "catches up" to approximately match realtime. If it properly *lags out*, getting too far behind, then
