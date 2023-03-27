@@ -20,6 +20,7 @@ jobs:
         - ext: ''
         - platform: windows
           ext: '.exe'
+        - std: ""
     name: Build desktop-bin-${{ matrix.sys }}-${{ matrix.platform }}
     runs-on: ${{ matrix.platform }}-latest
     steps:
@@ -42,7 +43,7 @@ jobs:
     - uses: actions/checkout@v3
     - name: Generate artifact
       run: |
-        cargo build --release --features io_${{ matrix.sys }},run_rayon --bins
+        cargo build --release --features io_${{ matrix.sys }},run_rayon,std --bins
 
     - uses: actions/upload-artifact@v3
       with:
