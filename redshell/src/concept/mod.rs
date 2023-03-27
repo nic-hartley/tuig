@@ -186,6 +186,7 @@ fn mouse_demo(io: &mut dyn IoSystem) {
                 Action::Error(msg) => {
                     text = format!("Error: {}", msg);
                 }
+                other => todo!("Forgot to add support for {:?}", other),
             }
         }
         if text == last_text {
