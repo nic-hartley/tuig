@@ -1,6 +1,6 @@
 [package]
 name = "redshell"
-version = "0.0.6"
+version = "0.0.7"
 edition = "2021"
 description = "A console-based hacking game"
 license = "BSD-3-Clause"
@@ -16,7 +16,7 @@ plat_steam = ["tuig/io_gui_softbuffer", "tuig/run_rayon"]
 # plat_wasm = []
 
 [dependencies]
-tuig = { version = "0.0.1", path = "../tuig" }
+tuig = { version = "0.0.2", path = "../tuig" }
 
 paste = "1.0.5"
 lazy_static = "1.4.0"
