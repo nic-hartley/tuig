@@ -4,7 +4,7 @@ version = "0.0.2"
 edition = "2021"
 description = "Multi-backend terminal-like text grid rendering."
 license = "BSD-3-Clause"
-repository = "https://github.com/nic-hartley/redshell/"
+repository = "https://github.com/nic-hartley/tuig"
 
 [features]
 std = []

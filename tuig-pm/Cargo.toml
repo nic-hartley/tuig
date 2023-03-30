@@ -4,7 +4,7 @@ version = "0.0.2"
 edition = "2021"
 description = "Procedural macro crate for tuig and tuig-iosys"
 license = "BSD-3-Clause"
-repository = "https://github.com/nic-hartley/redshell/"
+repository = "https://github.com/nic-hartley/tuig"
 
 [lib]
 proc-macro = true
