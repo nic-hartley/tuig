@@ -72,3 +72,5 @@ In short:
 - If it's undocumented, I can change it however I like and count it as a bugfix.
 - If it's documented, *just adding things* is never a breaking change, only a new feature -- even if I forgot to add `#[non_exhaustive]` to that enum. (Though I'll try very hard to make sure your code works without changes for minor version bumps, regardless.)
 - Changing documented things is almost certainly breaking regardless of the change.
+
+Its versions are also pinned to `tuig`, and vice versa, meaning that versions might be bumped without any change to this particular crate.

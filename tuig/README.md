@@ -61,6 +61,9 @@ In short:
 - If it's documented, *just adding things* is never a breaking change, only a new feature -- even if I forgot to add `#[non_exhaustive]` to that enum. (Though I'll try very hard to make sure your code works without changes for minor version bumps, regardless.)
 - Changing documented things is almost certainly breaking regardless of the change.
 
+Its versions are also pinned to `tuig-iosys`, and vice versa, meaning that versions might be bumped without any change to this particular crate.
+That said, because `tuig-iosys` is exposed as `tuig::io`, arguably any changes to it count as changes to `tuig` anyway.
+
   [tuig-iosys]: https://docs.rs/tuig-iosys
   [redshell]: https://github.com/nic-hartley/redshell/
   [raise issues]: https://github.com/nic-hartley/redshell/issues/new

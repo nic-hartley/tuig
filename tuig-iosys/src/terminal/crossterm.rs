@@ -9,8 +9,7 @@ use std::{
     io::Write,
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc::{self, RecvError, TryRecvError},
-        Arc,
+        mpsc, Arc,
     },
     time::Duration,
 };
@@ -100,7 +99,7 @@ impl IoRunner for CtRunner {
     fn step(&mut self) -> bool {
         // check whether we've been told to stop
         if self.stop.load(Ordering::Relaxed) {
-            writeln!(std::io::stderr(), "closing gracefully-ish").unwrap();
+            eprintln!("told to stop, stopping");
             return true;
         }
 
@@ -362,15 +361,13 @@ impl IoSystem for CtSystem {
     fn poll_input(&mut self) -> crate::Result<Option<Action>> {
         match self.queue.try_recv() {
             Ok(res) => Ok(Some(res)),
-            Err(TryRecvError::Disconnected) => panic!("unexpected queue closure"),
-            Err(TryRecvError::Empty) => Ok(None),
+            Err(mpsc::TryRecvError::Disconnected) => panic!("unexpected queue closure"),
+            Err(mpsc::TryRecvError::Empty) => Ok(None),
         }
     }
 
     fn stop(&mut self) {
+        eprintln!("stopping");
         self.stop.store(true, Ordering::Relaxed);
-        while self.queue.recv() != Err(RecvError) {
-            // flushing the queue and waiting for it to disconnect in the condition itself
-        }
     }
 }
