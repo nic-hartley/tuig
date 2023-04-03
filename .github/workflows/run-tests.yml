@@ -18,7 +18,7 @@ jobs:
       matrix:
         os: [windows, ubuntu]
         rust: [stable, "1.64", nightly]
-    name: Test battery on ${{ matrix.os }}
+    name: Test battery on ${{ matrix.os }} for Rust ${{ matrix.rust }}
     runs-on: ${{ matrix.os }}-latest
     steps:
     - uses: actions/cache@v3
