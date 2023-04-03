@@ -9,8 +9,7 @@ use std::{
     io::Write,
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc,
-        Arc,
+        mpsc, Arc,
     },
     time::Duration,
 };
