@@ -17,13 +17,14 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows, ubuntu]
+        rust: [stable, "1.64", nightly]
     name: Test battery on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}-latest
     steps:
     - uses: actions/cache@v3
       with:
         path: ~/.rustup/
-        key: rustup-${{ matrix.os }}
+        key: rustup-${{ matrix.os }}-${{ matrix.rust }}
     - uses: actions/cache@v3
       with:
         path: ~/.cargo/registry
@@ -31,7 +32,11 @@ jobs:
     - uses: actions/cache@v3
       with:
         path: ./target
-        key: target-dir-${{ matrix.os }}
+        key: target-dir-${{ matrix.os }}-${{ matrix.rust }}
+    - name: Setup Rust
+      run: |
+        rustup default ${{ matrix.rust }}
+        rustup component add rustfmt
 
     - uses: actions/checkout@v3
     - name: Run tests
