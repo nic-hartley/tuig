@@ -16,29 +16,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        os: [windows, ubuntu]
         rust: [stable, "1.64", nightly]
-        platform: [windows, ubuntu]
-        run: [single, rayon]  # TODO: std_multi
-        sys: [nop, cli_crossterm, gui_softbuffer]
-        include:
-        - std: ""
-        - run: single
-          std: "std"
-        - run: rayon
-          std: "std"
-        - sys: nop
-          std: "std"
-        - sys: cli_crossterm
-          std: "std"
-        - sys: gui_softbuffer
-          std: "std"
-    name: Rust ${{ matrix.rust }} on ${{ matrix.platform }}, runner ${{ matrix.run }}, IO ${{ matrix.sys }}
-    runs-on: ${{ matrix.platform }}-latest
+    name: Test battery on ${{ matrix.os }} for Rust ${{ matrix.rust }}
+    runs-on: ${{ matrix.os }}-latest
     steps:
     - uses: actions/cache@v3
       with:
         path: ~/.rustup/
-        key: rustup-${{ matrix.platform }}-${{ matrix.rust }}
+        key: rustup-${{ matrix.os }}-${{ matrix.rust }}
     - uses: actions/cache@v3
       with:
         path: ~/.cargo/registry
@@ -46,20 +32,16 @@ jobs:
     - uses: actions/cache@v3
       with:
         path: ./target
-        key: target-dir-${{ matrix.platform }}-${{ matrix.rust }}
-    - name: Set up Rust
+        key: target-dir-${{ matrix.os }}-${{ matrix.rust }}
+    - name: Setup Rust
       run: |
         rustup default ${{ matrix.rust }}
         rustup component add rustfmt
 
     - uses: actions/checkout@v3
     - name: Run tests
-      env:
-        features: run_${{ matrix.run }},io_${{ matrix.sys }},${{ matrix.std }}
-      run: |
-        cargo fmt --check
-        cargo check --features "${{ env.features }}" --all-targets
-        cargo test --features "${{ env.features }}" --all-targets
+      run: ci/tests.sh
+      shell: bash
 
 
   mass-events:
