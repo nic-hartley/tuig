@@ -93,3 +93,15 @@ pub enum Action {
     /// Trying to read input let to some kind of error, with a description
     Error(String),
 }
+
+impl Action {
+    /// Get the screen position of mouse events, or None for non-mouse events
+    pub(crate) fn position(&self) -> Option<XY> {
+        match self {
+            Self::MouseMove { pos } => Some(*pos),
+            Self::MousePress { pos, .. } => Some(*pos),
+            Self::MouseRelease { pos, .. } => Some(*pos),
+            _ => None,
+        }
+    }
+}
