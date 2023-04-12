@@ -1,8 +1,12 @@
 use std::thread;
 
-use tuig_iosys::{ui::Region, IoSystem, Screen, Action, Key};
+use tuig_iosys::{ui::Region, IoSystem, Screen, Action, Key, fmt::Cell};
 
-fn tui<'s>(region: Region<'s>) -> bool {
+fn tui<'s>(mut region: Region<'s>) -> bool {
+    let input = format!("{:?}", region.input);
+    let nth = input.chars().nth(8).unwrap_or('x');
+    let cell = Cell::of(nth);
+    region.fill(cell);
     true
 }
 
@@ -10,10 +14,12 @@ fn run(mut iosys: Box<dyn IoSystem>) {
     let mut screen = Screen::new(iosys.size());
     let mut input = None;
     loop {
+        screen.resize(iosys.size());
         let root = Region::new(&mut screen, input);
         if !tui(root) {
             break;
         }
+        iosys.draw(&screen).expect("failed to render output");
         let action = iosys.input().expect("failed to get input");
         if matches!(action, Action::KeyPress { key: Key::Escape }) {
             break;
