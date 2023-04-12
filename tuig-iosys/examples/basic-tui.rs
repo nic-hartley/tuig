@@ -1,12 +1,23 @@
 use std::thread;
 
-use tuig_iosys::{ui::Region, IoSystem, Screen, Action, Key, fmt::Cell};
+use tuig_iosys::{ui::Region, IoSystem, Screen, Action, Key, fmt::Cell, cell};
 
-fn tui<'s>(mut region: Region<'s>) -> bool {
-    let input = format!("{:?}", region.input);
-    let nth = input.chars().nth(8).unwrap_or('x');
-    let cell = Cell::of(nth);
-    region.fill(cell);
+fn char_for_input(action: &Option<Action>) -> Cell {
+    match action {
+        None => cell!(red '~'),
+        Some(Action::KeyPress { .. }) => cell!(green 'K'),
+        Some(Action::KeyRelease { .. }) => cell!(blue 'K'),
+        Some(Action::MouseMove { .. }) => cell!(red 'm'),
+        Some(Action::MousePress { .. }) => cell!(green 'M'),
+        Some(Action::MouseRelease { .. }) => cell!(blue 'M'),
+        _ => cell!(white on_black '~'),
+    }
+}
+
+fn tui<'s>(region: Region<'s>) -> bool {
+    let (mut left, mut rest) = region.split_left(10);
+    left.fill(char_for_input(&left.input));
+    rest.fill(char_for_input(&rest.input));
     true
 }
 

@@ -4,7 +4,7 @@ use super::Bounds;
 
 macro_rules! split_fn {
     ( $lt:lifetime: $( $name:ident ),* $(,)? ) => { $(
-        pub(crate) fn $name(self, amt: usize) -> (Region<$lt>, Region<$lt>) {
+        pub fn $name(self, amt: usize) -> (Region<$lt>, Region<$lt>) {
             let Region { screen, input, bounds } = self;
             let (chunk, rest) = bounds.$name(amt);
             // SAFETY: The bounds are forced to be mutually exclusive by the `Bounds::split_*` methods called, so the
