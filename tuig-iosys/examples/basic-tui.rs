@@ -1,6 +1,6 @@
 use std::thread;
 
-use tuig_iosys::{ui::Region, IoSystem, Screen, Action, Key, fmt::Cell, cell};
+use tuig_iosys::{cell, fmt::Cell, ui::Region, Action, IoSystem, Key, Screen};
 
 fn char_for_input(action: &Option<Action>) -> Cell {
     match action {
@@ -42,8 +42,7 @@ fn run(mut iosys: Box<dyn IoSystem>) {
 
 fn main() {
     println!("loading...");
-    let (iosys, mut iorun) = tuig_iosys::load()
-        .expect("failed to load any IO system(s)");
+    let (iosys, mut iorun) = tuig_iosys::load().expect("failed to load any IO system(s)");
     let handle = thread::spawn(move || run(iosys));
     iorun.run();
     handle.join().expect("failed to run thread");

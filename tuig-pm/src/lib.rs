@@ -46,5 +46,7 @@ mod_fn! {
 
 fn is_nightly() -> bool {
     use rustc_version::{version_meta, Channel};
-    version_meta().map(|vm| vm.channel == Channel::Nightly).unwrap_or(false)
+    version_meta()
+        .map(|vm| vm.channel == Channel::Nightly)
+        .unwrap_or(false)
 }

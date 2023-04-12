@@ -1,4 +1,4 @@
-use crate::{Screen, Action, XY, fmt::Cell};
+use crate::{fmt::Cell, Action, Screen, XY};
 
 use super::Bounds;
 
@@ -10,7 +10,7 @@ macro_rules! split_fn {
             // SAFETY: The bounds are forced to be mutually exclusive by the `Bounds::split_*` methods called, so the
             // regions refer to different areas of the screen. The input region is consumed, so it can't produce
             // regions multiple times. Regions limit their effect to just their (guaranteed non-overlapping) bounds,
-            // so keeping several mutable references to the screen is safe because 
+            // so keeping several mutable references to the screen is safe because
             let s = unsafe { &mut *(screen as *mut _) };
             (
                 Region { screen, input: chunk.filter(&input), bounds: chunk },
@@ -28,8 +28,15 @@ pub struct Region<'s> {
 
 impl<'s> Region<'s> {
     pub fn new(screen: &'s mut Screen, input: Option<Action>) -> Self {
-        let bounds = Bounds { pos: XY(0, 0), size: screen.size() };
-        Self { screen, input, bounds }
+        let bounds = Bounds {
+            pos: XY(0, 0),
+            size: screen.size(),
+        };
+        Self {
+            screen,
+            input,
+            bounds,
+        }
     }
 
     pub fn fill(&mut self, cell: Cell) {

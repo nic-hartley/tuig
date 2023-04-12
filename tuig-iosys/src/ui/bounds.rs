@@ -1,6 +1,6 @@
 use core::ops::Range;
 
-use crate::{XY, Action};
+use crate::{Action, XY};
 
 /// The boundaries of a [`Region`][super::Region].
 pub struct Bounds {
@@ -63,7 +63,7 @@ impl Bounds {
             Some(act) => match act.position() {
                 Some(pos) if !self.contains(pos) => None,
                 _other => Some(act.clone()),
-            }
+            },
             None => None,
         }
     }
@@ -78,6 +78,4 @@ impl Bounds {
 }
 
 #[cfg(test)]
-mod test {
-    
-}
+mod test {}
