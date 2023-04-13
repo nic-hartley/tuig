@@ -1,27 +1,54 @@
-use crate::{fmt::Cell, Action, Screen, XY};
+use core::cell::Cell;
+
+use crate::{fmt, Action, Screen, XY};
 
 use super::Bounds;
 
 macro_rules! split_fn {
     ( $lt:lifetime: $( $name:ident ),* $(,)? ) => { $(
         pub fn $name(self, amt: usize) -> (Region<$lt>, Region<$lt>) {
-            let Region { screen, input, bounds } = self;
+            let Region { sd, input, bounds } = self;
             let (chunk, rest) = bounds.$name(amt);
-            // SAFETY: The bounds are forced to be mutually exclusive by the `Bounds::split_*` methods called, so the
-            // regions refer to different areas of the screen. The input region is consumed, so it can't produce
-            // regions multiple times. Regions limit their effect to just their (guaranteed non-overlapping) bounds,
-            // so keeping several mutable references to the screen is safe because
-            let s = unsafe { &mut *(screen as *mut _) };
             (
-                Region { screen, input: chunk.filter(&input), bounds: chunk },
-                Region { screen: s, input: rest.filter(&input), bounds: rest },
+                Region { sd: sd.clone(), input: chunk.filter(&input), bounds: chunk },
+                Region { sd: sd.clone(), input: rest.filter(&input), bounds: rest },
             )
         }
     )* }
 }
 
+/// Internal type used to bundle together the functionality around having mutable access to distinct subregions.
+#[derive(Clone)]
+struct ScreenData<'s> {
+    buffer: &'s [Cell<fmt::Cell>],
+    width: usize,
+}
+
+impl<'s> ScreenData<'s> {
+    fn new(screen: &'s mut Screen) -> Self {
+        let width = screen.size().x();
+        let buffer = screen.cells.as_mut_slice();
+        let buffer = Cell::from_mut(buffer).as_slice_of_cells();
+        Self { buffer, width }
+    }
+
+    fn index(&self, pos: XY) -> usize {
+        self.width * pos.y() + pos.x()
+    }
+
+    fn cell(&self, pos: XY) -> &Cell<fmt::Cell> {
+        &self.buffer[self.index(pos)]
+    }
+
+    fn row(&self, pos: XY, width: usize) -> &[Cell<fmt::Cell>] {
+        let start = self.index(pos);
+        let end = start + width;
+        &self.buffer[start..end]
+    }
+}
+
 pub struct Region<'s> {
-    screen: &'s mut Screen,
+    sd: ScreenData<'s>,
     pub input: Option<Action>,
     bounds: Bounds,
 }
@@ -33,16 +60,16 @@ impl<'s> Region<'s> {
             size: screen.size(),
         };
         Self {
-            screen,
+            sd: ScreenData::new(screen),
             input,
             bounds,
         }
     }
 
-    pub fn fill(&mut self, cell: Cell) {
+    pub fn fill(&mut self, cell: fmt::Cell) {
         for y in self.bounds.ys() {
             for x in self.bounds.xs() {
-                self.screen[y][x] = cell.clone();
+                self.sd.cell(XY(x, y)).set(cell.clone());
             }
         }
     }

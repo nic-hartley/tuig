@@ -69,7 +69,7 @@ impl<'s> FusedIterator for ScreenRows<'s> {}
 /// Allows you to render things onto it, then can be rendered onto the screen. This strategy avoids flickering,
 /// partial renders, etc. and helps deduplicate rendering effort.
 pub struct Screen {
-    cells: Vec<Cell>,
+    pub(crate) cells: Vec<Cell>,
     size: XY,
 }
 
@@ -89,7 +89,7 @@ impl Screen {
         self.size
     }
 
-    /// All of the cells of this screen, in rows.
+    /// All of the cells of this screen, in row-major order.
     ///
     /// i.e. for the screen:
     ///
@@ -98,13 +98,13 @@ impl Screen {
     /// 3 4
     /// ```
     ///
-    /// this will return `&[1, 2, 3, 4]
+    /// this will return `&[1, 2, 3, 4]`.
     pub fn cells(&self) -> &[Cell] {
         &self.cells
     }
 
     /// Returns an iterator over the rows in a screen.
-    pub fn rows(&self) -> ScreenRows {
+    pub fn rows(&self) -> impl Iterator<Item = &[Cell]> {
         ScreenRows::new(self)
     }
 

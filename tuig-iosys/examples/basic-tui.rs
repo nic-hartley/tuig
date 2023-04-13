@@ -14,7 +14,7 @@ fn char_for_input(action: &Option<Action>) -> Cell {
     }
 }
 
-fn tui<'s>(region: Region<'s>) -> bool {
+fn tui(region: Region) -> bool {
     let (mut left, mut rest) = region.split_left(10);
     left.fill(char_for_input(&left.input));
     rest.fill(char_for_input(&rest.input));
