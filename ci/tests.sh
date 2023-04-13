@@ -23,14 +23,10 @@ needs_std() {
     esac
 }
 
-# output dir so we can only output when it's actually relevant
-outdir="$(mktemp -d)"
-
 cargo fmt --check
 for run in $RUNNERS; do
     for sys in $SYSTEMS; do
         std="$(needs_std "$run" "$sys")"
-        out="$outdir/$version-$run-$sys.log"
         FEATS="run_$run,io_$sys,$std"
         cargo check --features "$FEATS" --all-targets
         cargo test --features "$FEATS" --all-targets
