@@ -63,7 +63,7 @@ jobs:
     - name: Setup Rust
       run: |
         rustup default nightly
-        rustup component add miri
+        rustup component add rustfmt miri
 
     - uses: actions/checkout@v3
     - name: Run tests
