@@ -2,6 +2,53 @@
 
 set -e
 
+miri=""
+parallel="0"
+for arg in "$@"; do
+    case "$arg" in
+    --miri)
+        miri="miri"
+        parallel="1"
+        ;;
+    --para)
+        parallel="1"
+        ;;
+    esac
+done
+
+lines_to() {
+    label="$1"
+    while read -r line; do
+        echo "[$label]" $line
+    done
+}
+para_setup() {
+    if [ "$parallel" = "1" ]; then
+        pipe="$(mktemp -u tuig-ci-pipe.XXXXXXXXXX)"
+        mkfifo $pipe
+        trap 'trap - TERM; para_kill; kill -- -$$' INT TERM
+    fi
+}
+para() {
+    label="$1"
+    shift
+    if [ "$parallel" = "1" ]; then
+        ("$@" 2>&1 | lines_to "$label" >> "$pipe") &
+    else
+        "$@"
+    fi
+}
+para_kill() {
+    rm "$pipe"
+}
+para_teardown() {
+    if [ "$parallel" = "1" ]; then
+        cat "$pipe"
+        wait
+        rm "$pipe"
+    fi
+}
+
 # run_* features
 RUNNERS="single rayon"
 # io_* features
@@ -24,11 +71,13 @@ needs_std() {
 }
 
 cargo fmt --check
+para_setup
 for run in $RUNNERS; do
     for sys in $SYSTEMS; do
         std="$(needs_std "$run" "$sys")"
         FEATS="run_$run,io_$sys,$std"
         cargo check --features "$FEATS" --all-targets
-        cargo test --features "$FEATS" --all-targets
+        para "run:$run,sys:$sys" cargo $miri test --features "$FEATS" --all-targets --no-fail-fast
     done
 done
+para_teardown
