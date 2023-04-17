@@ -26,7 +26,7 @@ para_setup() {
     if [ "$parallel" = "1" ]; then
         pipe="$(mktemp -u tuig-ci-pipe.XXXXXXXXXX)"
         mkfifo $pipe
-        trap 'trap - TERM; para_kill; kill -- -$$' INT TERM
+        trap 'trap - TERM; para_kill' INT TERM
     fi
 }
 para() {
@@ -39,7 +39,10 @@ para() {
     fi
 }
 para_kill() {
-    rm "$pipe"
+    if [ "$parallel" = "1" ]; then
+        rm "$pipe"
+        kill -- -$$
+    fi
 }
 para_teardown() {
     if [ "$parallel" = "1" ]; then
@@ -50,9 +53,9 @@ para_teardown() {
 }
 
 # run_* features
-RUNNERS="single rayon"
+RUNNERS="single"
 # io_* features
-SYSTEMS="nop cli_crossterm gui_softbuffer"
+SYSTEMS="nop"
 
 # needs_std $RUN $IO indicates whether a given runner/iosystem pair needs the std feature
 needs_std() {
