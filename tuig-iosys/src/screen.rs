@@ -174,3 +174,9 @@ impl ops::IndexMut<usize> for Screen {
         &mut self.cells[start..end]
     }
 }
+
+impl Default for Screen {
+    fn default() -> Self {
+        Self::new(XY(0, 0))
+    }
+}

@@ -1,8 +1,9 @@
-use core::ops::Range;
+use core::{ops::Range, fmt};
 
 use crate::{Action, XY};
 
 /// The boundaries of a [`Region`][super::Region].
+#[derive(PartialEq, Eq, Clone)]
 pub struct Bounds {
     pub pos: XY,
     pub size: XY,
@@ -10,7 +11,7 @@ pub struct Bounds {
 
 impl Bounds {
     /// Cut off the leftmost `amt` columns. Returns `(left, rest)`.
-    pub fn split_left(self, amt: usize) -> (Bounds, Bounds) {
+    pub fn split_left(&self, amt: usize) -> (Bounds, Bounds) {
         assert!(amt > 0 && amt < self.size.x());
         let left = Bounds {
             pos: self.pos,
@@ -24,7 +25,7 @@ impl Bounds {
     }
 
     /// Cut off the rightmost `amt` columns. Returns `(right, rest)`.
-    pub fn split_right(self, amt: usize) -> (Bounds, Bounds) {
+    pub fn split_right(&self, amt: usize) -> (Bounds, Bounds) {
         assert!(amt > 0 && amt < self.size.x());
         let inverse = self.size.x() - amt;
         let (left, rest) = self.split_left(inverse);
@@ -32,7 +33,7 @@ impl Bounds {
     }
 
     /// Cut off the topmost `amt` columns. Returns `(top, rest)`.
-    pub fn split_top(self, amt: usize) -> (Bounds, Bounds) {
+    pub fn split_top(&self, amt: usize) -> (Bounds, Bounds) {
         assert!(amt > 0 && amt < self.size.y());
         let top = Bounds {
             pos: self.pos,
@@ -46,7 +47,7 @@ impl Bounds {
     }
 
     /// Cut off the bottommost `amt` columns. Returns `(bottom, rest)`.
-    pub fn split_bottom(self, amt: usize) -> (Bounds, Bounds) {
+    pub fn split_bottom(&self, amt: usize) -> (Bounds, Bounds) {
         assert!(amt > 0 && amt < self.size.y());
         let inverse = self.size.y() - amt;
         let (top, rest) = self.split_top(inverse);
@@ -74,6 +75,17 @@ impl Bounds {
 
     pub fn ys(&self) -> Range<usize> {
         self.pos.y()..(self.pos.y() + self.size.y())
+    }
+}
+
+impl fmt::Debug for Bounds {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Bounds")
+            .field("x", &self.pos.x())
+            .field("y", &self.pos.y())
+            .field("w", &self.size.x())
+            .field("h", &self.size.y())
+            .finish()
     }
 }
 

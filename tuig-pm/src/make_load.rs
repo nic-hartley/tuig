@@ -37,7 +37,7 @@ fn parse_load(input: ParseStream) -> syn::Result<LoadInput> {
 
 pub fn make_load(input: TokenStream) -> TokenStream {
     // parse each of the loaders
-    let LoadInput { attrs, arms, load_fn } = match parse_load.parse(input.into()) {
+    let LoadInput { attrs, arms, load_fn } = match parse_load.parse2(input) {
         Ok(li) => li,
         Err(e) => return e.to_compile_error(),
     };

@@ -23,3 +23,6 @@ mod bounds;
 pub(crate) use bounds::Bounds;
 mod region;
 pub use region::Region;
+
+#[doc(hidden)]
+pub mod splitters;

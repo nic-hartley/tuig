@@ -2,19 +2,29 @@ use core::cell::Cell;
 
 use crate::{fmt, Action, Screen, XY};
 
-use super::Bounds;
+use super::{Bounds, splitters::Splitter};
 
 macro_rules! split_fn {
-    ( $lt:lifetime: $( $name:ident ),* $(,)? ) => { $(
-        pub fn $name(self, amt: usize) -> (Region<$lt>, Region<$lt>) {
+    ( $lt:lifetime: $( $name:ident ),* $(,)? ) => { paste::paste! { $(
+        #[allow(dead_code)] // might as well have all of them, even if unused
+        pub(crate) fn [<split_ $name>](self, amt: usize) -> (Region<$lt>, Region<$lt>) {
             let Region { sd, input, bounds } = self;
-            let (chunk, rest) = bounds.$name(amt);
+            let (chunk, rest) = bounds.[<split_ $name>](amt);
             (
                 Region { sd: sd.clone(), input: chunk.filter(&input), bounds: chunk },
                 Region { sd: sd.clone(), input: rest.filter(&input), bounds: rest },
             )
         }
-    )* }
+
+        #[allow(dead_code)] // might as well have all of them, even if unused
+        pub(crate) fn [<split_ $name _mut >](&mut self, amt: usize) -> Region<$lt> {
+            let (chunk, rest) = self.bounds.[<split_ $name>](amt);
+            let chunk_input = chunk.filter(&self.input);
+            self.input = rest.filter(&self.input);
+            self.bounds = rest;
+            Region { sd: self.sd.clone(), input: chunk_input, bounds: chunk }
+        }
+    )* } }
 }
 
 /// Internal type used to bundle together the functionality around having mutable access to distinct subregions.
@@ -39,12 +49,6 @@ impl<'s> ScreenData<'s> {
     fn cell(&self, pos: XY) -> &Cell<fmt::Cell> {
         &self.buffer[self.index(pos)]
     }
-
-    fn row(&self, pos: XY, width: usize) -> &[Cell<fmt::Cell>] {
-        let start = self.index(pos);
-        let end = start + width;
-        &self.buffer[start..end]
-    }
 }
 
 pub struct Region<'s> {
@@ -66,13 +70,33 @@ impl<'s> Region<'s> {
         }
     }
 
-    pub fn fill(&mut self, cell: fmt::Cell) {
-        for y in self.bounds.ys() {
-            for x in self.bounds.xs() {
-                self.sd.cell(XY(x, y)).set(cell.clone());
+    #[cfg(test)]
+    pub(crate) fn bounds(&self) -> &Bounds {
+        &self.bounds
+    }
+
+    pub fn size(&self) -> XY {
+        self.bounds.size
+    }
+
+    pub fn set(&self, pos: XY, cell: fmt::Cell) {
+        assert!(pos.x() < self.bounds.size.x(), "position out of bounds");
+        assert!(pos.y() < self.bounds.size.y(), "position out of bounds");
+        let realpos = self.bounds.pos + pos;
+        self.sd.cell(realpos).set(cell);
+    }
+
+    pub fn fill(&self, cell: fmt::Cell) {
+        for y in 0..self.bounds.size.y() {
+            for x in 0..self.bounds.size.x() {
+                self.set(XY(x, y), cell.clone());
             }
         }
     }
 
-    split_fn!('s: split_left, split_right, split_top, split_bottom);
+    split_fn!('s: left, right, top, bottom);
+
+    pub fn split<S: Splitter<'s>>(self, splitter: S) -> S::Output {
+        splitter.split(self)
+    }
 }
