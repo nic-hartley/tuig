@@ -42,6 +42,7 @@ macro_rules! mod_fn {
 mod_fn! {
     proc_macro make_load,
     proc_macro force_docs_nightly,
+    proc_macro cols,
 }
 
 fn is_nightly() -> bool {
