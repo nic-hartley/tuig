@@ -1,4 +1,4 @@
-use core::{ops::Range, fmt};
+use core::{fmt, ops::Range};
 
 use crate::{Action, XY};
 

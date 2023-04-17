@@ -1,6 +1,6 @@
 use core::mem::MaybeUninit;
 
-use crate::{ui::Region, fmt::Cell, XY};
+use crate::{fmt::Cell, ui::Region, XY};
 
 use super::Splitter;
 
@@ -30,7 +30,11 @@ pub struct Cols<const COLS: usize> {
 impl<const COLS: usize> Cols<COLS> {
     #[deprecated = "use cols!() instead of ColsSplitter::new directly"]
     pub fn new(ws: [usize; COLS], pre: &'static str, seps: [&'static str; COLS]) -> Self {
-        Self { widths: ws, preseparator: pre, separators: seps }
+        Self {
+            widths: ws,
+            preseparator: pre,
+            separators: seps,
+        }
     }
 
     fn split_widths(&self) -> (&[usize], usize, &[usize]) {
@@ -49,7 +53,8 @@ impl<'s, const COLS: usize> Splitter<'s> for Cols<COLS> {
         // SAFETY: Arrays only require that each member be initialized as the member type requires, nothing extra.
         // `MaybeUninit` doesn't require it be initialized in any specific way, that's the whole point.
         // https://doc.rust-lang.org/std/mem/union.MaybeUninit.html#initializing-an-array-element-by-element
-        let mut res: [MaybeUninit<Region<'s>>; COLS] = unsafe { MaybeUninit::uninit().assume_init() };
+        let mut res: [MaybeUninit<Region<'s>>; COLS] =
+            unsafe { MaybeUninit::uninit().assume_init() };
 
         fill_sep(&mut parent, self.preseparator, true);
 
@@ -79,10 +84,16 @@ impl<'s, const COLS: usize> Splitter<'s> for Cols<COLS> {
 mod test {
     use super::*;
 
-    use crate::{Screen, ui::{Region, Bounds}};
+    use crate::{
+        ui::{Bounds, Region},
+        Screen,
+    };
 
     fn bounds(x: usize, y: usize, w: usize, h: usize) -> Bounds {
-        Bounds { pos: XY(x, y), size: XY(w, h) }
+        Bounds {
+            pos: XY(x, y),
+            size: XY(w, h),
+        }
     }
 
     fn cols<const N: usize>(ws: [usize; N], p: &'static str, seps: [&'static str; N]) -> Cols<N> {
@@ -96,7 +107,8 @@ mod test {
         let r = Region::new(&mut s, None);
         let [orig] = r.split(cols([0], "", [""]));
         assert_eq!(orig.bounds(), &bounds(0, 0, 50, 50));
-        #[cfg(miri)] orig.fill(Cell::of('!'));
+        #[cfg(miri)]
+        orig.fill(Cell::of('!'));
     }
 
     #[test]
@@ -105,9 +117,11 @@ mod test {
         let r = Region::new(&mut s, None);
         let [left, rest] = r.split(cols([5, 0], "", ["", ""]));
         assert_eq!(left.bounds(), &bounds(0, 0, 5, 50));
-        #[cfg(miri)] left.fill(Cell::of('!'));
+        #[cfg(miri)]
+        left.fill(Cell::of('!'));
         assert_eq!(rest.bounds(), &bounds(5, 0, 45, 50));
-        #[cfg(miri)] rest.fill(Cell::of('!'));
+        #[cfg(miri)]
+        rest.fill(Cell::of('!'));
     }
 
     #[test]
@@ -116,9 +130,11 @@ mod test {
         let r = Region::new(&mut s, None);
         let [rest, right] = r.split(cols([0, 5], "", ["", ""]));
         assert_eq!(rest.bounds(), &bounds(0, 0, 45, 50));
-        #[cfg(miri)] rest.fill(Cell::of('!'));
+        #[cfg(miri)]
+        rest.fill(Cell::of('!'));
         assert_eq!(right.bounds(), &bounds(45, 0, 5, 50));
-        #[cfg(miri)] right.fill(Cell::of('!'));
+        #[cfg(miri)]
+        right.fill(Cell::of('!'));
     }
 
     #[test]
@@ -127,9 +143,11 @@ mod test {
         let r = Region::new(&mut s, None);
         let [left, rest] = r.split(cols([5, 0], "~", ["", ""]));
         assert_eq!(left.bounds(), &bounds(1, 0, 5, 50));
-        #[cfg(miri)] left.fill(Cell::of('!'));
+        #[cfg(miri)]
+        left.fill(Cell::of('!'));
         assert_eq!(rest.bounds(), &bounds(6, 0, 44, 50));
-        #[cfg(miri)] rest.fill(Cell::of('!'));
+        #[cfg(miri)]
+        rest.fill(Cell::of('!'));
     }
 
     #[test]
@@ -138,9 +156,11 @@ mod test {
         let r = Region::new(&mut s, None);
         let [left, rest] = r.split(cols([5, 0], "", ["~", ""]));
         assert_eq!(left.bounds(), &bounds(0, 0, 5, 50));
-        #[cfg(miri)] left.fill(Cell::of('!'));
+        #[cfg(miri)]
+        left.fill(Cell::of('!'));
         assert_eq!(rest.bounds(), &bounds(6, 0, 44, 50));
-        #[cfg(miri)] rest.fill(Cell::of('!'));
+        #[cfg(miri)]
+        rest.fill(Cell::of('!'));
     }
 
     #[test]
@@ -149,9 +169,11 @@ mod test {
         let r = Region::new(&mut s, None);
         let [left, rest] = r.split(cols([5, 0], "", ["", "~"]));
         assert_eq!(left.bounds(), &bounds(0, 0, 5, 50));
-        #[cfg(miri)] left.fill(Cell::of('!'));
+        #[cfg(miri)]
+        left.fill(Cell::of('!'));
         assert_eq!(rest.bounds(), &bounds(5, 0, 44, 50));
-        #[cfg(miri)] rest.fill(Cell::of('!'));
+        #[cfg(miri)]
+        rest.fill(Cell::of('!'));
     }
 
     #[test]
@@ -160,9 +182,11 @@ mod test {
         let r = Region::new(&mut s, None);
         let [rest, right] = r.split(cols([0, 5], "~", ["", ""]));
         assert_eq!(rest.bounds(), &bounds(1, 0, 44, 50));
-        #[cfg(miri)] rest.fill(Cell::of('!'));
+        #[cfg(miri)]
+        rest.fill(Cell::of('!'));
         assert_eq!(right.bounds(), &bounds(45, 0, 5, 50));
-        #[cfg(miri)] right.fill(Cell::of('!'));
+        #[cfg(miri)]
+        right.fill(Cell::of('!'));
     }
 
     #[test]
@@ -171,9 +195,11 @@ mod test {
         let r = Region::new(&mut s, None);
         let [rest, right] = r.split(cols([0, 5], "", ["~", ""]));
         assert_eq!(rest.bounds(), &bounds(0, 0, 44, 50));
-        #[cfg(miri)] rest.fill(Cell::of('!'));
+        #[cfg(miri)]
+        rest.fill(Cell::of('!'));
         assert_eq!(right.bounds(), &bounds(45, 0, 5, 50));
-        #[cfg(miri)] right.fill(Cell::of('!'));
+        #[cfg(miri)]
+        right.fill(Cell::of('!'));
     }
 
     #[test]
@@ -182,9 +208,11 @@ mod test {
         let r = Region::new(&mut s, None);
         let [rest, right] = r.split(cols([0, 5], "", ["", "~"]));
         assert_eq!(rest.bounds(), &bounds(0, 0, 44, 50));
-        #[cfg(miri)] rest.fill(Cell::of('!'));
+        #[cfg(miri)]
+        rest.fill(Cell::of('!'));
         assert_eq!(right.bounds(), &bounds(44, 0, 5, 50));
-        #[cfg(miri)] right.fill(Cell::of('!'));
+        #[cfg(miri)]
+        right.fill(Cell::of('!'));
     }
 
     #[test]
@@ -248,7 +276,10 @@ mod test {
         }
         for y in 0..s.size().y() {
             let row_txt: String = s[y].iter().map(|c| c.ch).collect();
-            assert_eq!(row_txt, "!000000000@1111111111111111111111111111#222222222$");
+            assert_eq!(
+                row_txt,
+                "!000000000@1111111111111111111111111111#222222222$"
+            );
         }
     }
 }

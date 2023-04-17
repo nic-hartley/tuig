@@ -28,6 +28,6 @@ pub use region::Region;
 pub mod splitters;
 
 /// Create a splitter for a [`Region`] which divides it into optionally separated columns.
-/// 
+///
 /// The syntax
 pub use tuig_pm::cols;

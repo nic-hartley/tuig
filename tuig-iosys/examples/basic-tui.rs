@@ -1,6 +1,11 @@
 use std::thread;
 
-use tuig_iosys::{cell, fmt::Cell, ui::{Region, cols}, Action, IoSystem, Key, Screen};
+use tuig_iosys::{
+    cell,
+    fmt::Cell,
+    ui::{cols, Region},
+    Action, IoSystem, Key, Screen,
+};
 
 fn char_for_input(action: &Option<Action>) -> Cell {
     match action {

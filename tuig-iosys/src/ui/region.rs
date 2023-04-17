@@ -2,7 +2,7 @@ use core::cell::Cell;
 
 use crate::{fmt, Action, Screen, XY};
 
-use super::{Bounds, splitters::Splitter};
+use super::{splitters::Splitter, Bounds};
 
 macro_rules! split_fn {
     ( $lt:lifetime: $( $name:ident ),* $(,)? ) => { paste::paste! { $(
