@@ -1,6 +1,6 @@
 use std::thread;
 
-use tuig_iosys::{cell, fmt::Cell, ui::Region, Action, IoSystem, Key, Screen};
+use tuig_iosys::{cell, fmt::Cell, ui::{Region, cols}, Action, IoSystem, Key, Screen};
 
 fn char_for_input(action: &Option<Action>) -> Cell {
     match action {
@@ -15,9 +15,10 @@ fn char_for_input(action: &Option<Action>) -> Cell {
 }
 
 fn tui(region: Region) -> bool {
-    // let (mut left, mut rest) = region.split_left(10);
-    // left.fill(char_for_input(&left.input));
-    // rest.fill(char_for_input(&rest.input));
+    let sections = region.split(cols!(10 "| |" * "#" 5));
+    for s in sections {
+        s.fill(char_for_input(&s.input));
+    }
     true
 }
 
