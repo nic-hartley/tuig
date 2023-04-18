@@ -15,6 +15,7 @@ macro_rules! split_static {
         // literally just x and y for macro hygeine
         $x:ident, $y:ident
     ) => { paste::paste! {
+        #[must_use]
         pub struct $struct<const N: usize> {
             sizes: [usize; N],
             // TODO: &'static [fmt::Cell] separators?
