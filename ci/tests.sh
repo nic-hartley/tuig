@@ -53,9 +53,9 @@ para_teardown() {
 }
 
 # run_* features
-RUNNERS="single"
+RUNNERS="single rayon"
 # io_* features
-SYSTEMS="nop"
+SYSTEMS="nop cli_crossterm gui_softbuffer"
 
 # needs_std $RUN $IO indicates whether a given runner/iosystem pair needs the std feature
 needs_std() {
