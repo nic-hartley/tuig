@@ -1,5 +1,8 @@
-use proc_macro2::{TokenStream, Span};
-use syn::{parse::{ParseStream, Parser}, LitStr, LitInt};
+use proc_macro2::{Span, TokenStream};
+use syn::{
+    parse::{ParseStream, Parser},
+    LitInt, LitStr,
+};
 
 // would be cool if I didn't have to copy/paste the definition but eh.
 #[derive(Default)]
@@ -22,7 +25,9 @@ fn parse_sep(input: ParseStream) -> syn::Result<String> {
 fn parse_size(input: ParseStream) -> syn::Result<(Span, usize)> {
     let lh = input.lookahead1();
     if lh.peek(LitInt) {
-        input.parse::<LitInt>().and_then(|i| i.base10_parse().map(|n| (i.span(), n)))
+        input
+            .parse::<LitInt>()
+            .and_then(|i| i.base10_parse().map(|n| (i.span(), n)))
     } else if lh.peek(syn::Token!(*)) {
         let t = input.parse::<syn::Token!(*)>()?;
         Ok((t.span, 0))
@@ -51,7 +56,11 @@ fn parse_cols(input: ParseStream) -> syn::Result<ColsData> {
 }
 
 pub fn splitter(path: TokenStream, input: TokenStream) -> TokenStream {
-    let ColsData { sizes, presep, seps } = match parse_cols.parse2(input) {
+    let ColsData {
+        sizes,
+        presep,
+        seps,
+    } = match parse_cols.parse2(input) {
         Ok(d) => d,
         Err(e) => return e.to_compile_error(),
     };

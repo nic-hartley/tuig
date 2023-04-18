@@ -47,11 +47,19 @@ mod_fn! {
 mod splitters;
 #[proc_macro]
 pub fn cols(input: TokenStream) -> TokenStream {
-    splitters::splitter(quote::quote!(tuig_iosys::ui::splitters::statics::Cols), input.into()).into()
+    splitters::splitter(
+        quote::quote!(tuig_iosys::ui::splitters::statics::Cols),
+        input.into(),
+    )
+    .into()
 }
 #[proc_macro]
 pub fn rows(input: TokenStream) -> TokenStream {
-    splitters::splitter(quote::quote!(tuig_iosys::ui::splitters::statics::Rows), input.into()).into()
+    splitters::splitter(
+        quote::quote!(tuig_iosys::ui::splitters::statics::Rows),
+        input.into(),
+    )
+    .into()
 }
 
 fn is_nightly() -> bool {
