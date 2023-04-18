@@ -41,7 +41,7 @@ para() {
 para_kill() {
     if [ "$parallel" = "1" ]; then
         rm "$pipe"
-        kill -- -$$
+        kill -- -$$ || true
     fi
 }
 para_teardown() {
