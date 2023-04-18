@@ -50,7 +50,7 @@ fn parse_cols(input: ParseStream) -> syn::Result<ColsData> {
     Ok(res)
 }
 
-pub fn cols(input: TokenStream) -> TokenStream {
+pub fn splitter(path: TokenStream, input: TokenStream) -> TokenStream {
     let ColsData { sizes, presep, seps } = match parse_cols.parse2(input) {
         Ok(d) => d,
         Err(e) => return e.to_compile_error(),
@@ -61,7 +61,7 @@ pub fn cols(input: TokenStream) -> TokenStream {
     // get namespaced nicely?
     quote::quote! {
         #[allow(deprecated)]
-        tuig_iosys::ui::splitters::statics::Cols::new(
+        #path::new(
             [ #(#sizes),* ],
             #presep,
             [ #(#seps),* ],

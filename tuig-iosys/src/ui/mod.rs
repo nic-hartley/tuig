@@ -31,3 +31,9 @@ pub mod splitters;
 ///
 /// The syntax
 pub use tuig_pm::cols;
+
+/// Create a splitter for a [`Region`] which divides it into optionally separated columns.
+///
+/// The syntax is the same as for [`cols!`], except that everywhere it references words like "left" or "width",
+/// replace them with "top" or "height".
+pub use tuig_pm::rows;

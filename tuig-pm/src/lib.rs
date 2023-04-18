@@ -42,7 +42,16 @@ macro_rules! mod_fn {
 mod_fn! {
     proc_macro make_load,
     proc_macro force_docs_nightly,
-    proc_macro cols,
+}
+
+mod splitters;
+#[proc_macro]
+pub fn cols(input: TokenStream) -> TokenStream {
+    splitters::splitter(quote::quote!(tuig_iosys::ui::splitters::statics::Cols), input.into()).into()
+}
+#[proc_macro]
+pub fn rows(input: TokenStream) -> TokenStream {
+    splitters::splitter(quote::quote!(tuig_iosys::ui::splitters::statics::Rows), input.into()).into()
 }
 
 fn is_nightly() -> bool {

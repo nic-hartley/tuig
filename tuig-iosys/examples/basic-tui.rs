@@ -6,6 +6,7 @@ use tuig_iosys::{
     ui::{cols, Region},
     Action, IoSystem, Key, Screen,
 };
+use tuig_pm::rows;
 
 fn char_for_input(action: &Option<Action>) -> Cell {
     match action {
@@ -20,8 +21,9 @@ fn char_for_input(action: &Option<Action>) -> Cell {
 }
 
 fn tui(region: Region) -> bool {
-    let sections = region.split(cols!(10 "| |" * "#" 5));
-    for s in sections {
+    let [l, m, r] = region.split(cols!(10 "| |" * "#" 5));
+    let [t, b] = l.split(rows!(15 "x" *));
+    for s in [m, r, t, b] {
         s.fill(char_for_input(&s.input));
     }
     true
