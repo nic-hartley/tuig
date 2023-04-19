@@ -305,4 +305,46 @@ mod test {
             );
         }
     }
+
+    #[test]
+    fn split_just_enough_succeeds() {
+        let mut s = Screen::new(crate::XY(50, 50));
+        let r = Region::new(&mut s, None);
+        let [l, r] = r.split(cols([50, 0], "", ["", ""]))
+            .expect("should have had enough space");
+        assert_eq!(l.bounds(), &bounds(0, 0, 50, 50));
+        assert_eq!(r.bounds(), &bounds(0, 0, 0, 0));
+    }
+
+    #[test]
+    fn split_just_more_fails() {
+        let mut s = Screen::new(crate::XY(50, 50));
+        let r = Region::new(&mut s, None);
+        r.split(cols([50, 1], "", ["", ""]))
+            .expect_err("should not have had enough space");
+    }
+
+    #[test]
+    fn split_just_enough_plus_presep_fails() {
+        let mut s = Screen::new(crate::XY(50, 50));
+        let r = Region::new(&mut s, None);
+        r.split(cols([50, 0], "a", ["", ""]))
+            .expect_err("should not have had enough space");
+    }
+
+    #[test]
+    fn split_just_enough_plus_sep0_fails() {
+        let mut s = Screen::new(crate::XY(50, 50));
+        let r = Region::new(&mut s, None);
+        r.split(cols([50, 0], "", ["b", ""]))
+            .expect_err("should not have had enough space");
+    }
+
+    #[test]
+    fn split_just_enough_plus_sep1_fails() {
+        let mut s = Screen::new(crate::XY(50, 50));
+        let r = Region::new(&mut s, None);
+        r.split(cols([50, 0], "", ["", "c"]))
+            .expect_err("should not have had enough space");
+    }
 }
