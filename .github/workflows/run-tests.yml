@@ -47,7 +47,7 @@ jobs:
     - name: Run tests
       run: |
         cargo fmt --check
-        cargo check --features "$FEATS" --all-targets
+        cargo check --all-features --all-targets
         cargo ${{ matrix.miri }} test --all-targets --all-features
 
 
