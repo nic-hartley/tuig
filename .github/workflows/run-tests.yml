@@ -18,6 +18,11 @@ jobs:
       matrix:
         os: [windows, ubuntu]
         rust: [stable, "1.64", nightly]
+        include:
+        - miri: 
+        - os: ubuntu
+          rust: nightly
+          miri: miri
     name: Test battery on ${{ matrix.os }} for Rust ${{ matrix.rust }}
     runs-on: ${{ matrix.os }}-latest
     steps:
@@ -40,35 +45,10 @@ jobs:
 
     - uses: actions/checkout@v3
     - name: Run tests
-      run: ci/tests.sh --para
-      shell: bash
-
-
-  miri:
-    name: Test battery under miri
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/cache@v3
-      with:
-        path: ~/.rustup/
-        key: rustup-ubuntu-nightly
-    - uses: actions/cache@v3
-      with:
-        path: ~/.cargo/registry
-        key: cargo-cache
-    - uses: actions/cache@v3
-      with:
-        path: ./target
-        key: target-dir-ubuntu-nightly
-    - name: Setup Rust
       run: |
-        rustup default nightly
-        rustup component add rustfmt miri
-
-    - uses: actions/checkout@v3
-    - name: Run tests
-      run: ci/tests.sh --miri
-      shell: bash
+        cargo fmt --check
+        cargo check --features "$FEATS" --all-targets
+        cargo ${{ matrix.miri }} test --all-targets --all-features
 
 
   mass-events:
