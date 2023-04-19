@@ -78,7 +78,10 @@ impl Bounds {
     }
 
     pub fn empty() -> Self {
-        Self { pos: XY(0, 0), size: XY(0, 0) }
+        Self {
+            pos: XY(0, 0),
+            size: XY(0, 0),
+        }
     }
 }
 

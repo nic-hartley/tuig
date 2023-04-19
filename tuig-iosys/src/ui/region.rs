@@ -103,7 +103,14 @@ impl<'s> Region<'s> {
 
 impl Region<'static> {
     pub fn empty() -> Self {
-        Self { sd: ScreenData { buffer: &[], width: 0 }, input: None, bounds: Bounds::empty() }
+        Self {
+            sd: ScreenData {
+                buffer: &[],
+                width: 0,
+            },
+            input: None,
+            bounds: Bounds::empty(),
+        }
     }
 }
 
