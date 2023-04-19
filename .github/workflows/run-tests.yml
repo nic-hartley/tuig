@@ -41,7 +41,7 @@ jobs:
     - name: Setup Rust
       run: |
         rustup default ${{ matrix.rust }}
-        rustup component add rustfmt
+        rustup component add rustfmt ${{ matrix.miri }}
 
     - uses: actions/checkout@v3
     - name: Run tests
