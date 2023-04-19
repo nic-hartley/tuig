@@ -31,7 +31,7 @@ pub mod splitters;
 ///
 /// The syntax is relatively simple. First, you need to specify the widths of the columns you want:
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// cols!(15 * 24)
 /// ```
 ///
@@ -39,7 +39,8 @@ pub mod splitters;
 ///
 /// Between width items you can pass a string, e.g.:
 ///
-/// ```rust,no_run
+/// ```rust,ignore
+/// # use tuig_iosys::ui::cols;
 /// cols!(15 ": " * " | " 24)
 /// ```
 ///

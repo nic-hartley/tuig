@@ -12,7 +12,7 @@ pub struct Bounds {
 impl Bounds {
     /// Cut off the leftmost `amt` columns. Returns `(left, rest)`.
     pub fn split_left(&self, amt: usize) -> (Bounds, Bounds) {
-        assert!(amt > 0 && amt < self.size.x());
+        assert!(amt > 0 && amt <= self.size.x());
         let left = Bounds {
             pos: self.pos,
             size: XY(amt, self.size.y()),
@@ -26,7 +26,7 @@ impl Bounds {
 
     /// Cut off the rightmost `amt` columns. Returns `(right, rest)`.
     pub fn split_right(&self, amt: usize) -> (Bounds, Bounds) {
-        assert!(amt > 0 && amt < self.size.x());
+        assert!(amt > 0 && amt <= self.size.x());
         let inverse = self.size.x() - amt;
         let (left, rest) = self.split_left(inverse);
         (rest, left)
@@ -34,7 +34,7 @@ impl Bounds {
 
     /// Cut off the topmost `amt` columns. Returns `(top, rest)`.
     pub fn split_top(&self, amt: usize) -> (Bounds, Bounds) {
-        assert!(amt > 0 && amt < self.size.y());
+        assert!(amt > 0 && amt <= self.size.y());
         let top = Bounds {
             pos: self.pos,
             size: XY(self.size.x(), amt),
@@ -48,7 +48,7 @@ impl Bounds {
 
     /// Cut off the bottommost `amt` columns. Returns `(bottom, rest)`.
     pub fn split_bottom(&self, amt: usize) -> (Bounds, Bounds) {
-        assert!(amt > 0 && amt < self.size.y());
+        assert!(amt > 0 && amt <= self.size.y());
         let inverse = self.size.y() - amt;
         let (top, rest) = self.split_top(inverse);
         (rest, top)
@@ -75,6 +75,10 @@ impl Bounds {
 
     pub fn ys(&self) -> Range<usize> {
         self.pos.y()..(self.pos.y() + self.size.y())
+    }
+
+    pub fn empty() -> Self {
+        Self { pos: XY(0, 0), size: XY(0, 0) }
     }
 }
 

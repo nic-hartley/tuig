@@ -100,3 +100,15 @@ impl<'s> Region<'s> {
         splitter.split(self)
     }
 }
+
+impl Region<'static> {
+    pub fn empty() -> Self {
+        Self { sd: ScreenData { buffer: &[], width: 0 }, input: None, bounds: Bounds::empty() }
+    }
+}
+
+impl<'s> std::fmt::Debug for Region<'s> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.bounds.fmt(f)
+    }
+}

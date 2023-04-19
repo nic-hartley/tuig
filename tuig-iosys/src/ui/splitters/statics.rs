@@ -1,5 +1,3 @@
-use core::mem::MaybeUninit;
-
 use crate::{fmt::Cell, ui::Region, XY};
 
 use super::Splitter;
@@ -35,15 +33,6 @@ macro_rules! split_static {
                 }
             }
 
-            fn split_sizes(&self) -> (&[usize], usize, &[usize]) {
-                if let Some(idx) = self.sizes.iter().position(|&i| i == 0) {
-                    let (l, r) = self.sizes.split_at(idx);
-                    (l, idx, &r[1..])
-                } else {
-                    (&self.sizes, N, &[])
-                }
-            }
-
             fn fill_sep<'r>(r: &mut Region<'r>, sep: &str, is_left: bool) {
                 if sep.is_empty() {
                     return;
@@ -62,35 +51,33 @@ macro_rules! split_static {
         }
 
         impl<'s, const N: usize> Splitter<'s> for $struct<N> {
-            type Output = [Region<'s>; N];
+            type Output = Result<[Region<'s>; N], Region<'s>>;
             fn split(self, mut parent: Region<'s>) -> Self::Output {
-                // SAFETY: Arrays only require that each member be initialized as the member type requires, nothing
-                // extra. `MaybeUninit` doesn't require it be initialized in any specific way, that's the whole point.
-                // https://doc.rust-lang.org/std/mem/union.MaybeUninit.html#initializing-an-array-element-by-element
-                let mut res: [MaybeUninit<Region<'s>>; N] =
-                    unsafe { MaybeUninit::uninit().assume_init() };
+                let total_size =
+                    self.sizes.iter().sum::<usize>() +
+                    self.separators.iter().map(|s| s.len()).sum::<usize>() +
+                    self.preseparator.len();
+                let star_width = match parent.size().$along().checked_sub(total_size) {
+                    Some(w) => w,
+                    None => return Err(parent),
+                };
 
                 Self::fill_sep(&mut parent, self.preseparator, true);
 
-                let ([<$prev s>], star, [<$post s>]) = self.split_sizes();
-                for (i, $prev) in [<$prev s>].iter().enumerate() {
-                    res[i].write(parent.[< split_ $prev _mut >](*$prev));
+                Ok(std::array::from_fn(|i| {
+                    let width = if self.sizes[i] == 0 {
+                        star_width
+                    } else {
+                        self.sizes[i]
+                    };
+                    let res = if width == 0 {
+                        Region::empty()
+                    } else {
+                        parent.[< split_ $prev _mut >](width)
+                    };
                     Self::fill_sep(&mut parent, self.separators[i], true);
-                }
-                for (i, $post) in [<$post s>].iter().enumerate() {
-                    let i = (N - 1) - i;
-                    Self::fill_sep(&mut parent, self.separators[i], false);
-                    res[i].write(parent.[< split_ $post _mut >](*$post));
-                }
-                // then there actually was one, add it
-                if star != N {
-                    // we'll be missing the separator to its right
-                    Self::fill_sep(&mut parent, self.separators[star], false);
-                    res[star].write(parent);
-                }
-
-                // SAFETY: At this point every region being returned has been initialized
-                res.map(|mu| unsafe { mu.assume_init() })
+                    res
+                }))
             }
         }
 
@@ -126,7 +113,8 @@ mod test {
     fn plain_star_returns_original() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, None);
-        let [orig] = r.split(cols([0], "", [""]));
+        let [orig] = r.split(cols([0], "", [""]))
+            .expect("should have had enough space");
         assert_eq!(orig.bounds(), &bounds(0, 0, 50, 50));
         #[cfg(miri)]
         orig.fill(Cell::of('!'));
@@ -136,7 +124,8 @@ mod test {
     fn slice_off_left() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, None);
-        let [left, rest] = r.split(cols([5, 0], "", ["", ""]));
+        let [left, rest] = r.split(cols([5, 0], "", ["", ""]))
+            .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(0, 0, 5, 50));
         #[cfg(miri)]
         left.fill(Cell::of('!'));
@@ -149,7 +138,8 @@ mod test {
     fn slice_off_right() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, None);
-        let [rest, right] = r.split(cols([0, 5], "", ["", ""]));
+        let [rest, right] = r.split(cols([0, 5], "", ["", ""]))
+            .expect("should have had enough space");
         assert_eq!(rest.bounds(), &bounds(0, 0, 45, 50));
         #[cfg(miri)]
         rest.fill(Cell::of('!'));
@@ -162,7 +152,8 @@ mod test {
     fn slice_off_left_presep() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, None);
-        let [left, rest] = r.split(cols([5, 0], "~", ["", ""]));
+        let [left, rest] = r.split(cols([5, 0], "~", ["", ""]))
+            .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(1, 0, 5, 50));
         #[cfg(miri)]
         left.fill(Cell::of('!'));
@@ -175,7 +166,8 @@ mod test {
     fn slice_off_left_sep0() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, None);
-        let [left, rest] = r.split(cols([5, 0], "", ["~", ""]));
+        let [left, rest] = r.split(cols([5, 0], "", ["~", ""]))
+            .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(0, 0, 5, 50));
         #[cfg(miri)]
         left.fill(Cell::of('!'));
@@ -188,7 +180,8 @@ mod test {
     fn slice_off_left_sep1() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, None);
-        let [left, rest] = r.split(cols([5, 0], "", ["", "~"]));
+        let [left, rest] = r.split(cols([5, 0], "", ["", "~"]))
+            .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(0, 0, 5, 50));
         #[cfg(miri)]
         left.fill(Cell::of('!'));
@@ -201,7 +194,8 @@ mod test {
     fn slice_off_right_presep() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, None);
-        let [rest, right] = r.split(cols([0, 5], "~", ["", ""]));
+        let [rest, right] = r.split(cols([0, 5], "~", ["", ""]))
+            .expect("should have had enough space");
         assert_eq!(rest.bounds(), &bounds(1, 0, 44, 50));
         #[cfg(miri)]
         rest.fill(Cell::of('!'));
@@ -214,7 +208,8 @@ mod test {
     fn slice_off_right_sep0() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, None);
-        let [rest, right] = r.split(cols([0, 5], "", ["~", ""]));
+        let [rest, right] = r.split(cols([0, 5], "", ["~", ""]))
+            .expect("should have had enough space");
         assert_eq!(rest.bounds(), &bounds(0, 0, 44, 50));
         #[cfg(miri)]
         rest.fill(Cell::of('!'));
@@ -227,7 +222,8 @@ mod test {
     fn slice_off_right_sep1() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, None);
-        let [rest, right] = r.split(cols([0, 5], "", ["", "~"]));
+        let [rest, right] = r.split(cols([0, 5], "", ["", "~"]))
+            .expect("should have had enough space");
         assert_eq!(rest.bounds(), &bounds(0, 0, 44, 50));
         #[cfg(miri)]
         rest.fill(Cell::of('!'));
@@ -240,7 +236,8 @@ mod test {
     fn slice_left_and_right() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, None);
-        let [left, mid, right] = r.split(cols([4, 0, 5], "", ["", "", ""]));
+        let [left, mid, right] = r.split(cols([4, 0, 5], "", ["", "", ""]))
+            .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(0, 0, 4, 50));
         assert_eq!(mid.bounds(), &bounds(4, 0, 41, 50));
         assert_eq!(right.bounds(), &bounds(45, 0, 5, 50));
@@ -250,7 +247,8 @@ mod test {
     fn slice_left_and_right_presep() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, None);
-        let [left, mid, right] = r.split(cols([4, 0, 5], "", ["", "", ""]));
+        let [left, mid, right] = r.split(cols([4, 0, 5], "", ["", "", ""]))
+            .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(0, 0, 4, 50));
         assert_eq!(mid.bounds(), &bounds(4, 0, 41, 50));
         assert_eq!(right.bounds(), &bounds(45, 0, 5, 50));
@@ -260,7 +258,8 @@ mod test {
     fn slice_left_and_right_sep0() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, None);
-        let [left, mid, right] = r.split(cols([4, 0, 5], "", ["", "", ""]));
+        let [left, mid, right] = r.split(cols([4, 0, 5], "", ["", "", ""]))
+            .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(0, 0, 4, 50));
         assert_eq!(mid.bounds(), &bounds(4, 0, 41, 50));
         assert_eq!(right.bounds(), &bounds(45, 0, 5, 50));
@@ -270,7 +269,8 @@ mod test {
     fn slice_left_and_right_sep1() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, None);
-        let [left, mid, right] = r.split(cols([4, 0, 5], "", ["", "", ""]));
+        let [left, mid, right] = r.split(cols([4, 0, 5], "", ["", "", ""]))
+            .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(0, 0, 4, 50));
         assert_eq!(mid.bounds(), &bounds(4, 0, 41, 50));
         assert_eq!(right.bounds(), &bounds(45, 0, 5, 50));
@@ -280,7 +280,8 @@ mod test {
     fn slice_left_and_right_sep2() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, None);
-        let [left, mid, right] = r.split(cols([4, 0, 5], "", ["", "", ""]));
+        let [left, mid, right] = r.split(cols([4, 0, 5], "", ["", "", ""]))
+            .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(0, 0, 4, 50));
         assert_eq!(mid.bounds(), &bounds(4, 0, 41, 50));
         assert_eq!(right.bounds(), &bounds(45, 0, 5, 50));
@@ -290,7 +291,8 @@ mod test {
     fn separator_fills_separations() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, None);
-        let sects = r.split(cols([9, 0, 9], "!", ["@", "#", "$"]));
+        let sects = r.split(cols([9, 0, 9], "!", ["@", "#", "$"]))
+            .expect("should have had enough space");
         for (i, sect) in sects.into_iter().enumerate() {
             let chrs = ['0', '1', '2'];
             sect.fill(Cell::of(chrs[i % chrs.len()]));
