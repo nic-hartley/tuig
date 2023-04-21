@@ -59,13 +59,10 @@ impl Bounds {
     }
 
     /// Filters out [`Action`]s which didn't occur in this `Bounds`.
-    pub fn filter(&self, action: &Option<Action>) -> Option<Action> {
-        match action {
-            Some(act) => match act.position() {
-                Some(pos) if !self.contains(pos) => None,
-                _other => Some(act.clone()),
-            },
-            None => None,
+    pub fn filter(&self, action: &Action) -> Action {
+        match action.position() {
+            Some(pos) if !self.contains(pos) => Action::Redraw,
+            _ => action.clone(),
         }
     }
 

@@ -94,7 +94,7 @@ mod test {
 
     use crate::{
         ui::{Bounds, Region},
-        Screen,
+        Screen, Action,
     };
 
     fn bounds(x: usize, y: usize, w: usize, h: usize) -> Bounds {
@@ -112,7 +112,7 @@ mod test {
     #[test]
     fn plain_star_returns_original() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         let [orig] = r
             .split(cols([0], "", [""]))
             .expect("should have had enough space");
@@ -124,7 +124,7 @@ mod test {
     #[test]
     fn slice_off_left() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         let [left, rest] = r
             .split(cols([5, 0], "", ["", ""]))
             .expect("should have had enough space");
@@ -139,7 +139,7 @@ mod test {
     #[test]
     fn slice_off_right() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         let [rest, right] = r
             .split(cols([0, 5], "", ["", ""]))
             .expect("should have had enough space");
@@ -154,7 +154,7 @@ mod test {
     #[test]
     fn slice_off_left_presep() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         let [left, rest] = r
             .split(cols([5, 0], "~", ["", ""]))
             .expect("should have had enough space");
@@ -169,7 +169,7 @@ mod test {
     #[test]
     fn slice_off_left_sep0() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         let [left, rest] = r
             .split(cols([5, 0], "", ["~", ""]))
             .expect("should have had enough space");
@@ -184,7 +184,7 @@ mod test {
     #[test]
     fn slice_off_left_sep1() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         let [left, rest] = r
             .split(cols([5, 0], "", ["", "~"]))
             .expect("should have had enough space");
@@ -199,7 +199,7 @@ mod test {
     #[test]
     fn slice_off_right_presep() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         let [rest, right] = r
             .split(cols([0, 5], "~", ["", ""]))
             .expect("should have had enough space");
@@ -214,7 +214,7 @@ mod test {
     #[test]
     fn slice_off_right_sep0() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         let [rest, right] = r
             .split(cols([0, 5], "", ["~", ""]))
             .expect("should have had enough space");
@@ -229,7 +229,7 @@ mod test {
     #[test]
     fn slice_off_right_sep1() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         let [rest, right] = r
             .split(cols([0, 5], "", ["", "~"]))
             .expect("should have had enough space");
@@ -244,7 +244,7 @@ mod test {
     #[test]
     fn slice_left_and_right() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         let [left, mid, right] = r
             .split(cols([4, 0, 5], "", ["", "", ""]))
             .expect("should have had enough space");
@@ -256,7 +256,7 @@ mod test {
     #[test]
     fn slice_left_and_right_presep() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         let [left, mid, right] = r
             .split(cols([4, 0, 5], "", ["", "", ""]))
             .expect("should have had enough space");
@@ -268,7 +268,7 @@ mod test {
     #[test]
     fn slice_left_and_right_sep0() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         let [left, mid, right] = r
             .split(cols([4, 0, 5], "", ["", "", ""]))
             .expect("should have had enough space");
@@ -280,7 +280,7 @@ mod test {
     #[test]
     fn slice_left_and_right_sep1() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         let [left, mid, right] = r
             .split(cols([4, 0, 5], "", ["", "", ""]))
             .expect("should have had enough space");
@@ -292,7 +292,7 @@ mod test {
     #[test]
     fn slice_left_and_right_sep2() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         let [left, mid, right] = r
             .split(cols([4, 0, 5], "", ["", "", ""]))
             .expect("should have had enough space");
@@ -304,7 +304,7 @@ mod test {
     #[test]
     fn separator_fills_separations() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         let sects = r
             .split(cols([9, 0, 9], "!", ["@", "#", "$"]))
             .expect("should have had enough space");
@@ -324,7 +324,7 @@ mod test {
     #[test]
     fn split_just_enough_succeeds() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         let [l, r] = r
             .split(cols([50, 0], "", ["", ""]))
             .expect("should have had enough space");
@@ -335,7 +335,7 @@ mod test {
     #[test]
     fn split_just_more_fails() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         r.split(cols([50, 1], "", ["", ""]))
             .expect_err("should not have had enough space");
     }
@@ -343,7 +343,7 @@ mod test {
     #[test]
     fn split_just_enough_plus_presep_fails() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         r.split(cols([50, 0], "a", ["", ""]))
             .expect_err("should not have had enough space");
     }
@@ -351,7 +351,7 @@ mod test {
     #[test]
     fn split_just_enough_plus_sep0_fails() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         r.split(cols([50, 0], "", ["b", ""]))
             .expect_err("should not have had enough space");
     }
@@ -359,7 +359,7 @@ mod test {
     #[test]
     fn split_just_enough_plus_sep1_fails() {
         let mut s = Screen::new(crate::XY(50, 50));
-        let r = Region::new(&mut s, None);
+        let r = Region::new(&mut s, Action::Redraw);
         r.split(cols([50, 0], "", ["", "c"]))
             .expect_err("should not have had enough space");
     }

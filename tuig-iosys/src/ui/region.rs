@@ -53,12 +53,12 @@ impl<'s> ScreenData<'s> {
 
 pub struct Region<'s> {
     sd: ScreenData<'s>,
-    pub input: Option<Action>,
+    pub input: Action,
     bounds: Bounds,
 }
 
 impl<'s> Region<'s> {
-    pub fn new(screen: &'s mut Screen, input: Option<Action>) -> Self {
+    pub fn new(screen: &'s mut Screen, input: Action) -> Self {
         let bounds = Bounds {
             pos: XY(0, 0),
             size: screen.size(),
@@ -108,7 +108,7 @@ impl Region<'static> {
                 buffer: &[],
                 width: 0,
             },
-            input: None,
+            input: Action::Redraw,
             bounds: Bounds::empty(),
         }
     }
