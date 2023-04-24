@@ -64,7 +64,7 @@ macro_rules! split_static {
 
                 Self::fill_sep(&mut parent, self.preseparator, true);
 
-                Ok(std::array::from_fn(|i| {
+                Ok(core::array::from_fn(|i| {
                     let width = if self.sizes[i] == 0 {
                         star_width
                     } else {
@@ -92,6 +92,7 @@ split_static!(Rows, rows, top, bottom, y, x, x, y);
 mod test {
     use super::*;
 
+    use alloc::string::String;
     use crate::{
         ui::{Bounds, Region},
         Screen, Action,

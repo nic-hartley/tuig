@@ -114,7 +114,7 @@ impl Region<'static> {
     }
 }
 
-impl<'s> std::fmt::Debug for Region<'s> {
+impl<'s> core::fmt::Debug for Region<'s> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.bounds.fmt(f)
     }
