@@ -23,6 +23,8 @@ mod bounds;
 pub(crate) use bounds::Bounds;
 mod region;
 pub use region::Region;
+mod view;
+pub use view::ScreenView;
 
 #[doc(hidden)]
 pub mod splitters;
