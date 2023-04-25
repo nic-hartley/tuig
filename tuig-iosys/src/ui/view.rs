@@ -30,12 +30,17 @@ impl<'s> ScreenView<'s> {
     /// 
     /// # Safety
     /// 
-    /// The caller must ensure that there are never two `ScreenView`s with overlapping bounds on the same screen at a
-    /// time, even if they're never used. The rules are similar to those for `&mut [T]` and other aliased/overlapping
-    /// mutable references (i.e. don't).
+    /// The caller must ensure that:
     /// 
-    /// Strictly speaking, underlying UB won't be triggered unless `Index`/`IndexMut` calls produce illegally alised
-    /// references, but it's much easier to simply treat `ScreenView`s as mutable references into a `Screen`.
+    /// - There are never two concurrent `ScreenView`s pointing to overlapping areas on the same `Screen`, even if
+    ///   they're never used. The same rules apply as aliased `&mut`s / overlapping `&mut [T]`.
+    /// - The `bounds` are actually contained within the `screen`, i.e. `bounds.pos` <= `bounds.pos + bounds.size` <=
+    ///   `screen.size()`.
+    /// 
+    /// Strictly speaking, underlying UB won't be triggered unless `Index`/`IndexMut` calls produce illegally aliased
+    /// references, but it's much easier to simply treat `ScreenView`s as mutable references into a `Screen`, like a
+    /// `&mut [T]` into a `Vec<T>`, than to define all the potential UB elsewhere. Also, declaring the UB here means
+    /// the other functions can be safe.
     pub(crate) unsafe fn new(screen: &'s mut Screen, bounds: Bounds) -> Self {
         Self {
             _sc: PhantomData,
@@ -58,7 +63,7 @@ impl<'s> ScreenView<'s> {
     ///   can't get larger than `isize`, the offset must be within that range
     /// - It doesn't rely on "wrapping around", it just directly goes to the right address
     fn offset(&self, pos: XY) -> Option<usize> {
-        if pos.x() > self.bounds.size.x() || pos.y() > self.bounds.size.y() {
+        if pos.x() >= self.bounds.size.x() || pos.y() >= self.bounds.size.y() {
             return None;
         }
         let realpos = pos + self.bounds.pos;
@@ -68,8 +73,8 @@ impl<'s> ScreenView<'s> {
     /// Get a single cell in this view.
     /// 
     /// This returns `None` if the index is out of bounds.
-    pub fn cell<'v>(&'v self, idx: usize) -> Option<&'v Cell> {
-        let offset = self.offset(XY(0, idx))?;
+    pub fn cell<'v>(&'v self, pos: XY) -> Option<&'v Cell> {
+        let offset = self.offset(pos)?;
         // SAFETY: See [`Self::offset`] docs.
         unsafe { Some(&*self.buf.as_ptr().add(offset)) }
     }
@@ -77,8 +82,8 @@ impl<'s> ScreenView<'s> {
     /// Get a single cell in this view, mutably.
     /// 
     /// This returns `None` if the index is out of bounds.
-    pub fn cell_mut<'v>(&'v mut self, idx: usize) -> Option<&'v mut Cell> {
-        let offset = self.offset(XY(0, idx))?;
+    pub fn cell_mut<'v>(&'v mut self, pos: XY) -> Option<&'v mut Cell> {
+        let offset = self.offset(pos)?;
         // SAFETY: See [`Self::offset`] docs. Mutable references are safe because this method is `&mut self`, which
         // means Rust is preventing aliased references.
         unsafe { Some(&mut *self.buf.as_ptr().add(offset)) }
@@ -139,5 +144,88 @@ impl<'s> Index<usize> for ScreenView<'s> {
 impl<'s> IndexMut<usize> for ScreenView<'s> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         self.row_mut(index).expect("row index is out of bounds")
+    }
+}
+
+impl<'s> Index<XY> for ScreenView<'s> {
+    type Output = Cell;
+    fn index(&self, index: XY) -> &Self::Output {
+        self.cell(index).expect("row index is out of bounds")
+    }
+}
+
+impl<'s> IndexMut<XY> for ScreenView<'s> {
+    fn index_mut(&mut self, index: XY) -> &mut Self::Output {
+        self.cell_mut(index).expect("row index is out of bounds")
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn get_cell_inbounds() {
+        let mut screen = Screen::new(XY(5, 5));
+        screen.cells[0] = Cell::of('~');
+        let sv = unsafe { ScreenView::new(&mut screen, Bounds::new(0, 0, 5, 5)) };
+        assert_eq!(sv[XY(0, 0)], Cell::of('~'));
+    }
+
+    #[test]
+    fn set_cell_inbounds() {
+        let mut screen = Screen::new(XY(5, 5));
+        screen.cells[0] = Cell::of('~');
+        let mut sv = unsafe { ScreenView::new(&mut screen, Bounds::new(0, 0, 5, 5)) };
+        sv[XY(0, 0)] = Cell::of('!');
+        assert_eq!(screen.cells[0], Cell::of('!'));
+    }
+
+    #[test]
+    fn get_row_inbounds() {
+        let mut screen = Screen::new(XY(5, 5));
+        for (i, v) in screen.cells[0..5].iter_mut().enumerate() {
+            *v = Cell::of(char::from_digit(i as u32, 36).unwrap());
+        }
+        let sv = unsafe { ScreenView::new(&mut screen, Bounds::new(0, 0, 5, 5)) };
+        assert_eq!(sv[0], [Cell::of('0'), Cell::of('1'), Cell::of('2'), Cell::of('3'), Cell::of('4')]);
+    }
+
+    #[test]
+    fn set_row_inbounds() {
+        let mut screen = Screen::new(XY(5, 5));
+        let mut sv = unsafe { ScreenView::new(&mut screen, Bounds::new(0, 0, 5, 5)) };
+        for (i, v) in sv[0].iter_mut().enumerate() {
+            *v = Cell::of(char::from_digit(i as u32, 36).unwrap());
+        }
+        assert_eq!(&screen.cells[0..5], [Cell::of('0'), Cell::of('1'), Cell::of('2'), Cell::of('3'), Cell::of('4')]);
+    }
+
+    #[test]
+    fn get_cell_outside() {
+        let mut screen = Screen::new(XY(5, 5));
+        let sv = unsafe { ScreenView::new(&mut screen, Bounds::new(0, 0, 5, 5)) };
+        assert_eq!(sv.cell(XY(5, 0)), None);
+    }
+
+    #[test]
+    fn get_cell_mut_outside() {
+        let mut screen = Screen::new(XY(5, 5));
+        let mut sv = unsafe { ScreenView::new(&mut screen, Bounds::new(0, 0, 5, 5)) };
+        assert_eq!(sv.cell_mut(XY(5, 0)), None);
+    }
+
+    #[test]
+    fn get_row_outside() {
+        let mut screen = Screen::new(XY(5, 5));
+        let sv = unsafe { ScreenView::new(&mut screen, Bounds::new(0, 0, 5, 5)) };
+        assert_eq!(sv.row(5), None);
+    }
+
+    #[test]
+    fn get_row_mut_outside() {
+        let mut screen = Screen::new(XY(5, 5));
+        let mut sv = unsafe { ScreenView::new(&mut screen, Bounds::new(0, 0, 5, 5)) };
+        assert_eq!(sv.row_mut(5), None);
     }
 }
