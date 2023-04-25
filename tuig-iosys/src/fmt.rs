@@ -15,6 +15,8 @@
 //!
 //! And uh. Eventually there'll be others!
 
+use core::fmt::Debug;
+
 use alloc::string::String;
 
 /// The color of a piece of formatted text.
@@ -283,8 +285,16 @@ macro_rules! text {
 
 fmt_type! {
     /// A single character with associated formatting.
-    #[derive(Clone, Debug, PartialEq, Eq)]
+    #[derive(Clone, PartialEq, Eq)]
     pub struct Cell { pub ch: char }
+}
+
+impl core::fmt::Debug for Cell {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("Cell")
+            .field(&self.ch)
+            .finish()
+    }
 }
 
 /// Create a formatted [`Cell`].
