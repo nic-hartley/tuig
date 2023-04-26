@@ -1,4 +1,4 @@
-use crate::{fmt::Cell, ui::Region, XY};
+use crate::ui::Region;
 
 use super::Splitter;
 
@@ -33,20 +33,12 @@ macro_rules! split_static {
                 }
             }
 
-            fn fill_sep<'r>(r: &mut Region<'r>, sep: &str, is_left: bool) {
+            fn fill_sep<'r>(r: &mut Region<'r>, sep: &str) {
                 if sep.is_empty() {
                     return;
                 }
-                let region = if is_left {
-                    r.[<split_ $prev _mut>](sep.len())
-                } else {
-                    r.[<split_ $post _mut>](sep.len())
-                };
-                for $across in 0..region.size().$across() {
-                    for ($along, char) in sep.chars().enumerate() {
-                        region.set(XY($x, $y), Cell::of(char));
-                    }
-                }
+                let region = r.[<split_ $prev _mut>](sep.len());
+                // TODO: actually draw the separator
             }
         }
 
@@ -62,7 +54,7 @@ macro_rules! split_static {
                     None => return Err(parent),
                 };
 
-                Self::fill_sep(&mut parent, self.preseparator, true);
+                Self::fill_sep(&mut parent, self.preseparator);
 
                 Ok(core::array::from_fn(|i| {
                     let width = if self.sizes[i] == 0 {
@@ -75,7 +67,7 @@ macro_rules! split_static {
                     } else {
                         parent.[< split_ $prev _mut >](width)
                     };
-                    Self::fill_sep(&mut parent, self.separators[i], true);
+                    Self::fill_sep(&mut parent, self.separators[i]);
                     res
                 }))
             }
@@ -95,7 +87,7 @@ mod test {
     use alloc::string::String;
     use crate::{
         ui::{Bounds, Region},
-        Screen, Action,
+        Screen, Action, XY,
     };
 
     fn bounds(x: usize, y: usize, w: usize, h: usize) -> Bounds {
@@ -256,6 +248,7 @@ mod test {
 
     #[test]
     fn slice_left_and_right_presep() {
+        // TODO: Apply separators to all these tests
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let [left, mid, right] = r
@@ -311,7 +304,7 @@ mod test {
             .expect("should have had enough space");
         for (i, sect) in sects.into_iter().enumerate() {
             let chrs = ['0', '1', '2'];
-            sect.fill(Cell::of(chrs[i % chrs.len()]));
+            // TODO: Fill each section with appropriate character
         }
         for y in 0..s.size().y() {
             let row_txt: String = s[y].iter().map(|c| c.ch).collect();

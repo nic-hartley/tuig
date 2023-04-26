@@ -23,7 +23,7 @@ fn tui(region: Region) -> bool {
     let [l, m, r] = region.split(cols!(10 "| |" * "#" 5)).unwrap();
     let [t, b] = l.split(rows!(15 "x" *)).unwrap();
     for s in [m, r, t, b] {
-        s.fill(char_for_input(&s.input));
+        // TODO: s.fill(char_for_input(&s.input))
     }
     true
 }

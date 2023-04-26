@@ -3,7 +3,7 @@ use core::{fmt, ops::Range};
 use crate::{Action, XY};
 
 /// The boundaries of a [`Region`][super::Region].
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub struct Bounds {
     pub pos: XY,
     pub size: XY,

@@ -17,8 +17,8 @@ use super::Bounds;
 pub struct ScreenView<'s> {
     /// Ties the lifetimes together
     _sc: PhantomData<&'s Screen>,
-    /// Pointer to the original [`Screen`]'s `Screen.cells`
-    buf: NonNull<Cell>,
+    /// Pointer to the original [`Screen`]'s `Screen.cells`; or `None` for `ScreenView::empty`.
+    buf: Option<NonNull<Cell>>,
     /// Full size of the original [`Screen`]
     size: XY,
     /// The boundaries of this particular `ScreenView` within the screen
@@ -26,6 +26,17 @@ pub struct ScreenView<'s> {
 }
 
 impl<'s> ScreenView<'s> {
+    /// A `ScreenView` not coverying any space on any screen. Roughly analogous to `&mut []`. You can have as many of
+    /// these as you want, since you can't access any data through it.
+    pub fn empty() -> Self {
+        Self {
+            _sc: PhantomData,
+            buf: None,
+            size: XY(0, 0),
+            bounds: Bounds::new(0, 0, 0, 0),
+        }
+    }
+
     /// Create a new `ScreenView` covering the given bounds of the given `Screen`.
     /// 
     /// # Safety
@@ -45,10 +56,25 @@ impl<'s> ScreenView<'s> {
         Self {
             _sc: PhantomData,
             // SAFETY: `Vec::as_mut_ptr` never returns null pointers, only dangling ones.
-            buf: unsafe { NonNull::new_unchecked(screen.cells.as_mut_ptr()) },
+            buf: Some(unsafe { NonNull::new_unchecked(screen.cells.as_mut_ptr()) }),
             size: screen.size(),
             bounds,
         }
+    }
+
+    /// Split one `ScreenView` into more.
+    /// 
+    /// # Safety
+    /// 
+    /// The bounds provided must be entirely contained within the original (current) `ScreenView`, and none of them
+    /// can overlap at all. There can be gaps between them, though.
+    pub(crate) unsafe fn split<const N: usize>(self, subbounds: [Bounds; N]) -> [Self; N] {
+        subbounds.map(|sb| Self {
+            _sc: PhantomData,
+            bounds: sb,
+            buf: self.buf,
+            size: self.size,
+        })
     }
 
     /// Get the pointer offset for a relative location.
@@ -74,19 +100,21 @@ impl<'s> ScreenView<'s> {
     /// 
     /// This returns `None` if the index is out of bounds.
     pub fn cell<'v>(&'v self, pos: XY) -> Option<&'v Cell> {
+        let buf = self.buf?;
         let offset = self.offset(pos)?;
         // SAFETY: See [`Self::offset`] docs.
-        unsafe { Some(&*self.buf.as_ptr().add(offset)) }
+        unsafe { Some(&*buf.as_ptr().add(offset)) }
     }
 
     /// Get a single cell in this view, mutably.
     /// 
     /// This returns `None` if the index is out of bounds.
     pub fn cell_mut<'v>(&'v mut self, pos: XY) -> Option<&'v mut Cell> {
+        let buf = self.buf?;
         let offset = self.offset(pos)?;
         // SAFETY: See [`Self::offset`] docs. Mutable references are safe because this method is `&mut self`, which
         // means Rust is preventing aliased references.
-        unsafe { Some(&mut *self.buf.as_ptr().add(offset)) }
+        unsafe { Some(&mut *buf.as_ptr().add(offset)) }
     }
 
     /// Get an entire row of cells as a slice, to read them as a unit.
@@ -97,9 +125,10 @@ impl<'s> ScreenView<'s> {
     /// 
     /// This returns `None` if the index is out of bounds.
     pub fn row<'v>(&'v self, idx: usize) -> Option<&'v [Cell]> {
+        let buf = self.buf?;
         let offset = self.offset(XY(0, idx))?;
         // SAFETY: See [`Self::offset`] docs.
-        let start = unsafe { self.buf.as_ptr().add(offset) };
+        let start = unsafe { buf.as_ptr().add(offset) };
         let len = self.bounds.size.x();
         // SAFETY: `bounds` from different instances are guaranteed (from `Self::new`) to be exclusive between them,
         // so there can't be any overlap that way. And the use of `&self` ensures that this object  won't be used
@@ -118,11 +147,12 @@ impl<'s> ScreenView<'s> {
     /// 
     /// This returns `None` if the index is out of bounds.
     pub fn row_mut<'v>(&'v mut self, idx: usize) -> Option<&'v mut [Cell]> {
+        let buf = self.buf?;
         let offset = self.offset(XY(0, idx))?;
         // SAFETY: The offset is guaranteed to be within the allocated object (the screen's Vec's buffer) because
         // `self.offset` ensures it. It's guaranteed to fit within an `isize` because the Vec can't get that big. And
         // we don't rely on "wrapping around".
-        let start = unsafe { self.buf.as_ptr().add(offset) };
+        let start = unsafe { buf.as_ptr().add(offset) };
         let len = self.bounds.size.x();
         // SAFETY: `bounds` from different instances are guaranteed (from `Self::new`) to be exclusive between them,
         // so there can't be any overlap that way. And the use of `&mut self` ensures that this object  won't be used
@@ -157,6 +187,12 @@ impl<'s> Index<XY> for ScreenView<'s> {
 impl<'s> IndexMut<XY> for ScreenView<'s> {
     fn index_mut(&mut self, index: XY) -> &mut Self::Output {
         self.cell_mut(index).expect("row index is out of bounds")
+    }
+}
+
+impl<'s> Default for ScreenView<'s> {
+    fn default() -> Self {
+        Self::empty()
     }
 }
 

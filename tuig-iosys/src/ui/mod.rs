@@ -25,6 +25,8 @@ mod region;
 pub use region::Region;
 mod view;
 pub use view::ScreenView;
+mod attach;
+pub use attach::{Attachment, RawAttachment};
 
 #[doc(hidden)]
 pub mod splitters;
