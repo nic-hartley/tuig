@@ -1,4 +1,8 @@
-use crate::{fmt::Cell, ui::{RawAttachment, ScreenView}, Action};
+use crate::{
+    fmt::Cell,
+    ui::{RawAttachment, ScreenView},
+    Action,
+};
 
 pub struct Fill(pub Cell);
 

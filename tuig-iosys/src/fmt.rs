@@ -291,9 +291,7 @@ fmt_type! {
 
 impl core::fmt::Debug for Cell {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_tuple("Cell")
-            .field(&self.ch)
-            .finish()
+        f.debug_tuple("Cell").field(&self.ch).finish()
     }
 }
 

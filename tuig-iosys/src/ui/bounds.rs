@@ -11,7 +11,10 @@ pub struct Bounds {
 
 impl Bounds {
     pub fn new(x: usize, y: usize, w: usize, h: usize) -> Self {
-        Self { pos: XY(x, y), size: XY(w, h) }
+        Self {
+            pos: XY(x, y),
+            size: XY(w, h),
+        }
     }
 
     /// Cut off the leftmost `amt` columns. Returns `(left, rest)`.

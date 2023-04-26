@@ -1,4 +1,7 @@
-use crate::{ui::{Region, ScreenView}, fmt::Cell};
+use crate::{
+    fmt::Cell,
+    ui::{Region, ScreenView},
+};
 
 use super::Splitter;
 
@@ -92,11 +95,11 @@ split_static!(Rows, rows, top, bottom, y, x, x, y);
 mod test {
     use super::*;
 
-    use alloc::string::String;
     use crate::{
         ui::{Bounds, Region},
-        Screen, Action, XY,
+        Action, Screen, XY,
     };
+    use alloc::string::String;
 
     fn bounds(x: usize, y: usize, w: usize, h: usize) -> Bounds {
         Bounds {
