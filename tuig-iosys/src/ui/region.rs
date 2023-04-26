@@ -1,6 +1,6 @@
-use crate::{Action, Screen, XY};
+use crate::{Action, Screen, XY, fmt::Cell};
 
-use super::{splitters::Splitter, Bounds, ScreenView};
+use super::{splitters::Splitter, Bounds, ScreenView, Attachment};
 
 macro_rules! split_fn {
     ( $lt:lifetime: $( $name:ident ),* $(,)? ) => { paste::paste! { $(
@@ -60,11 +60,19 @@ impl<'s> Region<'s> {
     pub(crate) fn raw_pieces(self) -> (Action, ScreenView<'s>) {
         (self.input, self.sv)
     }
+
+    pub fn attach<A: Attachment<'s>>(self, attachment: A) -> A::Output {
+        attachment.attach(self)
+    }
+
+    pub fn fill(self, cell: Cell) {
+        self.attach(super::elements::Fill(cell))
+    }
 }
 
 impl Region<'static> {
     pub fn empty() -> Self {
-        Self { sv: ScreenView::empty(), input: Action::Redraw, bounds: Bounds::new(0, 0, 0, 0) }
+        Self { sv: ScreenView::empty(), input: Action::Redraw, bounds: Bounds::empty() }
     }
 }
 

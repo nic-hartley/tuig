@@ -3,7 +3,7 @@ use std::thread;
 use tuig_iosys::{
     cell,
     fmt::Cell,
-    ui::{cols, Region},
+    ui::{cols, Region, ScreenView},
     Action, IoSystem, Key, Screen,
 };
 use tuig_pm::rows;
@@ -23,7 +23,7 @@ fn tui(region: Region) -> bool {
     let [l, m, r] = region.split(cols!(10 "| |" * "#" 5)).unwrap();
     let [t, b] = l.split(rows!(15 "x" *)).unwrap();
     for s in [m, r, t, b] {
-        // TODO: s.fill(char_for_input(&s.input))
+        s.attach(|i, mut sv: ScreenView| sv.fill(char_for_input(&i)))
     }
     true
 }

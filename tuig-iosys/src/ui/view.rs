@@ -20,7 +20,7 @@ pub struct ScreenView<'s> {
     /// Pointer to the original [`Screen`]'s `Screen.cells`; or `None` for `ScreenView::empty`.
     buf: Option<NonNull<Cell>>,
     /// Full size of the original [`Screen`]
-    size: XY,
+    full_size: XY,
     /// The boundaries of this particular `ScreenView` within the screen
     bounds: Bounds,
 }
@@ -32,8 +32,8 @@ impl<'s> ScreenView<'s> {
         Self {
             _sc: PhantomData,
             buf: None,
-            size: XY(0, 0),
-            bounds: Bounds::new(0, 0, 0, 0),
+            full_size: XY(0, 0),
+            bounds: Bounds::empty(),
         }
     }
 
@@ -57,7 +57,7 @@ impl<'s> ScreenView<'s> {
             _sc: PhantomData,
             // SAFETY: `Vec::as_mut_ptr` never returns null pointers, only dangling ones.
             buf: Some(unsafe { NonNull::new_unchecked(screen.cells.as_mut_ptr()) }),
-            size: screen.size(),
+            full_size: screen.size(),
             bounds,
         }
     }
@@ -73,7 +73,7 @@ impl<'s> ScreenView<'s> {
             _sc: PhantomData,
             bounds: sb,
             buf: self.buf,
-            size: self.size,
+            full_size: self.full_size,
         })
     }
 
@@ -93,7 +93,12 @@ impl<'s> ScreenView<'s> {
             return None;
         }
         let realpos = pos + self.bounds.pos;
-        Some(realpos.y() * self.size.x() + realpos.x())
+        Some(realpos.y() * self.full_size.x() + realpos.x())
+    }
+
+    /// Get the size of this view.
+    pub fn size(&self) -> XY {
+        self.bounds.size
     }
 
     /// Get a single cell in this view.
@@ -160,6 +165,15 @@ impl<'s> ScreenView<'s> {
         // The other conditions are fulfilled because this pointer is entirely contained within a single Vec alloc.
         unsafe {
             Some(slice::from_raw_parts_mut(start, len))
+        }
+    }
+
+    /// Fill this section of the screen with a single character.
+    pub fn fill(&mut self, cell: Cell) {
+        for y in 0..self.size().y() {
+            // SAFETY: We're iterating from 0 to the maximum row, they have to exist
+            let row = unsafe { self.row_mut(y).unwrap_unchecked() };
+            row.fill(cell.clone());
         }
     }
 }

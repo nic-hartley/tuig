@@ -1,4 +1,4 @@
-use crate::ui::Region;
+use crate::{ui::{Region, ScreenView}, fmt::Cell};
 
 use super::Splitter;
 
@@ -37,8 +37,16 @@ macro_rules! split_static {
                 if sep.is_empty() {
                     return;
                 }
+                // TODO: Get rid of this allocation somehow, maybe with more preprocessing/macrofuckery
+                let cells: alloc::vec::Vec<_> = sep.chars().map(|c| Cell::of(c)).collect();
                 let region = r.[<split_ $prev _mut>](sep.len());
-                // TODO: actually draw the separator
+                region.attach(|_, mut sv: ScreenView| {
+                    for $y in 0..sv.size().y() {
+                        for $x in 0..sv.size().x() {
+                            sv[$y][$x] = cells[$along].clone();
+                        }
+                    }
+                })
             }
         }
 
@@ -304,7 +312,7 @@ mod test {
             .expect("should have had enough space");
         for (i, sect) in sects.into_iter().enumerate() {
             let chrs = ['0', '1', '2'];
-            // TODO: Fill each section with appropriate character
+            sect.fill(Cell::of(chrs[i]));
         }
         for y in 0..s.size().y() {
             let row_txt: String = s[y].iter().map(|c| c.ch).collect();
