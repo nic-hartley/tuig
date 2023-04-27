@@ -66,7 +66,7 @@ impl<'s> Region<'s> {
     }
 
     pub fn fill(self, cell: Cell) {
-        self.attach(super::elements::Fill(cell))
+        self.attach(|_, mut sv: ScreenView| sv.fill(cell))
     }
 }
 
