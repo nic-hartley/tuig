@@ -132,30 +132,6 @@ impl Screen {
             }
         }
     }
-
-    /// Write a header to the screen. (Note this must be rewritten every frame!)
-    #[cfg(feature = "ui")]
-    pub fn header<'a>(&'a mut self) -> crate::ui::widgets::Header<'a> {
-        crate::ui::widgets::Header::new(self)
-    }
-
-    /// Write a text-box to the screen.
-    #[cfg(feature = "ui")]
-    pub fn textbox<'a>(&'a mut self, text: Vec<Text>) -> crate::ui::widgets::Textbox<'a> {
-        crate::ui::widgets::Textbox::new(self, text)
-    }
-
-    /// Draw a vertical line on screen.
-    #[cfg(feature = "ui")]
-    pub fn vertical<'a>(&'a mut self, col: usize) -> crate::ui::widgets::Vertical<'a> {
-        crate::ui::widgets::Vertical::new(self, col)
-    }
-
-    /// Draw a horizontal line on screen.
-    #[cfg(feature = "ui")]
-    pub fn horizontal<'a>(&'a mut self, row: usize) -> crate::ui::widgets::Horizontal<'a> {
-        crate::ui::widgets::Horizontal::new(self, row)
-    }
 }
 
 impl ops::Index<usize> for Screen {
