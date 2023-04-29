@@ -6,4 +6,5 @@
 
 mod button;
 mod textbox;
+pub use textbox::{Textbox, TextboxData};
 mod text_input;
