@@ -1,16 +1,26 @@
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::{Span, TokenStream, TokenTree};
 use syn::{
     parse::{ParseStream, Parser},
-    LitInt, LitStr,
+    LitInt, LitStr, Token,
 };
 
 // would be cool if I didn't have to copy/paste the definition but eh.
 #[derive(Default)]
 pub struct ColsData {
+    base: TokenStream,
     sizes: Vec<usize>,
     // TODO: &'static [fmt::Cell] separators?
     presep: String,
     seps: Vec<String>,
+}
+
+fn parse_base(input: ParseStream) -> syn::Result<TokenStream> {
+    let mut res = vec![];
+    while !input.lookahead1().peek(Token!(:)) {
+        res.push(input.parse::<TokenTree>()?)
+    }
+    let _ = input.parse::<Token!(:)>()?;
+    Ok(quote::quote!( #( #res )* ))
 }
 
 fn parse_sep(input: ParseStream) -> syn::Result<String> {
@@ -30,7 +40,7 @@ fn parse_size(input: ParseStream) -> syn::Result<(Span, usize)> {
             .and_then(|i| i.base10_parse().map(|n| (i.span(), n)))
     } else if lh.peek(syn::Token!(*)) {
         let t = input.parse::<syn::Token!(*)>()?;
-        Ok((t.span, 0))
+        Ok((t.span, usize::MAX))
     } else {
         Err(input.error("expected a usize or *"))
     }
@@ -38,12 +48,13 @@ fn parse_size(input: ParseStream) -> syn::Result<(Span, usize)> {
 
 fn parse_cols(input: ParseStream) -> syn::Result<ColsData> {
     let mut res = ColsData::default();
+    res.base = input.call(parse_base)?;
     let mut has_star = false;
     res.presep = input.call(parse_sep)?;
     while !input.is_empty() {
         let (t, w) = input.call(parse_size)?;
         res.sizes.push(w);
-        if w == 0 {
+        if w == usize::MAX {
             if !has_star {
                 has_star = true;
             } else {
@@ -57,6 +68,7 @@ fn parse_cols(input: ParseStream) -> syn::Result<ColsData> {
 
 pub fn splitter(path: TokenStream, input: TokenStream) -> TokenStream {
     let ColsData {
+        base,
         sizes,
         presep,
         seps,
@@ -70,7 +82,7 @@ pub fn splitter(path: TokenStream, input: TokenStream) -> TokenStream {
     // get namespaced nicely?
     quote::quote! {
         #[allow(deprecated)]
-        #path::new(
+        #base::#path::new(
             [ #(#sizes),* ],
             #presep,
             [ #(#seps),* ],

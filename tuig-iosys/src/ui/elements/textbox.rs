@@ -3,9 +3,10 @@ use core::mem;
 use alloc::{string::String, vec::Vec};
 
 use crate::{
-    fmt::{Formatted, FormattedExt, Text, Cell},
+    fmt::{Cell, Formatted, FormattedExt, Text},
     text, text1,
-    xy::XY, ui::ScreenView,
+    ui::ScreenView,
+    xy::XY,
 };
 
 fn breakable(ch: char) -> bool {
@@ -32,9 +33,9 @@ impl TextboxData {
 }
 
 /// A box of text which can be attached to a [`Region`].
-/// 
+///
 /// Textboxes automatically handle:
-/// 
+///
 /// - Word wrapping to fit in their region
 /// - Indentation, including distinct first line indentation
 /// - Scrolling to a desired height, relative to the top or bottom
@@ -67,7 +68,7 @@ impl<'a> Textbox<'a> {
     }
 
     pub fn render(mut self) -> TextboxData {
-        let sv = match mem::replace(&mut self.sv, None) {
+        let mut sv = match mem::replace(&mut self.sv, None) {
             Some(s) => s,
             None => return TextboxData::EMPTY,
         };
@@ -78,7 +79,7 @@ impl<'a> Textbox<'a> {
 
         let first_indent = self.first_indent.unwrap_or(self.indent);
         let width = sv.size().x();
-        let height = sv.size().y();
+        let mut height = sv.size().y();
 
         assert!(width > self.indent);
         assert!(width > first_indent);
@@ -189,10 +190,13 @@ impl<'a> Textbox<'a> {
             height: 0,
             scroll: start,
         };
-        let mut cells = vec![];
+        let mut cells = alloc::vec![];
         for line in lines.into_iter().skip(start).take(height) {
-            cells.extend(line.into_iter().flat_map(|t| t.text.chars().map(|c| Cell::of(c).fmt_of(&t))));
-            sv[y][x..x+line.len()].clone_from_slice(&cells);
+            cells.extend(
+                line.iter()
+                    .flat_map(|t| t.text.chars().map(|c| Cell::of(c).fmt_of(t))),
+            );
+            sv[y][x..x + cells.len()].clone_from_slice(&cells);
             cells.clear();
             y += 1;
             data.height += 1;
@@ -230,7 +234,8 @@ mod test {
 
     use crate::{
         fmt::{Cell, Color, Formatted, FormattedExt},
-        text1, Screen,
+        ui::Region,
+        Screen,
     };
 
     use super::*;
@@ -245,16 +250,29 @@ mod test {
         FILLER.chars().nth((x * 5 + y * 3) % FILLER.len()).unwrap()
     }
 
-    /// Generate a screen filled with miscellaneous "random" data, to fairly reliably check that stuff was left blank
-    /// by the code under test. (This isn't cryptographically secure or anything!)
-    fn screen(x: usize, y: usize) -> Screen {
-        let mut s = Screen::new(XY(x, y));
-        for px in 0..x {
-            for py in 0..y {
-                s[py][px] = Cell::of(charat(px, py)).on_black();
+    /// Generate a screen filled with miscellaneous "random" data, to fairly reliably check that stuff was left alone
+    /// by the code under test, and offer a region of the given size and position within it.
+    macro_rules! make_screen {
+        (
+            $screen:ident($sx:literal, $sy:literal)
+            $( , $region:ident($rx:literal, $ry:literal, $rw:tt, $rh:tt) )?
+        ) => {
+            let mut $screen = Screen::new(XY($sx, $sy));
+            for px in 0..$sx {
+                for py in 0..$sy {
+                    $screen[py][px] = Cell::of(charat(px, py)).on_black();
+                }
             }
-        }
-        s
+            $(
+                let root = Region::new(&mut $screen, crate::Action::Redraw);
+                let [_, vert] = root.split(crate::ui::cols!($rx $rw))
+                    .expect("not enough space for desired cols");
+                let [_, hori] = vert.split(crate::ui::rows!($ry $rh))
+                    .expect("not enough space for desired rows");
+                #[allow(unused_mut)]
+                let mut $region = hori;
+            )?
+        };
     }
 
     fn assert_cell_blank(s: &Screen, x: usize, y: usize) {
@@ -329,15 +347,15 @@ mod test {
 
     #[test]
     fn blank_textbox_renders_nothing() {
-        let mut sc = screen(50, 30);
-        sc.textbox(alloc::vec![]);
-        screen_assert!(sc: blank.., ..);
+        make_screen!(sc(50, 30), r(0, 0, *, *));
+        r.textbox(alloc::vec![]);
+        screen_assert! { sc: blank .., .. };
     }
 
     #[test]
     fn basic_textbox_renders_right() {
-        let mut sc = screen(50, 30);
-        let res = sc
+        make_screen!(sc(50, 30), r(0, 0, *, *));
+        let res = r
             .textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "))
             .render();
         screen_assert!(sc:
@@ -358,10 +376,9 @@ mod test {
 
     #[test]
     fn textbox_positioning_works() {
-        let mut sc = screen(50, 30);
-        let res = sc
+        make_screen!(sc(50, 30), r(4, 3, *, *));
+        let res = r
             .textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "))
-            .pos(4, 3)
             .render();
         screen_assert!(sc:
             // blank top 3 rows (0, 1, 2)
@@ -385,12 +402,11 @@ mod test {
 
     #[test]
     fn textbox_wraps_words_and_overwrites() {
-        let mut sc = screen(50, 30);
-        let res = sc
+        make_screen!(sc(50, 30), r(40, 0, *, *));
+        let res = r
             .textbox(text!(
                 "these are some words which will eveeeentually be wrapped!"
             ))
-            .pos(40, 0)
             .render();
         screen_assert!(sc:
             blank ..40, ..,
@@ -409,11 +425,10 @@ mod test {
 
     #[test]
     fn textbox_wrap_carries_formatting() {
-        let mut sc = screen(50, 30);
-        sc.textbox(
+        make_screen!(sc(50, 30), r(40, 0, *, *));
+        r.textbox(
             text!("these are some words which will ", green "eveeeentually", " be wrapped!"),
-        )
-        .pos(40, 0);
+        );
         screen_assert!(sc:
             blank ..40, ..,
             blank .., 6..,
@@ -428,11 +443,10 @@ mod test {
 
     #[test]
     fn textbox_linefill_carries_formatting() {
-        let mut sc = screen(50, 30);
-        sc.textbox(
+        make_screen!(sc(50, 30), r(40, 0, *, *));
+        r.textbox(
             text!("these are some words which will eveeeentually ", on_blue "be wrapped", "!"),
-        )
-        .pos(40, 0);
+        );
         screen_assert!(sc:
             blank ..40, ..,
             blank .., 6..,
@@ -447,13 +461,11 @@ mod test {
 
     #[test]
     fn textbox_size_truncates() {
-        let mut sc = screen(50, 30);
-        let res = sc
+        make_screen!(sc(50, 30), r(40, 0, 10, 3));
+        let res = r
             .textbox(text!(
                 "these are some words which will eveeeentually be wrapped!"
             ))
-            .pos(40, 0)
-            .size(10, 3)
             .render();
         screen_assert!(sc:
             blank ..40, ..,
@@ -469,12 +481,11 @@ mod test {
 
     #[test]
     fn textbox_scroll_moves_view() {
-        let mut sc = screen(50, 30);
-        let res = sc
+        make_screen!(sc(50, 30), r(40, 0, *, *));
+        let res = r
             .textbox(text!(
                 "these are some words which will eveeeentually be wrapped!"
             ))
-            .pos(40, 0)
             .scroll(2)
             .render();
         screen_assert!(sc:
@@ -492,13 +503,11 @@ mod test {
 
     #[test]
     fn textbox_scroll_bottom_moves_view() {
-        let mut sc = screen(50, 30);
-        let res = sc
+        make_screen!(sc(50, 30), r(40, 0, 10, 4));
+        let res = r
             .textbox(text!(
                 "these are some words which will eveeeentually be wrapped!"
             ))
-            .pos(40, 0)
-            .size(10, 4)
             .scroll(1)
             .scroll_bottom(true)
             .render();

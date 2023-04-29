@@ -22,18 +22,21 @@ macro_rules! mod_fn {
     ( @ proc_macro $name:ident ) => {
         convert! {
             #[proc_macro]
+            #[doc(hidden)]
             fn $name(input: TokenStream) -> TokenStream
         }
     };
     ( @ proc_macro_derive ( $type:ident ) $name:ident ) => {
         convert! {
             #[proc_macro_derive( $type )]
+            #[doc(hidden)]
             fn $name(input: TokenStream) -> TokenStream
         }
     };
     ( @ proc_macro_attribute $name:ident ) => {
         convert! {
             #[proc_macro_attribute]
+            #[doc(hidden)]
             fn $name(attr: TokenStream, item: TokenStream) -> TokenStream
         }
     };
@@ -48,7 +51,7 @@ mod splitters;
 #[proc_macro]
 pub fn cols(input: TokenStream) -> TokenStream {
     splitters::splitter(
-        quote::quote!(tuig_iosys::ui::splitters::statics::Cols),
+        quote::quote!(ui::splitters::statics::Cols),
         input.into(),
     )
     .into()
@@ -56,7 +59,7 @@ pub fn cols(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn rows(input: TokenStream) -> TokenStream {
     splitters::splitter(
-        quote::quote!(tuig_iosys::ui::splitters::statics::Rows),
+        quote::quote!(ui::splitters::statics::Rows),
         input.into(),
     )
     .into()

@@ -17,7 +17,6 @@
 #![cfg(feature = "ui")]
 
 pub mod helpers;
-pub mod widgets;
 
 mod bounds;
 pub(crate) use bounds::Bounds;
@@ -33,6 +32,23 @@ pub use inputstate::InputState;
 pub mod elements;
 #[doc(hidden)]
 pub mod splitters;
+
+#[doc(hidden)]
+pub mod macros {
+    pub use tuig_pm as pm;
+    #[macro_export]
+    macro_rules! __cols {
+        ($( $i:tt )*) => {
+            $crate::ui::macros::pm::cols!($crate: $( $i )*)
+        };
+    }
+    #[macro_export]
+    macro_rules! __rows {
+        ($( $i:tt )*) => {
+            $crate::ui::macros::pm::rows!($crate: $( $i )*)
+        };
+    }
+}
 
 /// Create a splitter for a [`Region`] which divides it into optionally separated columns.
 ///
@@ -72,10 +88,10 @@ pub mod splitters;
 ///     unsafe { libc::system(cmd.as_ptr()); }
 /// }
 /// ```
-pub use tuig_pm::cols;
+pub use crate::__cols as cols;
 
 /// Create a splitter for a [`Region`] which divides it into optionally separated columns.
 ///
 /// The syntax is the same as for [`cols!`], except that everywhere it references words like "left" or "width",
 /// replace them with "top" or "height".
-pub use tuig_pm::rows;
+pub use crate::__rows as rows;

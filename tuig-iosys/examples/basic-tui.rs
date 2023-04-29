@@ -3,10 +3,9 @@ use std::thread;
 use tuig_iosys::{
     cell,
     fmt::Cell,
-    ui::{cols, Region, ScreenView},
+    ui::{rows, cols, Region, ScreenView},
     Action, IoSystem, Key, Screen,
 };
-use tuig_pm::rows;
 
 fn char_for_input(action: &Action) -> Cell {
     match action {

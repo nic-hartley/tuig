@@ -1,6 +1,6 @@
 use std::thread;
 
-use tuig_iosys::{text1, Action, IoSystem, Key, Screen};
+use tuig_iosys::{text1, Action, IoSystem, Key, Screen, ui::Region};
 
 fn list_events(mut sys: Box<dyn IoSystem>) {
     const MAX_LEN: usize = 256;
@@ -8,7 +8,7 @@ fn list_events(mut sys: Box<dyn IoSystem>) {
     let mut screen = Screen::new(sys.size());
     loop {
         screen.resize(sys.size());
-        screen
+        Region::new(&mut screen, Action::Redraw)
             .textbox(log.clone())
             .first_indent(0)
             .indent(4)
