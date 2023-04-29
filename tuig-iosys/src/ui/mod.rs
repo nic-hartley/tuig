@@ -27,8 +27,10 @@ mod view;
 pub use view::ScreenView;
 mod attach;
 pub use attach::{Attachment, RawAttachment};
-pub mod elements;
+mod inputstate;
+pub use inputstate::InputState;
 
+pub mod elements;
 #[doc(hidden)]
 pub mod splitters;
 

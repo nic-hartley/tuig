@@ -3,7 +3,7 @@ use core::mem;
 
 use crate::{fmt::Text, text, Action, Key};
 
-use super::ModState;
+use super::super::InputState;
 
 /// Indicates what the text input needs from its owner
 #[derive(Debug, PartialEq, Eq)]
@@ -55,7 +55,7 @@ pub struct TextInput {
     autocomplete: String,
 
     /// the current state of the keyboard modifiers
-    modstate: ModState,
+    modstate: InputState,
 
     /// previous lines entered, for scrolling through
     history: VecDeque<String>,
