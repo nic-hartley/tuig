@@ -96,12 +96,10 @@ mod test {
     use super::*;
 
     use crate::{
-        ui::{Bounds, Region},
+        ui::{cols, Bounds, Region},
         Action, Screen, XY,
     };
     use alloc::string::String;
-
-    const STAR: usize = usize::MAX;
 
     fn bounds(x: usize, y: usize, w: usize, h: usize) -> Bounds {
         Bounds {
@@ -110,17 +108,12 @@ mod test {
         }
     }
 
-    fn cols<const N: usize>(ws: [usize; N], p: &'static str, seps: [&'static str; N]) -> Cols<N> {
-        #[allow(deprecated)]
-        Cols::new(ws, p, seps)
-    }
-
     #[test]
     fn plain_star_returns_original() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let [orig] = r
-            .split(cols([STAR], "", [""]))
+            .split(cols!(*))
             .expect("should have had enough space");
         assert_eq!(orig.bounds(), &bounds(0, 0, 50, 50));
         #[cfg(miri)]
@@ -132,7 +125,7 @@ mod test {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let [left, rest] = r
-            .split(cols([5, STAR], "", ["", ""]))
+            .split(cols!(5 *))
             .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(0, 0, 5, 50));
         #[cfg(miri)]
@@ -147,7 +140,7 @@ mod test {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let [rest, right] = r
-            .split(cols([STAR, 5], "", ["", ""]))
+            .split(cols!(* 5))
             .expect("should have had enough space");
         assert_eq!(rest.bounds(), &bounds(0, 0, 45, 50));
         #[cfg(miri)]
@@ -162,7 +155,7 @@ mod test {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let [left, rest] = r
-            .split(cols([5, STAR], "~", ["", ""]))
+            .split(cols!("~" 5 *))
             .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(1, 0, 5, 50));
         #[cfg(miri)]
@@ -177,7 +170,7 @@ mod test {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let [left, rest] = r
-            .split(cols([5, STAR], "", ["~", ""]))
+            .split(cols!(5 "~" *))
             .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(0, 0, 5, 50));
         #[cfg(miri)]
@@ -192,7 +185,7 @@ mod test {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let [left, rest] = r
-            .split(cols([5, STAR], "", ["", "~"]))
+            .split(cols!(5 * "~"))
             .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(0, 0, 5, 50));
         #[cfg(miri)]
@@ -207,7 +200,7 @@ mod test {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let [rest, right] = r
-            .split(cols([STAR, 5], "~", ["", ""]))
+            .split(cols!("~" * 5))
             .expect("should have had enough space");
         assert_eq!(rest.bounds(), &bounds(1, 0, 44, 50));
         #[cfg(miri)]
@@ -222,7 +215,7 @@ mod test {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let [rest, right] = r
-            .split(cols([STAR, 5], "", ["~", ""]))
+            .split(cols!(* "~" 5))
             .expect("should have had enough space");
         assert_eq!(rest.bounds(), &bounds(0, 0, 44, 50));
         #[cfg(miri)]
@@ -237,7 +230,7 @@ mod test {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let [rest, right] = r
-            .split(cols([STAR, 5], "", ["", "~"]))
+            .split(cols!(* 5 "~"))
             .expect("should have had enough space");
         assert_eq!(rest.bounds(), &bounds(0, 0, 44, 50));
         #[cfg(miri)]
@@ -252,7 +245,7 @@ mod test {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let [left, mid, right] = r
-            .split(cols([4, STAR, 5], "", ["", "", ""]))
+            .split(cols!(4 * 5))
             .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(0, 0, 4, 50));
         assert_eq!(mid.bounds(), &bounds(4, 0, 41, 50));
@@ -265,7 +258,7 @@ mod test {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let [left, mid, right] = r
-            .split(cols([4, STAR, 5], "", ["", "", ""]))
+            .split(cols!(4 * 5))
             .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(0, 0, 4, 50));
         assert_eq!(mid.bounds(), &bounds(4, 0, 41, 50));
@@ -277,7 +270,7 @@ mod test {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let [left, mid, right] = r
-            .split(cols([4, STAR, 5], "", ["", "", ""]))
+            .split(cols!(4 * 5))
             .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(0, 0, 4, 50));
         assert_eq!(mid.bounds(), &bounds(4, 0, 41, 50));
@@ -289,7 +282,7 @@ mod test {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let [left, mid, right] = r
-            .split(cols([4, STAR, 5], "", ["", "", ""]))
+            .split(cols!(4 * 5))
             .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(0, 0, 4, 50));
         assert_eq!(mid.bounds(), &bounds(4, 0, 41, 50));
@@ -301,7 +294,7 @@ mod test {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let [left, mid, right] = r
-            .split(cols([4, STAR, 5], "", ["", "", ""]))
+            .split(cols!(4 * 5))
             .expect("should have had enough space");
         assert_eq!(left.bounds(), &bounds(0, 0, 4, 50));
         assert_eq!(mid.bounds(), &bounds(4, 0, 41, 50));
@@ -313,7 +306,7 @@ mod test {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let sects = r
-            .split(cols([9, STAR, 9], "!", ["@", "#", "$"]))
+            .split(cols!("!" 9 "@" * "#" 9 "$"))
             .expect("should have had enough space");
         for (i, sect) in sects.into_iter().enumerate() {
             let chrs = ['0', '1', '2'];
@@ -333,7 +326,7 @@ mod test {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
         let [l, r] = r
-            .split(cols([50, STAR], "", ["", ""]))
+            .split(cols!(50 *))
             .expect("should have had enough space");
         assert_eq!(l.bounds(), &bounds(0, 0, 50, 50));
         assert_eq!(r.bounds(), &bounds(0, 0, 0, 0));
@@ -343,7 +336,7 @@ mod test {
     fn split_just_more_fails() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
-        r.split(cols([50, 1], "", ["", ""]))
+        r.split(cols!(50 1))
             .expect_err("should not have had enough space");
     }
 
@@ -351,7 +344,7 @@ mod test {
     fn split_just_enough_plus_presep_fails() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
-        r.split(cols([50, STAR], "a", ["", ""]))
+        r.split(cols!("a" 50 *))
             .expect_err("should not have had enough space");
     }
 
@@ -359,7 +352,7 @@ mod test {
     fn split_just_enough_plus_sep0_fails() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
-        r.split(cols([50, STAR], "", ["b", ""]))
+        r.split(cols!(50 "b" *))
             .expect_err("should not have had enough space");
     }
 
@@ -367,7 +360,7 @@ mod test {
     fn split_just_enough_plus_sep1_fails() {
         let mut s = Screen::new(crate::XY(50, 50));
         let r = Region::new(&mut s, Action::Redraw);
-        r.split(cols([50, STAR], "", ["", "c"]))
+        r.split(cols!(50 * "c"))
             .expect_err("should not have had enough space");
     }
 }
