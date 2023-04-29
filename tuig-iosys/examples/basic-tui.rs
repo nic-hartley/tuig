@@ -3,8 +3,8 @@ use std::thread;
 use tuig_iosys::{
     cell,
     fmt::Cell,
-    ui::{rows, cols, Region, ScreenView},
-    Action, IoSystem, Key, Screen,
+    ui::{rows, cols, Region, ScreenView, elements::Textbox},
+    Action, IoSystem, Key, Screen, text,
 };
 
 fn char_for_input(action: &Action) -> Cell {
@@ -19,11 +19,18 @@ fn char_for_input(action: &Action) -> Cell {
 }
 
 fn tui(region: Region) -> bool {
-    let [l, m, r] = region.split(cols!(10 "| |" * "#" 5)).unwrap();
-    let [t, b] = l.split(rows!(15 "x" *)).unwrap();
-    for s in [m, r, t, b] {
+    let [l, m, r] = region.split(cols!(20 "| |" * "#" 5)).unwrap();
+    let [t, b] = l.split(rows!(* "." 5)).unwrap();
+    for s in [m, r, b] {
         s.attach(|i, mut sv: ScreenView| sv.fill(char_for_input(&i)))
     }
+    t.attach(|i, sv| {
+        let txt = text![
+            "Hello! Your most recent ", red "action", " was: ",
+            bold green "{:?}"(i),
+        ];
+        Textbox::new(sv, txt)
+    });
     true
 }
 
