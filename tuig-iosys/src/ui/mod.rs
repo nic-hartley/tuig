@@ -16,8 +16,6 @@
 
 #![cfg(feature = "ui")]
 
-pub mod helpers;
-
 mod bounds;
 pub(crate) use bounds::Bounds;
 mod region;
