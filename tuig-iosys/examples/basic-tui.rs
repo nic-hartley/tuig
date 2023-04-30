@@ -29,7 +29,8 @@ fn tui(region: Region) -> bool {
             "Hello! Your most recent ", red "action", " was: ",
             bold green "{:?}"(i),
         ];
-        Textbox::new_in(sv, txt)
+        Textbox::new(txt)
+            .render_to(sv)
     });
     true
 }
@@ -45,7 +46,7 @@ fn run(mut iosys: Box<dyn IoSystem>) {
         }
         iosys.draw(&screen).expect("failed to render output");
         input = iosys.input().expect("failed to get input");
-        if matches!(input, Action::KeyPress { key: Key::Escape }) {
+        if matches!(input, Action::Closed | Action::KeyPress { key: Key::Escape }) {
             break;
         }
     }

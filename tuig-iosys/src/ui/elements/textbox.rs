@@ -5,8 +5,7 @@ use alloc::{string::String, vec::Vec};
 use crate::{
     fmt::{Cell, Formatted, FormattedExt, Text},
     text, text1,
-    ui::ScreenView,
-    xy::XY,
+    xy::XY, ui::{ScreenView, RawAttachment},
 };
 
 fn breakable(ch: char) -> bool {
@@ -39,8 +38,7 @@ impl TextboxData {
 /// - Word wrapping to fit in their region
 /// - Indentation, including distinct first line indentation
 /// - Scrolling to a desired height, relative to the top or bottom
-pub struct Textbox<'a> {
-    pub(in super::super) sv: Option<ScreenView<'a>>,
+pub struct Textbox {
     pub(in super::super) chunks: Vec<Text>,
     pub(in super::super) scroll: usize,
     pub(in super::super) scroll_bottom: bool,
@@ -48,16 +46,10 @@ pub struct Textbox<'a> {
     pub(in super::super) first_indent: Option<usize>,
 }
 
-impl<'a> Textbox<'a> {
-    /// Create a new textbox directy from a screenview.
-    /// 
-    /// Where possible, it's preferred to use [`Region::textbox`][crate::ui::Region::textbox] directly; it tends to
-    /// lead to cleaner code. That might not be feasible, though, depending on your use case, e.g. if you want the
-    /// input to directly affect the text. In that case you'll implement [`RawAttachment`][crate::ui::RawAttachment],
-    /// construct the textbox with the `ScreenView`, and process the input yourself.
-    pub fn new_in(sv: ScreenView<'a>, text: Vec<Text>) -> Self {
+impl Textbox {
+    /// Create a new textbox containing the given text.
+    pub fn new(text: Vec<Text>) -> Self {
         Self {
-            sv: Some(sv),
             chunks: text,
             scroll: 0,
             scroll_bottom: false,
@@ -88,12 +80,11 @@ impl<'a> Textbox<'a> {
         first_indent(amt: usize) => first_indent = Some(amt),
     }
 
-    pub fn render(mut self) -> TextboxData {
-        let mut sv = match mem::replace(&mut self.sv, None) {
-            Some(s) => s,
-            None => return TextboxData::EMPTY,
-        };
-
+    /// Render this textbox to a [`ScreenView`], and return information about the render.
+    /// 
+    /// This is functionally equivalent to just directly [`Region::attach`][crate::ui::Region::attach]ing the textbox,
+    /// but you may find it useful if e.g. you want the text to depend on the input being handled in that region.
+    pub fn render_to(mut self, mut sv: ScreenView) -> TextboxData {
         if sv.size() == XY(0, 0) {
             return TextboxData::EMPTY;
         }
@@ -226,26 +217,10 @@ impl<'a> Textbox<'a> {
     }
 }
 
-impl<'a> Drop for Textbox<'a> {
-    fn drop(&mut self) {
-        match self.sv {
-            Some(_) => {
-                // this textbox hasn't been rendered, so do that now
-                // (this dummy textbox has 0 allocations and should trigger a NOP rendering/drop)
-                let dummy = Textbox {
-                    sv: None,
-                    chunks: alloc::vec![],
-                    scroll: 0,
-                    scroll_bottom: false,
-                    indent: 0,
-                    first_indent: None,
-                };
-                let me = mem::replace(self, dummy);
-                // ignore the data
-                let _ = me.render();
-            }
-            None => (),
-        }
+impl<'s> RawAttachment<'s> for Textbox {
+    type Output = TextboxData;
+    fn raw_attach(self, _: crate::Action, screen: ScreenView<'s>) -> Self::Output {
+        self.render_to(screen)
     }
 }
 
@@ -377,8 +352,7 @@ mod test {
     fn basic_textbox_renders_right() {
         make_screen!(sc(50, 30), r(0, 0, *, *));
         let res = r
-            .textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "))
-            .render();
+            .textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "));
         screen_assert!(sc:
             // end of the line and beyond
             blank 20.., 1..=1,
@@ -399,8 +373,7 @@ mod test {
     fn textbox_positioning_works() {
         make_screen!(sc(50, 30), r(4, 3, *, *));
         let res = r
-            .textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "))
-            .render();
+            .textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "));
         screen_assert!(sc:
             // blank top 3 rows (0, 1, 2)
             blank .., ..3,
@@ -427,8 +400,7 @@ mod test {
         let res = r
             .textbox(text!(
                 "these are some words which will eveeeentually be wrapped!"
-            ))
-            .render();
+            ));
         screen_assert!(sc:
             blank ..40, ..,
             blank .., 6..,
@@ -486,8 +458,7 @@ mod test {
         let res = r
             .textbox(text!(
                 "these are some words which will eveeeentually be wrapped!"
-            ))
-            .render();
+            ));
         screen_assert!(sc:
             blank ..40, ..,
             blank .., 3..,
@@ -503,12 +474,11 @@ mod test {
     #[test]
     fn textbox_scroll_moves_view() {
         make_screen!(sc(50, 30), r(40, 0, *, *));
-        let res = r
-            .textbox(text!(
+        let res = r.attach(
+            Textbox::new(text!(
                 "these are some words which will eveeeentually be wrapped!"
-            ))
-            .scroll(2)
-            .render();
+            )).scroll(2)
+        );
         screen_assert!(sc:
             blank ..40, ..,
             blank .., 4..,
@@ -525,13 +495,13 @@ mod test {
     #[test]
     fn textbox_scroll_bottom_moves_view() {
         make_screen!(sc(50, 30), r(40, 0, 10, 4));
-        let res = r
-            .textbox(text!(
+        let res = r.attach(
+            Textbox::new(text!(
                 "these are some words which will eveeeentually be wrapped!"
             ))
             .scroll(1)
             .scroll_bottom(true)
-            .render();
+        );
         screen_assert!(sc:
             blank ..40, ..,
             blank .., 4..,

@@ -1,6 +1,6 @@
 use std::thread;
 
-use tuig_iosys::{text1, Action, IoSystem, Key, Screen, ui::Region};
+use tuig_iosys::{text1, Action, IoSystem, Key, Screen, ui::{Region, elements::Textbox}};
 
 fn list_events(mut sys: Box<dyn IoSystem>) {
     const MAX_LEN: usize = 256;
@@ -8,11 +8,12 @@ fn list_events(mut sys: Box<dyn IoSystem>) {
     let mut screen = Screen::new(sys.size());
     loop {
         screen.resize(sys.size());
-        Region::new(&mut screen, Action::Redraw)
-            .textbox(log.clone())
-            .first_indent(0)
-            .indent(4)
-            .scroll_bottom(true);
+        Region::new(&mut screen, Action::Redraw).attach(
+            Textbox::new(log.clone())
+                .first_indent(0)
+                .indent(4)
+                .scroll_bottom(true)
+        );
         sys.draw(&screen).expect("failed to render screen");
         match sys.input().expect("failed to get input") {
             Action::Closed | Action::KeyPress { key: Key::Escape } => break,

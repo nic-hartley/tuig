@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 
 use crate::{fmt::{Cell, Text}, Action, Screen, XY};
 
-use super::{splitters::Splitter, Attachment, Bounds, ScreenView, elements::Textbox};
+use super::{splitters::Splitter, Attachment, Bounds, ScreenView, elements::{Textbox, TextboxData}};
 
 macro_rules! split_fn {
     ( $lt:lifetime: $( $name:ident ),* $(,)? ) => { paste::paste! { $(
@@ -71,8 +71,8 @@ impl<'s> Region<'s> {
         self.attach(|_, mut sv: ScreenView| sv.fill(cell))
     }
 
-    pub fn textbox(self, text: Vec<Text>) -> Textbox<'s> {
-        self.attach(|_, sv: ScreenView<'s>| Textbox::new_in(sv, text))
+    pub fn textbox(self, text: Vec<Text>) -> TextboxData {
+        self.attach(Textbox::new(text))
     }
 }
 
