@@ -49,7 +49,13 @@ pub struct Textbox<'a> {
 }
 
 impl<'a> Textbox<'a> {
-    pub fn new(sv: ScreenView<'a>, text: Vec<Text>) -> Self {
+    /// Create a new textbox directy from a screenview.
+    /// 
+    /// Where possible, it's preferred to use [`Region::textbox`][crate::ui::Region::textbox] directly; it tends to
+    /// lead to cleaner code. That might not be feasible, though, depending on your use case, e.g. if you want the
+    /// input to directly affect the text. In that case you'll implement [`RawAttachment`][crate::ui::RawAttachment],
+    /// construct the textbox with the `ScreenView`, and process the input yourself.
+    pub fn new_in(sv: ScreenView<'a>, text: Vec<Text>) -> Self {
         Self {
             sv: Some(sv),
             chunks: text,
@@ -61,9 +67,24 @@ impl<'a> Textbox<'a> {
     }
 
     crate::util::setters! {
+        /// Set the scroll position of the textbox, i.e. how many lines from the top or bottom should be hidden.
+        /// 
+        /// Defaults to 0, i.e. not scrolling at all. Anything that doesn't fit is simply not visible.
         scroll(amt: usize) => scroll = amt,
+        /// Set whether the scroll position should be relative to the top or bottom.
+        /// 
+        /// Scrolling from the bottom will also align the bottom of the text with the bottom of the textbox, rather
+        /// than aligning the tops.
+        /// 
+        /// Defaults to false, i.e. by default scrolling is from the top.
         scroll_bottom(v: bool) => scroll_bottom = v,
+        /// How much to indent the text.
+        /// 
+        /// Defaults to 0, i.e. no indent.
         indent(amt: usize) => indent = amt,
+        /// How much to specifically indent the first line of each paragraph.
+        /// 
+        /// Defaults to being the same as the indent.
         first_indent(amt: usize) => first_indent = Some(amt),
     }
 

@@ -29,7 +29,7 @@ fn tui(region: Region) -> bool {
             "Hello! Your most recent ", red "action", " was: ",
             bold green "{:?}"(i),
         ];
-        Textbox::new(sv, txt)
+        Textbox::new_in(sv, txt)
     });
     true
 }

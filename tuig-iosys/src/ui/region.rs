@@ -72,7 +72,7 @@ impl<'s> Region<'s> {
     }
 
     pub fn textbox(self, text: Vec<Text>) -> Textbox<'s> {
-        self.attach(|_, sv: ScreenView<'s>| Textbox::new(sv, text))
+        self.attach(|_, sv: ScreenView<'s>| Textbox::new_in(sv, text))
     }
 }
 
