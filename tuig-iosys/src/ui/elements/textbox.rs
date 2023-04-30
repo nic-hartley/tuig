@@ -5,7 +5,8 @@ use alloc::{string::String, vec::Vec};
 use crate::{
     fmt::{Cell, Formatted, FormattedExt, Text},
     text, text1,
-    xy::XY, ui::{ScreenView, RawAttachment},
+    ui::{RawAttachment, ScreenView},
+    xy::XY,
 };
 
 fn breakable(ch: char) -> bool {
@@ -60,28 +61,28 @@ impl Textbox {
 
     crate::util::setters! {
         /// Set the scroll position of the textbox, i.e. how many lines from the top or bottom should be hidden.
-        /// 
+        ///
         /// Defaults to 0, i.e. not scrolling at all. Anything that doesn't fit is simply not visible.
         scroll(amt: usize) => scroll = amt,
         /// Set whether the scroll position should be relative to the top or bottom.
-        /// 
+        ///
         /// Scrolling from the bottom will also align the bottom of the text with the bottom of the textbox, rather
         /// than aligning the tops.
-        /// 
+        ///
         /// Defaults to false, i.e. by default scrolling is from the top.
         scroll_bottom(v: bool) => scroll_bottom = v,
         /// How much to indent the text.
-        /// 
+        ///
         /// Defaults to 0, i.e. no indent.
         indent(amt: usize) => indent = amt,
         /// How much to specifically indent the first line of each paragraph.
-        /// 
+        ///
         /// Defaults to being the same as the indent.
         first_indent(amt: usize) => first_indent = Some(amt),
     }
 
     /// Render this textbox to a [`ScreenView`], and return information about the render.
-    /// 
+    ///
     /// This is functionally equivalent to just directly [`Region::attach`][crate::ui::Region::attach]ing the textbox,
     /// but you may find it useful if e.g. you want the text to depend on the input being handled in that region.
     pub fn render_to(mut self, mut sv: ScreenView) -> TextboxData {
@@ -397,10 +398,9 @@ mod test {
     #[test]
     fn textbox_wraps_words_and_overwrites() {
         make_screen!(sc(50, 30), r(40, 0, *, *));
-        let res = r
-            .textbox(text!(
-                "these are some words which will eveeeentually be wrapped!"
-            ));
+        let res = r.textbox(text!(
+            "these are some words which will eveeeentually be wrapped!"
+        ));
         screen_assert!(sc:
             blank ..40, ..,
             blank .., 6..,
@@ -419,9 +419,7 @@ mod test {
     #[test]
     fn textbox_wrap_carries_formatting() {
         make_screen!(sc(50, 30), r(40, 0, *, *));
-        r.textbox(
-            text!("these are some words which will ", green "eveeeentually", " be wrapped!"),
-        );
+        r.textbox(text!("these are some words which will ", green "eveeeentually", " be wrapped!"));
         screen_assert!(sc:
             blank ..40, ..,
             blank .., 6..,
@@ -455,10 +453,9 @@ mod test {
     #[test]
     fn textbox_size_truncates() {
         make_screen!(sc(50, 30), r(40, 0, 10, 3));
-        let res = r
-            .textbox(text!(
-                "these are some words which will eveeeentually be wrapped!"
-            ));
+        let res = r.textbox(text!(
+            "these are some words which will eveeeentually be wrapped!"
+        ));
         screen_assert!(sc:
             blank ..40, ..,
             blank .., 3..,
@@ -477,7 +474,8 @@ mod test {
         let res = r.attach(
             Textbox::new(text!(
                 "these are some words which will eveeeentually be wrapped!"
-            )).scroll(2)
+            ))
+            .scroll(2),
         );
         screen_assert!(sc:
             blank ..40, ..,
@@ -500,7 +498,7 @@ mod test {
                 "these are some words which will eveeeentually be wrapped!"
             ))
             .scroll(1)
-            .scroll_bottom(true)
+            .scroll_bottom(true),
         );
         screen_assert!(sc:
             blank ..40, ..,

@@ -1,6 +1,10 @@
 use std::thread;
 
-use tuig_iosys::{text1, Action, IoSystem, Key, Screen, ui::{Region, elements::Textbox}};
+use tuig_iosys::{
+    text1,
+    ui::{elements::Textbox, Region},
+    Action, IoSystem, Key, Screen,
+};
 
 fn list_events(mut sys: Box<dyn IoSystem>) {
     const MAX_LEN: usize = 256;
@@ -12,7 +16,7 @@ fn list_events(mut sys: Box<dyn IoSystem>) {
             Textbox::new(log.clone())
                 .first_indent(0)
                 .indent(4)
-                .scroll_bottom(true)
+                .scroll_bottom(true),
         );
         sys.draw(&screen).expect("failed to render screen");
         match sys.input().expect("failed to get input") {

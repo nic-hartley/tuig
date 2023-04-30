@@ -3,8 +3,9 @@ use std::thread;
 use tuig_iosys::{
     cell,
     fmt::Cell,
-    ui::{rows, cols, Region, ScreenView, elements::Textbox},
-    Action, IoSystem, Key, Screen, text,
+    text,
+    ui::{cols, elements::Textbox, rows, Region, ScreenView},
+    Action, IoSystem, Key, Screen,
 };
 
 fn char_for_input(action: &Action) -> Cell {
@@ -29,8 +30,7 @@ fn tui(region: Region) -> bool {
             "Hello! Your most recent ", red "action", " was: ",
             bold green "{:?}"(i),
         ];
-        Textbox::new(txt)
-            .render_to(sv)
+        Textbox::new(txt).render_to(sv)
     });
     true
 }
@@ -46,7 +46,10 @@ fn run(mut iosys: Box<dyn IoSystem>) {
         }
         iosys.draw(&screen).expect("failed to render output");
         input = iosys.input().expect("failed to get input");
-        if matches!(input, Action::Closed | Action::KeyPress { key: Key::Escape }) {
+        if matches!(
+            input,
+            Action::Closed | Action::KeyPress { key: Key::Escape }
+        ) {
             break;
         }
     }

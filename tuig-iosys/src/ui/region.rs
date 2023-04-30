@@ -1,8 +1,15 @@
 use alloc::vec::Vec;
 
-use crate::{fmt::{Cell, Text}, Action, Screen, XY};
+use crate::{
+    fmt::{Cell, Text},
+    Action, Screen, XY,
+};
 
-use super::{splitters::Splitter, Attachment, Bounds, ScreenView, elements::{Textbox, TextboxData}};
+use super::{
+    elements::{Textbox, TextboxData},
+    splitters::Splitter,
+    Attachment, Bounds, ScreenView,
+};
 
 macro_rules! split_fn {
     ( $lt:lifetime: $( $name:ident ),* $(,)? ) => { paste::paste! { $(
