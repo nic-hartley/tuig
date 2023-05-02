@@ -1,19 +1,18 @@
-
 use alloc::{collections::VecDeque, string::String};
 
-use crate::{Action, ui::ScreenView};
+use crate::{ui::ScreenView, Action};
 
 use super::RawAttachment;
 
 /// Takes text input, analogous to `<input type="text">`, with hooks for autocompletion, history, etc.
-/// 
+///
 /// You'll need to keep the actual element around, because it tracks some pieces of state:
 /// - Currently in-progress input
 /// - Cursor position within the line
 /// - Autocomplete-related things
-/// 
+///
 /// Accordingly, [`Attachment`] is implemented for `&mut TextInput`, not `TextInput` itself, so you'll use it like:
-/// 
+///
 /// ```no_run
 /// # use tuig_iosys::ui::{Region, elements::{TextInput, TextInputResult}};
 /// let region = //...
@@ -26,7 +25,7 @@ use super::RawAttachment;
 ///   TextInputResult::Submit(s) => println!("enter pressed: {}", s),
 /// }
 /// ```
-/// 
+///
 /// [`Region::attach`]ing this will return a [`TextInputResult`], which is how you'll interact with autocomplete. To
 /// use the history features, see [`TextInput::store`].
 pub struct TextInput {
@@ -39,7 +38,7 @@ pub struct TextInput {
     /// The caller-supplied autocomplete text
     autocomplete: String,
     /// Previous lines we were told to save
-    /// 
+    ///
     /// The history goes older to newer from front to back, so new lines are added with `push_back` and old ones are
     /// removed with `pop_front`.
     history: VecDeque<String>,
@@ -51,9 +50,9 @@ pub struct TextInput {
 
 impl TextInput {
     /// Creates a [`TextInput`] with the prompt text and history capacity.
-    /// 
+    ///
     /// The prompt is the fixed, noneditable text at the beginning of the `TextInput`.
-    /// 
+    ///
     /// `history_cap` is the maximum number of history entries. If it's 0, there's no history at all; otherwise, there
     /// will be at most that many history entries.
     pub fn new(prompt: impl Into<String>, history_cap: usize) -> Self {
@@ -70,7 +69,7 @@ impl TextInput {
 
     /// Store a line in the history, usually one you just got from [`TextInputResult::Submit`]. (But that isn't
     /// required or enforced.)
-    /// 
+    ///
     /// The user can scroll through history with the up and down arrows. The `TextInput` will show the history entries
     /// in order. When the user types, it copies the selected history into the current line, rather than editing the
     /// history.
@@ -95,15 +94,18 @@ impl TextInput {
 #[derive(Debug, PartialEq, Eq)]
 pub enum TextInputResult<'ti> {
     /// The user didn't do anything that you need to handle.
-    /// 
+    ///
     /// For example, an input that this element ignores, or just typing a letter.
     Nothing,
     /// The user pressed Tab to request autocompletion, with the given text.
-    /// 
+    ///
     /// `line` is everything up to their current cursor location. `res` is where you put the text you want to show.
-    Autocomplete { text: &'ti str, res: &'ti mut String },
+    Autocomplete {
+        text: &'ti str,
+        res: &'ti mut String,
+    },
     /// The user pressed Enter to submit a line of text.
-    /// 
+    ///
     /// Set `save` to decide whether to store the line in history.
     Submit(String),
 }
