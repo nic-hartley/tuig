@@ -1,219 +1,117 @@
 
-use alloc::{collections::VecDeque, string::String, vec::Vec};
-use core::mem;
+use alloc::{collections::VecDeque, string::String};
 
-use crate::{fmt::Text, text, Action, Key};
+use crate::{Action, ui::ScreenView};
 
-use super::super::InputState;
+use super::RawAttachment;
 
-/// Indicates what the text input needs from its owner
-#[derive(Debug, PartialEq, Eq)]
-pub enum TextInputRequest {
-    /// Action doesn't require any response.
-    Nothing,
-    /// You need to redraw and that's it.
-    Redraw,
-    /// Autocomplete has been requested, with the given text.
-    Autocomplete,
-    /// User has submitted a line by pressing Enter.
-    Line(String),
-}
-
-impl TextInputRequest {
-    pub fn is_tainting(&self) -> bool {
-        !matches!(self, Self::Nothing)
-    }
-
-    // for testing we generally want to treat `Nothing` and `Redraw` identically, as they both "aren't important"
-    // (in particular, feed! shouldn't care)
-    #[cfg(test)]
-    fn test_eq(&self, other: &Self) -> bool {
-        match self {
-            Self::Nothing | Self::Redraw => matches!(other, Self::Nothing | Self::Redraw),
-            Self::Autocomplete => matches!(other, Self::Autocomplete),
-            Self::Line(self_s) => {
-                if let Self::Line(other_s) = other {
-                    self_s == other_s
-                } else {
-                    false
-                }
-            }
-        }
-    }
-}
-
-/// Allows the user to input text, rendering it to a bounded area and offering hooks for tab-based autocomplete.
-#[derive(Clone, Default)]
+/// Takes text input, analogous to `<input type="text">`, with hooks for autocompletion, history, etc.
+/// 
+/// You'll need to keep the actual element around, because it tracks some pieces of state:
+/// - Currently in-progress input
+/// - Cursor position within the line
+/// - Autocomplete-related things
+/// 
+/// Accordingly, [`Attachment`] is implemented for `&mut TextInput`, not `TextInput` itself, so you'll use it like:
+/// 
+/// ```no_run
+/// # use tuig_iosys::ui::{Region, elements::{TextInput, TextInputResult}};
+/// let region = //...
+/// # Region::empty();
+/// let text_input = // ...
+/// # TextInput::new();
+/// match region.attach(&mut text_input) {
+///   TextInputResult::Nothing => (),
+///   TextInputResult::Autocomplete { text, res } => *res = text.into(),
+///   TextInputResult::Submit(s) => println!("enter pressed: {}", s),
+/// }
+/// ```
+/// 
+/// [`Region::attach`]ing this will return a [`TextInputResult`], which is how you'll interact with autocomplete. To
+/// use the history features, see [`TextInput::store`].
 pub struct TextInput {
-    /// prompt displayed before the user's text
+    /// A bit of fixed, uneditable text at the beginning of the text input, to signal the user to type.
     prompt: String,
-
-    /// line(s) currently being typed
+    /// The current line of text being edited
     line: String,
-    /// cursor position in the line being typed
+    /// Which character index the cursor is just before (so `cursor == line.len()` means the cursor is at the end)
     cursor: usize,
-    /// any autocomplete that's been requested
+    /// The caller-supplied autocomplete text
     autocomplete: String,
-
-    /// the current state of the keyboard modifiers
-    modstate: InputState,
-
-    /// previous lines entered, for scrolling through
+    /// Previous lines we were told to save
+    /// 
+    /// The history goes older to newer from front to back, so new lines are added with `push_back` and old ones are
+    /// removed with `pop_front`.
     history: VecDeque<String>,
-    /// where in the history we are. (history.len() = next line.)
-    hist_pos: usize,
-    /// the number of history items to store
-    hist_cap: usize,
+    /// Current position, if scrolling back through history, or `history.len()`
+    histpos: usize,
+    /// Maximum number of history elements
+    histcap: usize,
 }
 
 impl TextInput {
-    /// Create a new text input element.
-    #[cfg_attr(coverage, no_coverage)]
-    pub fn new(prompt: &str, history: usize) -> Self {
+    /// Creates a [`TextInput`] with the prompt text and history capacity.
+    /// 
+    /// The prompt is the fixed, noneditable text at the beginning of the `TextInput`.
+    /// 
+    /// `history_cap` is the maximum number of history entries. If it's 0, there's no history at all; otherwise, there
+    /// will be at most that many history entries.
+    pub fn new(prompt: impl Into<String>, history_cap: usize) -> Self {
         Self {
             prompt: prompt.into(),
             line: String::new(),
             cursor: 0,
             autocomplete: String::new(),
-            modstate: Default::default(),
-            history: Default::default(),
-            hist_pos: 0,
-            hist_cap: history,
+            history: VecDeque::new(),
+            histpos: 0,
+            histcap: history_cap,
         }
     }
 
-    pub fn completable(&self) -> &str {
-        &self.line[..self.cursor]
-    }
-
-    pub fn set_complete(&mut self, text: String) {
-        self.autocomplete = text;
-    }
-
-    fn cur_line(&self) -> &str {
-        if self.hist_pos < self.history.len() {
-            &self.history[self.hist_pos]
-        } else {
-            &self.line
-        }
-    }
-
-    fn pick_hist(&mut self) {
-        if self.hist_pos == self.history.len() {
+    /// Store a line in the history, usually one you just got from [`TextInputResult::Submit`]. (But that isn't
+    /// required or enforced.)
+    /// 
+    /// The user can scroll through history with the up and down arrows. The `TextInput` will show the history entries
+    /// in order. When the user types, it copies the selected history into the current line, rather than editing the
+    /// history.
+    pub fn store(&mut self, line: String) {
+        if self.histcap == 0 {
             return;
         }
-        self.line = self.history[self.hist_pos].clone();
-        self.hist_pos = self.history.len();
-    }
-
-    fn keypress(&mut self, key: Key) -> TextInputRequest {
-        match key {
-            Key::Char(ch) if !self.modstate.hotkeying() => {
-                self.pick_hist();
-                let chs: String = if self.modstate.shift {
-                    ch.to_uppercase().collect()
-                } else {
-                    ch.to_lowercase().collect()
-                };
-                self.line.insert_str(self.cursor, &chs);
-                self.cursor += 1;
-            }
-            Key::Backspace if self.cursor > 0 => {
-                self.pick_hist();
-                self.line.remove(self.cursor - 1);
-                self.cursor -= 1;
-            }
-            Key::Delete if self.cursor < self.cur_line().len() => {
-                self.pick_hist();
-                self.line.remove(self.cursor);
-            }
-            Key::Left if self.cursor > 0 => self.cursor -= 1,
-            Key::Right if self.cursor < self.cur_line().len() => self.cursor += 1,
-            Key::Up if self.hist_pos > 0 => {
-                self.hist_pos -= 1;
-                self.cursor = self.cur_line().len();
-            }
-            Key::Down if self.hist_pos < self.history.len() => {
-                self.hist_pos += 1;
-                self.cursor = self.cur_line().len();
-            }
-            Key::Tab => {
-                if self.autocomplete.is_empty() {
-                    return TextInputRequest::Autocomplete;
-                } else {
-                    self.pick_hist();
-                    self.line.insert_str(self.cursor, &self.autocomplete);
-                    self.cursor += self.autocomplete.len();
-                }
-            }
-            Key::Enter => {
-                self.pick_hist();
-                self.cursor = 0;
-                self.autocomplete = String::new();
-                let old_line = mem::replace(&mut self.line, String::new());
-                if !old_line.trim().is_empty() && self.hist_cap > 0 {
-                    if self.history.len() == self.hist_cap {
-                        self.history.pop_front();
-                    }
-                    self.history.push_back(old_line.clone());
-                }
-                self.hist_pos = self.history.len();
-                return TextInputRequest::Line(old_line);
-            }
-            // return early to skip tainting / clearing autocomplete
-            _ => return TextInputRequest::Nothing,
-        }
-        self.autocomplete = String::new();
-        TextInputRequest::Redraw
-    }
-
-    /// Handles an [`Action`] which should go to the textbox, for things like typing and autocompletion.
-    ///
-    /// The type this returns indicates what needs to be done
-    pub fn action(&mut self, action: Action) -> TextInputRequest {
-        match action {
-            act if self.modstate.action(&act) => TextInputRequest::Nothing,
-            Action::KeyPress { key } => self.keypress(key),
-            _ => TextInputRequest::Nothing,
-        }
-    }
-
-    /// Builds a `Vec<Text>` with the prompt line, for rendering.
-    pub fn render<'s>(&self) -> Vec<Text> {
-        let line = self.cur_line();
-        if self.cursor == line.len() {
-            if self.autocomplete.is_empty() {
-                text![
-                    "{}"(self.prompt),
-                    bright_white "{}"(line),
-                    underline " ",
-                ]
-            } else {
-                text![
-                    "{}"(self.prompt),
-                    bright_white "{}"(line),
-                    bright_black underline "{}"(&self.autocomplete[..1]),
-                    bright_black "{}"(&self.autocomplete[1..]),
-                ]
-            }
-        } else {
-            if self.autocomplete.is_empty() {
-                text![
-                    "{}"(self.prompt),
-                    bright_white "{}"(&line[..self.cursor]),
-                    bright_white underline "{}"(&line[self.cursor..self.cursor+1]),
-                    bright_white "{}"(&line[self.cursor+1..]),
-                ]
-            } else {
-                text![
-                    "{}"(self.prompt),
-                    bright_white "{}"(&line[..self.cursor]),
-                    bright_black underline "{}"(&self.autocomplete[..1]),
-                    bright_black "{}"(&self.autocomplete[1..]),
-                    bright_white "{}"(&line[self.cursor..]),
-                ]
+        if self.history.len() == self.histcap {
+            // UNWRAP: histcap > 0, and len == histcap, so len > 0, so pop works
+            let old = self.history.pop_front().unwrap();
+            if self.line.capacity() == 0 {
+                // haven't allocated the line yet, so replace it with an empty but allocated line
+                self.line = old;
+                self.line.clear();
             }
         }
+        self.history.push_back(line);
+    }
+}
+
+/// The result of parsing a frame of input.
+#[derive(Debug, PartialEq, Eq)]
+pub enum TextInputResult<'ti> {
+    /// The user didn't do anything that you need to handle.
+    /// 
+    /// For example, an input that this element ignores, or just typing a letter.
+    Nothing,
+    /// The user pressed Tab to request autocompletion, with the given text.
+    /// 
+    /// `line` is everything up to their current cursor location. `res` is where you put the text you want to show.
+    Autocomplete { text: &'ti str, res: &'ti mut String },
+    /// The user pressed Enter to submit a line of text.
+    /// 
+    /// Set `save` to decide whether to store the line in history.
+    Submit(String),
+}
+
+impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
+    type Output = TextInputResult<'ti>;
+    fn raw_attach(self, input: Action, screen: ScreenView<'s>) -> Self::Output {
+        todo!()
     }
 }
 
