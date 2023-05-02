@@ -22,8 +22,6 @@ mod region;
 pub use region::Region;
 mod view;
 pub use view::ScreenView;
-mod attach;
-pub use attach::{Attachment, RawAttachment};
 mod inputstate;
 pub use inputstate::InputState;
 

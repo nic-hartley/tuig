@@ -6,9 +6,9 @@ use crate::{
 };
 
 use super::{
-    elements::{Textbox, TextboxData},
+    elements::{Textbox, TextboxData, Attachment},
     splitters::Splitter,
-    Attachment, Bounds, ScreenView,
+    Bounds, ScreenView,
 };
 
 macro_rules! split_fn {

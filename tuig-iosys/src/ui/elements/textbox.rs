@@ -5,9 +5,11 @@ use alloc::{string::String, vec::Vec};
 use crate::{
     fmt::{Cell, Formatted, FormattedExt, Text},
     text, text1,
-    ui::{RawAttachment, ScreenView},
+    ui::ScreenView,
     xy::XY,
 };
+
+use super::RawAttachment;
 
 fn breakable(ch: char) -> bool {
     ch.is_whitespace()
