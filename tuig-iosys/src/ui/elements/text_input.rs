@@ -1,11 +1,16 @@
 use alloc::{collections::VecDeque, string::String};
 
-use crate::{ui::ScreenView, Action, text, fmt::{Cell, FormattedExt}, text1};
+use crate::{
+    fmt::{Cell, FormattedExt},
+    text, text1,
+    ui::ScreenView,
+    Action,
+};
 
 use super::RawAttachment;
 
 /// Takes text input, analogous to `<input type="text">`, with hooks for autocompletion, history, etc.
-/// 
+///
 /// `TextInput` is meant to take a single line of input, and it doesn't really do anything with extra vertical space
 /// it's attached to. If the input is longer than the space is wide, the input scrolls left and right to keep the
 /// cursor in view, biasing towards the end, and cutting off the ends with a `…`.
@@ -129,9 +134,13 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
         // TODO: slice according to cursor position
         // TODO: underline cursor character
 
-        screen[0].iter_mut().zip(
-            text.iter().flat_map(|t| t.text.chars().map(|c| Cell::of(c).fmt_of(t)))
-        ).for_each(|(cell, char)| *cell = char);
+        screen[0]
+            .iter_mut()
+            .zip(
+                text.iter()
+                    .flat_map(|t| t.text.chars().map(|c| Cell::of(c).fmt_of(t))),
+            )
+            .for_each(|(cell, char)| *cell = char);
 
         res
     }
