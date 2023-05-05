@@ -273,12 +273,13 @@ macro_rules! text {
         {
             extern crate alloc;
             #[allow(unused_imports)]
-            use $crate::fmt::{FormattedExt as _};
+            use $crate::fmt::{Text, FormattedExt as _};
+            // enforce the correct type, even for empty text![]
             alloc::vec![
                 $(
                     $crate::text1!($( $name )* $text $( ( $( $arg ),* ) )?)
                 ),*
-            ]
+            ] as Vec<Text>
         }
     };
 }
