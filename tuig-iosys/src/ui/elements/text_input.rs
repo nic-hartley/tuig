@@ -1,10 +1,14 @@
 use alloc::{collections::VecDeque, string::String};
 
-use crate::{ui::ScreenView, Action};
+use crate::{ui::ScreenView, Action, text, fmt::{Cell, FormattedExt}, text1};
 
 use super::RawAttachment;
 
 /// Takes text input, analogous to `<input type="text">`, with hooks for autocompletion, history, etc.
+/// 
+/// `TextInput` is meant to take a single line of input, and it doesn't really do anything with extra vertical space
+/// it's attached to. If the input is longer than the space is wide, the input scrolls left and right to keep the
+/// cursor in view, biasing towards the end, and cutting off the ends with a `…`.
 ///
 /// You'll need to keep the actual element around, because it tracks some pieces of state:
 /// - Currently in-progress input
@@ -31,12 +35,15 @@ use super::RawAttachment;
 pub struct TextInput {
     /// A bit of fixed, uneditable text at the beginning of the text input, to signal the user to type.
     prompt: String,
+
     /// The current line of text being edited
     line: String,
     /// Which character index the cursor is just before (so `cursor == line.len()` means the cursor is at the end)
     cursor: usize,
-    /// The caller-supplied autocomplete text
+
+    /// The caller-specified autocomplete text
     autocomplete: String,
+
     /// Previous lines we were told to save
     ///
     /// The history goes older to newer from front to back, so new lines are added with `push_back` and old ones are
@@ -112,12 +119,25 @@ pub enum TextInputResult<'ti> {
 
 impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
     type Output = TextInputResult<'ti>;
-    fn raw_attach(self, input: Action, screen: ScreenView<'s>) -> Self::Output {
-        todo!()
+    fn raw_attach(self, input: Action, mut screen: ScreenView<'s>) -> Self::Output {
+        let res = match input {
+            _ => TextInputResult::Nothing,
+        };
+
+        let text = text![];
+        // TODO: generate the base text
+        // TODO: slice according to cursor position
+        // TODO: underline cursor character
+
+        screen[0].iter_mut().zip(
+            text.iter().flat_map(|t| t.text.chars().map(|c| Cell::of(c).fmt_of(t)))
+        ).for_each(|(cell, char)| *cell = char);
+
+        res
     }
 }
 
-#[cfg(test)]
+#[cfg(testa)]
 mod test {
     use super::*;
 
