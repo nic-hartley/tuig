@@ -148,15 +148,142 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
 
 #[cfg(test)]
 mod tests {
-    // empty renders nothing
-    // renders text on the same frame as the keypress
-    // with some text, renders that text
-    // with too much text, cursor at end, renders the last few
-    // with too much text, cursor *near* end, renders the same
-    // with too much text, cursor away from end, renders the middle few
-    // with too much text, cursor near beginning, renders almost the first few
-    // with too much text, cursor beginning, renders the first few
-    // returns the input text and clears when you press enter
+    use super::*;
+    use crate::{XY, fmt::Cell, ui::{Region, elements::test_utils::*}, fmt::FormattedExt, Screen, Key};
+
+    macro_rules! feed {
+        ($s:ident, $ti:ident, event $ev:expr) => {{
+            make_region!($s => r(0, 0, *, *, $ev));
+            r.attach(&mut $ti)
+        }};
+        ($s:ident, $ti:ident, key $k:expr) => {
+            assert_eq!(feed!($s, $ti, event Action::KeyPress { key: $k }), TextInputResult::Nothing);
+            assert_eq!(feed!($s, $ti, event Action::KeyRelease { key: $k }), TextInputResult::Nothing);
+        };
+    }
+
+    #[test]
+    fn empty_renders_nothing() {
+        make_screen!(s(15, 1), r(0, 0, *, *));
+        let mut ti = TextInput::new("", 0);
+        r.attach(&mut ti);
+        screen_assert!(s: blank .., ..);
+    }
+
+    #[test]
+    fn blank_renders_prompt() {
+        make_screen!(s(15, 1), r(0, 0, *, *));
+        let mut ti = TextInput::new("> ", 0);
+        r.attach(&mut ti);
+        screen_assert!(s: fmt 0, 0, "> ", blank 2.., ..);
+    }
+
+    #[test]
+    fn text_rendered_on_keypress() {
+        make_screen!(s(15, 1), r(0, 0, *, *, Action::KeyPress { key: Key::Char('z') }));
+        let mut ti = TextInput::new("> ", 0);
+        r.attach(&mut ti);
+        screen_assert!(s: fmt 0, 0, "> z", blank 2.., ..);
+        assert_eq!(&ti.line, "z");
+    }
+
+    #[test]
+    fn text_typed_is_rendered() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        feed!(s, ti, key Key::Char('a'));
+        feed!(s, ti, key Key::Char('b'));
+        feed!(s, ti, key Key::Char('c'));
+        feed!(s, ti, key Key::Char('d'));
+        screen_assert!(s: fmt 0, 0, "> abcd", blank 6.., ..);
+    }
+
+    #[test]
+    fn overflow_with_cursor_at_end_shows_last() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        for ch in "0123456789abcdefghijklmnopqrst".chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        screen_assert!(s: fmt 0, 0, "> …jklmnopqrst", fmt 14, 0, " " underline);
+    }
+
+    #[test]
+    fn overflow_with_cursor_just_before_end_shows_last() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        for ch in "0123456789abcdefghijklmnopqrst".chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        feed!(s, ti, key Key::Left);
+        screen_assert!(s: fmt 0, 0, "> …ijklmnopqrs", fmt 14, 0, "t" underline);
+    }
+
+    #[test]
+    fn overflow_with_cursor_near_end_shows_last() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        for ch in "0123456789abcdefghijklmnopqrst".chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        for _ in 0..3 {
+            feed!(s, ti, key Key::Left);
+        }
+        screen_assert!(s: fmt 0, 0, "> …ijklmnopq", fmt 12, 0, "r" underline, fmt 13, 0, "st");
+    }
+
+    #[test]
+    fn overflow_with_cursor_in_middle_shows_middle() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        for ch in "0123456789abcdefghijklmnopqrst".chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        for _ in 0..15 {
+            feed!(s, ti, key Key::Left);
+        }
+        screen_assert!(s: fmt 0, 0, "> …e", fmt 4, 0, "f" underline, fmt 5, 0, "ghijklmno…");
+    }
+
+    #[test]
+    fn overflow_with_cursor_near_beginning_shows_beginning() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        for ch in "0123456789abcdefghijklmnopqrst".chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        for _ in 0..28 {
+            feed!(s, ti, key Key::Left);
+        }
+        screen_assert!(s: fmt 0, 0, "> 01", fmt 4, 0, "2" underline, fmt 5, 0, "3456789ab…");
+    }
+
+    #[test]
+    fn overflow_with_cursor_at_beginning_shows_beginning() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        for ch in "0123456789abcdefghijklmnopqrst".chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        for _ in 0..28 {
+            feed!(s, ti, key Key::Left);
+        }
+        screen_assert!(s: fmt 0, 0, "> ", fmt 2, 0, "0" underline, fmt 3, 0, "123456789ab…");
+    }
+
+    #[test]
+    fn press_enter_returns_input_text() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        const TEXT: &str = "0123456789abcdefghijklmnopqrst";
+        for ch in TEXT.chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        assert_eq!(feed!(s, ti, event Action::KeyPress { key: Key::Enter }), TextInputResult::Nothing);
+        assert_eq!(feed!(s, ti, event Action::KeyRelease { key: Key::Enter }), TextInputResult::Submit(TEXT.into()));
+        screen_assert!(s: fmt 0, 0, "> ", blank 2.., ..);
+    }
+
     // triggers autocomplete when you press tab
     // render returning autocomplete is just text, next render includes the autocomplete
     // autocomplete goes away after keypress

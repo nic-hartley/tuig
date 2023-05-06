@@ -229,120 +229,12 @@ impl<'s> RawAttachment<'s> for Textbox {
 
 #[cfg(test)]
 mod test {
-    use core::ops::{Bound, RangeBounds};
-
     use crate::{
-        fmt::{Cell, Color, Formatted, FormattedExt},
-        ui::Region,
-        Screen,
+        ui::{elements::test_utils::*, Region},
+        Screen, XY, fmt::{Cell, FormattedExt},
     };
 
     use super::*;
-
-    const FILLER: &str = "0123456789abcdef";
-
-    fn charat(x: usize, y: usize) -> char {
-        // compare:
-        // [(...) % FILLER.len()]
-        // .chars().nth((...) % FILLER.len()).unwrap()
-        // unfortunately the first one is invalid
-        FILLER.chars().nth((x * 5 + y * 3) % FILLER.len()).unwrap()
-    }
-
-    /// Generate a screen filled with miscellaneous "random" data, to fairly reliably check that stuff was left alone
-    /// by the code under test, and offer a region of the given size and position within it.
-    macro_rules! make_screen {
-        (
-            $screen:ident($sx:literal, $sy:literal)
-            $( , $region:ident($rx:literal, $ry:literal, $rw:tt, $rh:tt) )?
-        ) => {
-            let mut $screen = Screen::new(XY($sx, $sy));
-            for px in 0..$sx {
-                for py in 0..$sy {
-                    $screen[py][px] = Cell::of(charat(px, py)).on_black();
-                }
-            }
-            $(
-                let root = Region::new(&mut $screen, crate::Action::Redraw);
-                let [_, vert] = root.split(crate::ui::cols!($rx $rw))
-                    .expect("not enough space for desired cols");
-                let [_, hori] = vert.split(crate::ui::rows!($ry $rh))
-                    .expect("not enough space for desired rows");
-                #[allow(unused_mut)]
-                let mut $region = hori;
-            )?
-        };
-    }
-
-    fn assert_cell_blank(s: &Screen, x: usize, y: usize) {
-        let cell = &s[y][x];
-        assert!(
-            cell.ch == charat(x, y) && cell.get_fmt().bg == Color::Black,
-            "mismatched cell at {}, {}: expected blank, got {:?}",
-            x,
-            y,
-            cell,
-        );
-    }
-
-    fn assert_area_blank(s: &Screen, x: impl RangeBounds<usize>, y: impl RangeBounds<usize>) {
-        fn min(r: &impl RangeBounds<usize>) -> usize {
-            match r.start_bound() {
-                Bound::Included(v) => *v,
-                Bound::Excluded(v) => v - 1,
-                Bound::Unbounded => 0,
-            }
-        }
-        fn max(r: &impl RangeBounds<usize>, m: usize) -> usize {
-            match r.end_bound() {
-                Bound::Included(v) => v + 1,
-                Bound::Excluded(v) => *v,
-                Bound::Unbounded => m,
-            }
-        }
-        let min_x = min(&x);
-        let max_x = max(&x, s.size().x());
-        let min_y = min(&y);
-        let max_y = max(&y, s.size().y());
-        for x in min_x..max_x {
-            for y in min_y..max_y {
-                assert_cell_blank(s, x, y)
-            }
-        }
-    }
-
-    fn assert_cell_fmt(s: &Screen, x: usize, y: usize, c: Cell) {
-        assert!(
-            s[y][x] == c,
-            "mismatched cell at {}, {}: expected {:?}, got {:?}",
-            x,
-            y,
-            c,
-            s[y][x]
-        );
-    }
-
-    fn assert_area_fmt(s: &Screen, x: usize, y: usize, t: Text) {
-        for (i, ch) in t.text.chars().enumerate() {
-            assert_cell_fmt(s, x + i, y, Cell::of(ch).fmt_of(&t));
-        }
-    }
-
-    macro_rules! screen_assert {
-        ( $sc:ident: $(
-            $( fmt $fmt_x:expr, $fmt_y:expr, $text:literal $( $mod:ident )* )?
-            $( blank $blank_x:expr, $blank_y:expr )?
-        ),* ) => {
-            $(
-                $(
-                    assert_area_fmt(&$sc, $fmt_x, $fmt_y, text1!($($mod)* $text));
-                )?
-                $(
-                    assert_area_blank(&$sc, $blank_x, $blank_y);
-                )?
-            )*
-        };
-    }
 
     #[test]
     fn blank_textbox_renders_nothing() {
