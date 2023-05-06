@@ -2,7 +2,7 @@ use alloc::{collections::VecDeque, string::String};
 
 use crate::{
     fmt::{Cell, FormattedExt},
-    text, text1,
+    text,
     ui::ScreenView,
     Action,
 };
@@ -144,4 +144,20 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
 
         res
     }
+}
+
+#[cfg(test)]
+mod tests {
+    // empty renders nothing
+    // renders text on the same frame as the keypress
+    // with some text, renders that text
+    // with too much text, cursor at end, renders the last few
+    // with too much text, cursor *near* end, renders the same
+    // with too much text, cursor away from end, renders the middle few
+    // with too much text, cursor near beginning, renders almost the first few
+    // with too much text, cursor beginning, renders the first few
+    // returns the input text and clears when you press enter
+    // triggers autocomplete when you press tab
+    // render returning autocomplete is just text, next render includes the autocomplete
+    // autocomplete goes away after keypress
 }
