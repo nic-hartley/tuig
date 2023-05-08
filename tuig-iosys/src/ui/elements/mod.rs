@@ -151,11 +151,9 @@ pub(crate) mod test_utils {
             $( fmt $fmt_x:expr, $fmt_y:expr, $text:literal $( $mod:ident )* )?
             $( blank $blank_x:expr, $blank_y:expr )?
         ),* ) => {
-            #[allow(unused)]
-            use crate::text1;
             $(
                 $(
-                    assert_area_fmt(&$sc, $fmt_x, $fmt_y, text1!($($mod)* $text));
+                    assert_area_fmt(&$sc, $fmt_x, $fmt_y, crate::text1!($($mod)* $text));
                 )?
                 $(
                     assert_area_blank(&$sc, $blank_x, $blank_y);

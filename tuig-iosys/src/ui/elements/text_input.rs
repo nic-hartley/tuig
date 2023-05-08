@@ -54,7 +54,7 @@ pub struct TextInput {
     /// The history goes older to newer from front to back, so new lines are added with `push_back` and old ones are
     /// removed with `pop_front`.
     history: VecDeque<String>,
-    /// Current position, if scrolling back through history, or `history.len()`
+    /// Current position, if scrolling back through history, or `history.len()` if looking at `line`
     histpos: usize,
     /// Maximum number of history elements
     histcap: usize,
@@ -152,14 +152,30 @@ mod tests {
     use crate::{XY, fmt::Cell, ui::{Region, elements::test_utils::*}, fmt::FormattedExt, Screen, Key};
 
     macro_rules! feed {
-        ($s:ident, $ti:ident, event $ev:expr) => {{
+        (
+            $s:ident, $ti:ident, event $ev:expr
+            $( => $( $res:tt )* )?
+        ) => {{
             make_region!($s => r(0, 0, *, *, $ev));
-            r.attach(&mut $ti)
+            let res = r.attach(&mut $ti);
+            $(
+                assert_eq!(res, TextInputResult::$($res)*);
+            )?
+            res
         }};
-        ($s:ident, $ti:ident, key $k:expr) => {
-            assert_eq!(feed!($s, $ti, event Action::KeyPress { key: $k }), TextInputResult::Nothing);
-            assert_eq!(feed!($s, $ti, event Action::KeyRelease { key: $k }), TextInputResult::Nothing);
+        ($s:ident, $ti:ident, key $k:expr $( => $( $res:tt )* )? ) => {
+            feed!($s, $ti, event Action::KeyPress { key: $k } $( => $( $res )* )?);
+            feed!($s, $ti, event Action::KeyRelease { key: $k } => Nothing);
         };
+        ($s:ident, $ti:ident, chars $l:expr) => {
+            for ch in $l.chars() {
+                if ch == '\n' {
+                    feed!($s, $ti, key Key::Enter);
+                } else {
+                    feed!($s, $ti, key Key::Char(ch));
+                }
+            }
+        }
     }
 
     #[test]
@@ -167,7 +183,7 @@ mod tests {
         make_screen!(s(15, 1), r(0, 0, *, *));
         let mut ti = TextInput::new("", 0);
         r.attach(&mut ti);
-        screen_assert!(s: blank .., ..);
+        screen_assert!(s: fmt 0, 0, " " underline, fmt 1, 0, "              ");
     }
 
     #[test]
@@ -175,7 +191,7 @@ mod tests {
         make_screen!(s(15, 1), r(0, 0, *, *));
         let mut ti = TextInput::new("> ", 0);
         r.attach(&mut ti);
-        screen_assert!(s: fmt 0, 0, "> ", blank 2.., ..);
+        screen_assert!(s: fmt 0, 0, "> ", fmt 2, 0, " " underline, fmt 3, 0, "            ");
     }
 
     #[test]
@@ -183,7 +199,7 @@ mod tests {
         make_screen!(s(15, 1), r(0, 0, *, *, Action::KeyPress { key: Key::Char('z') }));
         let mut ti = TextInput::new("> ", 0);
         r.attach(&mut ti);
-        screen_assert!(s: fmt 0, 0, "> z", blank 2.., ..);
+        screen_assert!(s: fmt 0, 0, "> z", fmt 3, 0, " " underline, fmt 4, 0, "           ");
         assert_eq!(&ti.line, "z");
     }
 
@@ -195,7 +211,7 @@ mod tests {
         feed!(s, ti, key Key::Char('b'));
         feed!(s, ti, key Key::Char('c'));
         feed!(s, ti, key Key::Char('d'));
-        screen_assert!(s: fmt 0, 0, "> abcd", blank 6.., ..);
+        screen_assert!(s: fmt 0, 0, "> abcd", fmt 6, 0, " " underline, fmt 7, 0, "        ");
     }
 
     #[test]
@@ -259,6 +275,114 @@ mod tests {
     }
 
     #[test]
+    fn left_arrow_moves_cursor() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        for ch in "123456789".chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        // make sure the screen looks right to begin with
+        screen_assert!(s: fmt 0, 0, "> 123456789", fmt 11, 0, " " underline);
+        // then move the cursor left
+        feed!(s, ti, key Key::Left);
+        screen_assert!(s: fmt 0, 0, "> 12345678", fmt 10, 0, "9" underline);
+        // and again a couple more times
+        feed!(s, ti, key Key::Left);
+        screen_assert!(s: fmt 0, 0, "> 1234567", fmt 9, 0, "8" underline, fmt 10, 0, "9");
+        feed!(s, ti, key Key::Left);
+        screen_assert!(s: fmt 0, 0, "> 123456", fmt 8, 0, "7" underline, fmt 9, 0, "89");
+        // then try typing at the cursor
+        for ch in "abc".chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        // and make sure it still looks right
+        screen_assert!(s: fmt 0, 0, "> 123456abc", fmt 11, 0, "7" underline, fmt 12, 0, "89");
+    }
+
+    #[test]
+    fn right_arrow_moves_cursor() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        for ch in "123456789".chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        // make sure the screen looks right to begin with
+        screen_assert!(s: fmt 0, 0, "> 123456789", fmt 11, 0, " " underline);
+        // then move the cursor left and confirm
+        feed!(s, ti, key Key::Left);
+        feed!(s, ti, key Key::Left);
+        feed!(s, ti, key Key::Left);
+        feed!(s, ti, key Key::Left);
+        feed!(s, ti, key Key::Left);
+        screen_assert!(s: fmt 0, 0, "> 1234", fmt 6, 0, "5" underline, fmt 7, 0, "6789");
+        // then move it back right, confirming along the way
+        feed!(s, ti, key Key::Right);
+        screen_assert!(s: fmt 0, 0, "> 12345", fmt 6, 0, "6" underline, fmt 7, 0, "789");
+        feed!(s, ti, key Key::Right);
+        screen_assert!(s: fmt 0, 0, "> 123456", fmt 6, 0, "7" underline, fmt 7, 0, "89");
+        feed!(s, ti, key Key::Right);
+        screen_assert!(s: fmt 0, 0, "> 1234567", fmt 6, 0, "8" underline, fmt 7, 0, "9");
+        // then try typing at the cursor
+        for ch in "abc".chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        // and make sure it still looks right
+        screen_assert!(s: fmt 0, 0, "> 1234567abc", fmt 12, 0, "8" underline, fmt 13, 0, "9");
+    }
+
+    #[test]
+    fn home_moves_cursor() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        for ch in "123456789".chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        // make sure the screen looks right to begin with
+        screen_assert!(s: fmt 0, 0, "> 123456789", fmt 11, 0, " " underline);
+        // then hit the home button
+        feed!(s, ti, key Key::Home);
+        screen_assert!(s: fmt 0, 0, "> ", fmt 2, 0, "1" underline, fmt 3, 0, "23456789");
+        // and again a couple more times, make sure it doesn't change
+        feed!(s, ti, key Key::Home);
+        screen_assert!(s: fmt 0, 0, "> ", fmt 2, 0, "1" underline, fmt 3, 0, "23456789");
+        feed!(s, ti, key Key::Home);
+        screen_assert!(s: fmt 0, 0, "> ", fmt 2, 0, "1" underline, fmt 3, 0, "23456789");
+        // then try typing at the cursor
+        for ch in "abc".chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        // and make sure it still looks right
+        screen_assert!(s: fmt 0, 0, "> abc", fmt 5, 0, "1" underline, fmt 6, 0, "23456789");
+    }
+
+    #[test]
+    fn end_moves_cursor() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        for ch in "123456789".chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        // make sure the screen looks right to begin with
+        screen_assert!(s: fmt 0, 0, "> 123456789", fmt 11, 0, " " underline);
+        // then move the cursor left and confirm
+        feed!(s, ti, key Key::Left);
+        feed!(s, ti, key Key::Left);
+        feed!(s, ti, key Key::Left);
+        feed!(s, ti, key Key::Left);
+        feed!(s, ti, key Key::Left);
+        screen_assert!(s: fmt 0, 0, "> 1234", fmt 6, 0, "5" underline, fmt 7, 0, "6789");
+        // then move it back to the end
+        feed!(s, ti, key Key::End);
+        screen_assert!(s: fmt 0, 0, "> 123456789", fmt 11, 0, " " underline);
+        // then try typing at the cursor
+        for ch in "abc".chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        // and make sure it still looks right
+        screen_assert!(s: fmt 0, 0, "> 123456789abc", fmt 14, 0, " " underline);
+    }
+
+    #[test]
     fn overflow_with_cursor_at_beginning_shows_beginning() {
         make_screen!(s(15, 1));
         let mut ti = TextInput::new("> ", 0);
@@ -272,19 +396,236 @@ mod tests {
     }
 
     #[test]
+    fn autocomplete_clipped_shows_gray_dots() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        const TEXT: &str = "0123456789abcdefghijklmnopqrst";
+        feed!(s, ti, chars TEXT);
+        for _ in 0..20 {
+            feed!(s, ti, key Key::Left);
+        }
+        // first: make sure we know what it should look like
+        screen_assert!(s: fmt 0, 0, "> …9", fmt 4, 0, "a" underline, fmt 5, 0, "bcdefghij…");
+        // autocomplete: should insert `ABCDEFGHIJ_____`, which gets cut off
+        match feed!(s, ti, event Action::KeyPress { key: Key::Tab }) {
+            TextInputResult::Autocomplete { res, .. } => *res = "ABCDEFGHIJ_____".into(),
+            _ => panic!("tab did not trigger TextInputResult::Autocomplete"),
+        }
+        feed!(s, ti, event Action::Redraw);
+        screen_assert!(s:
+            fmt 0, 0, "> …9", fmt 4, 0,
+            "A" underline bright_black, fmt 5, 0, "BCDEFGHIJ…" bright_black,
+        );
+    }
+
+    #[test]
+    fn autocomplete_barely_unclipped_shows_white_dots() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        const TEXT: &str = "0123456789abcdefghijklmnopqrst";
+        feed!(s, ti, chars TEXT);
+        for _ in 0..20 {
+            feed!(s, ti, key Key::Left);
+        }
+        // first: make sure we know what it should look like
+        screen_assert!(s: fmt 0, 0, "> …9", fmt 4, 0, "a" underline, fmt 5, 0, "bcdefghij…");
+        // autocomplete: should insert `ABCDEFGHIJ`, which just barely fits, with normal text cut off after
+        match feed!(s, ti, event Action::KeyPress { key: Key::Tab }) {
+            TextInputResult::Autocomplete { res, .. } => *res = "ABCDEFGHIJ".into(),
+            _ => panic!("tab did not trigger TextInputResult::Autocomplete"),
+        }
+        feed!(s, ti, event Action::Redraw);
+        screen_assert!(s:
+            fmt 0, 0, "> …9", fmt 4, 0,
+            "A" underline bright_black, fmt 5, 0, "BCDEFGHIJ" bright_black,
+            fmt 14, 0, "…",
+        );
+    }
+
+    #[test]
     fn press_enter_returns_input_text() {
         make_screen!(s(15, 1));
         let mut ti = TextInput::new("> ", 0);
         const TEXT: &str = "0123456789abcdefghijklmnopqrst";
-        for ch in TEXT.chars() {
-            feed!(s, ti, key Key::Char(ch));
-        }
-        assert_eq!(feed!(s, ti, event Action::KeyPress { key: Key::Enter }), TextInputResult::Nothing);
-        assert_eq!(feed!(s, ti, event Action::KeyRelease { key: Key::Enter }), TextInputResult::Submit(TEXT.into()));
-        screen_assert!(s: fmt 0, 0, "> ", blank 2.., ..);
+        feed!(s, ti, chars TEXT);
+        feed!(s, ti, event Action::KeyPress { key: Key::Enter } => Submit(TEXT.into()));
+        screen_assert!(s: fmt 0, 0, "> ", fmt 2, 0, " " underline, fmt 3, 0, "            ");
     }
 
-    // triggers autocomplete when you press tab
-    // render returning autocomplete is just text, next render includes the autocomplete
-    // autocomplete goes away after keypress
+    #[test]
+    fn press_enter_returns_input_text_when_cursor_not_at_end() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        const TEXT: &str = "0123456789abcdefghijklmnopqrst";
+        feed!(s, ti, chars TEXT);
+        for _ in 0..5 {
+            feed!(s, ti, key Key::Left);
+        }
+        feed!(s, ti, event Action::KeyPress { key: Key::Enter } => Submit(TEXT.into()));
+        screen_assert!(s: fmt 0, 0, "> ", fmt 2, 0, " " underline, fmt 3, 0, "            ");
+    }
+
+    #[test]
+    fn press_tab_triggers_autocomplete() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        feed!(s, ti, chars "abcdefg");
+        feed!(s, ti, key Key::Left);
+        feed!(s, ti, key Key::Left);
+        feed!(s, ti, key Key::Left);
+        // line should now be abcd_fg
+        match feed!(s, ti, event Action::KeyPress { key: Key::Tab }) {
+            TextInputResult::Autocomplete { text, res } => {
+                assert_eq!(text, "abcd");
+                assert_eq!(res, "");
+            }
+            _ => panic!("tab did not trigger TextInputResult::Autocomplete"),
+        }
+    }
+
+    #[test]
+    fn autocomplete_render_correct() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        feed!(s, ti, chars "abcdefg");
+        feed!(s, ti, key Key::Left);
+        feed!(s, ti, key Key::Left);
+        feed!(s, ti, key Key::Left);
+        // line should now be abcd_fg
+        match feed!(s, ti, event Action::KeyPress { key: Key::Tab }) {
+            TextInputResult::Autocomplete { res, .. } => *res = "mlem".into(),
+            _ => panic!("tab did not trigger TextInputResult::Autocomplete"),
+        }
+        // immediately after hitting tab, it shouldn't show
+        screen_assert!(s: fmt 0, 0, "> abcd", fmt 6, 0, "e" underline, fmt 7, 0, "fg      ");
+        // then we redraw and it should show up
+        feed!(s, ti, event Action::Redraw => Nothing);
+        screen_assert!(s:
+            fmt 0, 0, "> abcd",
+            fmt 6, 0, "m" bright_black underline, fmt 7, 0, "lem" bright_black,
+            fmt 10, 0, "efg  "
+        );
+    }
+
+    #[test]
+    fn autocomplete_goes_away_after_keypress() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 0);
+        feed!(s, ti, chars "abcdefg");
+        feed!(s, ti, key Key::Left);
+        feed!(s, ti, key Key::Left);
+        feed!(s, ti, key Key::Left);
+        match feed!(s, ti, event Action::KeyPress { key: Key::Tab }) {
+            TextInputResult::Autocomplete { res, .. } => *res = "mlem".into(),
+            _ => panic!("tab did not trigger TextInputResult::Autocomplete"),
+        }
+        feed!(s, ti, event Action::Redraw);
+        // ensure the autocomplete was drawn
+        screen_assert!(s:
+            fmt 0, 0, "> abcd",
+            fmt 6, 0, "m" bright_black underline, fmt 7, 0, "lem" bright_black,
+            fmt 10, 0, "efg  "
+        );
+        // mouse movement shouldn't get rid of it
+        feed!(s, ti, event Action::MouseMove { pos: XY(0, 0) });
+        screen_assert!(s:
+            fmt 0, 0, "> abcd",
+            fmt 6, 0, "m" bright_black underline, fmt 7, 0, "lem" bright_black,
+            fmt 10, 0, "efg  "
+        );
+        // F1 shouldn't do anything in particular (except cancel the autocomplete)
+        feed!(s, ti, event Action::KeyPress { key: Key::F(1) });
+        screen_assert!(s:
+            fmt 0, 0, "> abcd", fmt 6, 0, "e" underline, fmt 7, 0, "efg     "
+        );
+    }
+
+    #[test]
+    fn submit_text_adds_to_history() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 2);
+        feed!(s, ti, chars "abcdef\n");
+        // ensure it's blank
+        screen_assert!(s: fmt 0, 0, "> ", fmt 2, 0, " " underline, fmt 3, 0, "            ");
+        // then hit up and ensure the previous line is there
+        feed!(s, ti, key Key::Up);
+        screen_assert!(s: fmt 0, 0, "> abcdef", fmt 8, 0, " ");
+    }
+
+    #[test]
+    fn down_restores_current_line() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 2);
+        for ch in "abcdef".chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        feed!(s, ti, key Key::Enter);
+        // new text on the current line, without submitting
+        for ch in "01234".chars() {
+            feed!(s, ti, key Key::Char(ch));
+        }
+        screen_assert!(s: fmt 0, 0, "> 01234", fmt 7, 0, " " underline);
+        // go to the previous line, ensure that's correct
+        feed!(s, ti, key Key::Up);
+        screen_assert!(s: fmt 0, 0, "> abcdef", fmt 8, 0, " " underline);
+        // go back to the current line, and ensure that's right
+        feed!(s, ti, key Key::Down);
+        screen_assert!(s: fmt 0, 0, "> 01234", fmt 7, 0, " " underline);
+    }
+
+    #[test]
+    fn cursor_move_doesnt_select_history() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 2);
+        feed!(s, ti, chars "abcdef\n01234");
+        feed!(s, ti, key Key::Up);
+        // move a bit and make sure the cursor moved
+        screen_assert!(s: fmt 0, 0, "> abcdef", fmt 8, 0, " " underline);
+        feed!(s, ti, key Key::Left);
+        feed!(s, ti, key Key::Left);
+        feed!(s, ti, key Key::Left);
+        screen_assert!(s: fmt 0, 0, "> abc", fmt 5, 0, "d" underline, fmt 6, 0, "ef");
+        // go back to the current line, whose content should be unchanged (and the cursor should be at the end)
+        feed!(s, ti, key Key::Down);
+        screen_assert!(s: fmt 0, 0, "> 01234", fmt 7, 0, " " underline);
+    }
+
+    #[test]
+    fn typing_selects_history() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 2);
+        feed!(s, ti, chars "abcdef\n01234");
+        feed!(s, ti, key Key::Up);
+        // type a character
+        feed!(s, ti, key Key::Char('z'));
+        screen_assert!(s: fmt 0, 0, "> abcdefz", fmt 9, 0, " " underline);
+        // press up to load the previous history and ensure it's there
+        feed!(s, ti, key Key::Up);
+        screen_assert!(s: fmt 0, 0, "> abcdef", fmt 8, 0, " " underline);
+    }
+
+    #[test]
+    fn enter_selects_history_and_submits() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 2);
+        // prep history
+        feed!(s, ti, chars "abc\n01234\n");
+        // up arrow should give us `01234`, then `abc`
+        feed!(s, ti, key Key::Up);
+        feed!(s, ti, key Key::Up);
+        // submit, and ensure we get the relevant text
+        feed!(s, ti, event Action::KeyPress { key: Key::Enter } => Submit("abc".into()));
+        feed!(s, ti, event Action::KeyRelease { key: Key::Enter });
+        // ensure the screen is as it should be
+        screen_assert!(s: fmt 0, 0, "> ", fmt 2, 0, " " underline);
+        // up arrow once should show us "abc" (the new one)
+        feed!(s, ti, key Key::Up);
+        screen_assert!(s: fmt 0, 0, "> abc", fmt 5, 0, " " underline);
+        // up again should show us "1234"
+        feed!(s, ti, key Key::Up);
+        screen_assert!(s: fmt 0, 0, "> 1234", fmt 6, 0, " " underline);
+        // and up one last time should show us "abc" (the original)
+        feed!(s, ti, key Key::Up);
+        screen_assert!(s: fmt 0, 0, "> abc", fmt 5, 0, " " underline);
+    }
 }
