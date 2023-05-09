@@ -4,7 +4,11 @@ use tuig_iosys::{
     cell,
     fmt::Cell,
     text,
-    ui::{cols, elements::{Textbox, TextInput}, rows, Region, ScreenView},
+    ui::{
+        cols,
+        elements::{TextInput, Textbox},
+        rows, Region, ScreenView,
+    },
     Action, IoSystem, Key, Screen,
 };
 

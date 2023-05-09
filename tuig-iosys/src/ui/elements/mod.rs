@@ -42,9 +42,12 @@ impl<'s, T, F: FnOnce(Action, ScreenView<'s>) -> T> RawAttachment<'s> for F {
 
 #[cfg(test)]
 pub(crate) mod test_utils {
-    use core::ops::{RangeBounds, Bound};
+    use core::ops::{Bound, RangeBounds};
 
-    use crate::{Screen, fmt::{Color, Cell, Formatted, FormattedExt, Text}};
+    use crate::{
+        fmt::{Cell, Color, Formatted, FormattedExt, Text},
+        Screen,
+    };
 
     const FILLER: &str = "0123456789abcdef";
 
@@ -163,5 +166,8 @@ pub(crate) mod test_utils {
         };
     }
 
-    pub(crate) use {__make_screen as make_screen, __make_region as make_region, __screen_assert as screen_assert};
+    pub(crate) use {
+        __make_region as make_region, __make_screen as make_screen,
+        __screen_assert as screen_assert,
+    };
 }

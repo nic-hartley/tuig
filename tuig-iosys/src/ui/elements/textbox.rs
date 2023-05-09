@@ -230,8 +230,9 @@ impl<'s> RawAttachment<'s> for Textbox {
 #[cfg(test)]
 mod test {
     use crate::{
+        fmt::{Cell, FormattedExt},
         ui::{elements::test_utils::*, Region},
-        Screen, XY, fmt::{Cell, FormattedExt},
+        Screen, XY,
     };
 
     use super::*;

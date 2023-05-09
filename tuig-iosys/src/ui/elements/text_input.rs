@@ -4,9 +4,9 @@ use alloc::{collections::VecDeque, string::String};
 
 use crate::{
     fmt::{Cell, FormattedExt, Text},
-    text,
+    text, text1,
     ui::ScreenView,
-    Action, text1, Key,
+    Action, Key,
 };
 
 use super::RawAttachment;
@@ -128,7 +128,9 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
     type Output = TextInputResult<'ti>;
     fn raw_attach(self, input: Action, mut screen: ScreenView<'s>) -> Self::Output {
         let (res, clear_autocomplete) = match input {
-            Action::KeyPress { key: Key::Backspace } => {
+            Action::KeyPress {
+                key: Key::Backspace,
+            } => {
                 if self.cursor > 0 {
                     self.cursor -= 1;
                     self.line.remove(self.cursor);
@@ -201,7 +203,9 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
         };
 
         let left_start = self.cursor - len_left;
-        line[1].text.replace_range(0..left_start, if cut_left { "…" } else { "" });
+        line[1]
+            .text
+            .replace_range(0..left_start, if cut_left { "…" } else { "" });
 
         let mut trim = len_right;
         let mut last_idx = line.len();
@@ -211,7 +215,9 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
                 continue;
             }
             // otherwise we've landed on the element we need to trim!
-            chunk.text.replace_range(trim.., if cut_left { "…" } else { "" });
+            chunk
+                .text
+                .replace_range(trim.., if cut_left { "…" } else { "" });
             last_idx = i + 2;
             break;
         }
@@ -233,7 +239,12 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{XY, fmt::Cell, ui::{Region, elements::test_utils::*}, fmt::FormattedExt, Screen, Key};
+    use crate::{
+        fmt::Cell,
+        fmt::FormattedExt,
+        ui::{elements::test_utils::*, Region},
+        Key, Screen, XY,
+    };
 
     macro_rules! feed {
         (
