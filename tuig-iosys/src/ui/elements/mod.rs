@@ -9,6 +9,7 @@ mod scrollable;
 mod textbox;
 pub use textbox::{Textbox, TextboxData};
 mod text_input;
+pub use text_input::{TextInput, TextInputResult};
 
 use crate::Action;
 

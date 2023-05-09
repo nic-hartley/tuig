@@ -4,7 +4,7 @@ use tuig_iosys::{
     cell,
     fmt::Cell,
     text,
-    ui::{cols, elements::Textbox, rows, Region, ScreenView},
+    ui::{cols, elements::{Textbox, TextInput}, rows, Region, ScreenView},
     Action, IoSystem, Key, Screen,
 };
 
@@ -19,23 +19,33 @@ fn char_for_input(action: &Action) -> Cell {
     }
 }
 
-fn tui(region: Region) -> bool {
-    let [l, m, r] = region.split(cols!(20 "| |" * "#" 5)).unwrap();
-    let [t, b] = l.split(rows!(* "." 5)).unwrap();
-    for s in [m, r, b] {
-        s.attach(|i, mut sv: ScreenView| sv.fill(char_for_input(&i)))
-    }
-    t.attach(|i, sv| {
-        let txt = text![
-            "Hello! Your most recent ", red "action", " was: ",
-            bold green "{:?}"(i),
-        ];
-        Textbox::new(txt).render_to(sv)
-    });
-    true
-}
-
 fn run(mut iosys: Box<dyn IoSystem>) {
+    let mut ti = TextInput {
+        prompt: "".into(),
+        line: "abcde01234ABCDE)!@#$_".into(),
+        cursor: 3,
+        autocomplete: "".into(),
+        history: Default::default(),
+        histpos: 0,
+        histcap: 0,
+    };
+    let mut tui = |region: Region| {
+        let [l, m, r] = region.split(cols!(20 "| |" * "#" 5)).unwrap();
+        let [t, b] = l.split(rows!(* "=" 1)).unwrap();
+        for s in [m, r] {
+            s.attach(|i, mut sv: ScreenView| sv.fill(char_for_input(&i)))
+        }
+        t.attach(|i, sv| {
+            let txt = text![
+                "Hello! Your most recent ", red "action", " was: ",
+                bold green "{:?}"(i),
+            ];
+            Textbox::new(txt).render_to(sv)
+        });
+        b.attach(&mut ti);
+        true
+    };
+
     let mut screen = Screen::new(iosys.size());
     let mut input = Action::Redraw;
     loop {

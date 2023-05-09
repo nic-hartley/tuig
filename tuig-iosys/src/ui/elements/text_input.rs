@@ -1,10 +1,12 @@
+use core::iter;
+
 use alloc::{collections::VecDeque, string::String};
 
 use crate::{
-    fmt::{Cell, FormattedExt},
+    fmt::{Cell, FormattedExt, Text},
     text,
     ui::ScreenView,
-    Action,
+    Action, text1,
 };
 
 use super::RawAttachment;
@@ -39,25 +41,25 @@ use super::RawAttachment;
 /// use the history features, see [`TextInput::store`].
 pub struct TextInput {
     /// A bit of fixed, uneditable text at the beginning of the text input, to signal the user to type.
-    prompt: String,
+    pub prompt: String,
 
     /// The current line of text being edited
-    line: String,
+    pub line: String,
     /// Which character index the cursor is just before (so `cursor == line.len()` means the cursor is at the end)
-    cursor: usize,
+    pub cursor: usize,
 
     /// The caller-specified autocomplete text
-    autocomplete: String,
+    pub autocomplete: String,
 
     /// Previous lines we were told to save
     ///
     /// The history goes older to newer from front to back, so new lines are added with `push_back` and old ones are
     /// removed with `pop_front`.
-    history: VecDeque<String>,
+    pub history: VecDeque<String>,
     /// Current position, if scrolling back through history, or `history.len()` if looking at `line`
-    histpos: usize,
+    pub histpos: usize,
     /// Maximum number of history elements
-    histcap: usize,
+    pub histcap: usize,
 }
 
 impl TextInput {
@@ -129,16 +131,71 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
             _ => TextInputResult::Nothing,
         };
 
-        let text = text![];
-        // TODO: generate the base text
-        // TODO: slice according to cursor position
-        // TODO: underline cursor character
+        // generate the base text
+        let mut line = text![
+            // separate prompt for easier slicing later
+            "{}"(self.prompt),
+            "{}"(&self.line[..self.cursor]),
+            "", // blank where the cursor will go
+        ];
+        if !self.autocomplete.is_empty() {
+            line.push(text1!(bright_black "{}"(self.autocomplete)));
+        }
+        line.push(text1!("{}"(&self.line[self.cursor..])));
+
+        // underline the cursor character
+        // the cursor is always at the beginning of the 4th element (idx 3)
+        // so we remove that one's first character, create a new Text element accordingly
+        let cursor_ch = if line[3].text.is_empty() {
+            ' '
+        } else {
+            line[3].text.remove(0)
+        };
+        line[2] = Text::of(cursor_ch.into()).fmt_of(&line[3]).underline();
+
+        // slice according to cursor position, biasing towards the end of the line
+        let width = screen.size().x() - self.prompt.len();
+        let min_space_left = 1 + width / 8;
+        let max_space_right = width - min_space_left;
+        let all_right = self.line.len() - self.cursor;
+        let (len_right, cut_right) = if all_right == 0 {
+            (1, false)
+        } else if all_right <= max_space_right {
+            (all_right, false)
+        } else {
+            (max_space_right - 1, true)
+        };
+        let max_space_left = width - (len_right + cut_right as usize);
+        let all_left = self.cursor;
+        let (len_left, cut_left) = if all_left < max_space_left {
+            (all_left, false)
+        } else {
+            (max_space_left - 1, true)
+        };
+
+        let left_start = self.cursor - len_left;
+        line[1].text.replace_range(0..left_start, if cut_left { "…" } else { "" });
+
+        let mut trim = len_right;
+        let mut last_idx = line.len();
+        for (i, chunk) in line[2..].iter_mut().enumerate() {
+            if chunk.text.len() < trim {
+                trim -= chunk.text.len();
+                continue;
+            }
+            // otherwise we've landed on the element we need to trim!
+            chunk.text.replace_range(trim.., if cut_left { "…" } else { "" });
+            last_idx = i + 2;
+            break;
+        }
+        line.drain(last_idx + 1..);
 
         screen[0]
             .iter_mut()
             .zip(
-                text.iter()
-                    .flat_map(|t| t.text.chars().map(|c| Cell::of(c).fmt_of(t))),
+                line.iter()
+                    .flat_map(|t| t.text.chars().map(|c| Cell::of(c).fmt_of(t)))
+                    .chain(iter::repeat(Cell::BLANK)),
             )
             .for_each(|(cell, char)| *cell = char);
 
