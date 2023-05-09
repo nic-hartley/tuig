@@ -6,7 +6,7 @@ use crate::{
     fmt::{Cell, FormattedExt, Text},
     text,
     ui::ScreenView,
-    Action, text1,
+    Action, text1, Key,
 };
 
 use super::RawAttachment;
@@ -127,9 +127,36 @@ pub enum TextInputResult<'ti> {
 impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
     type Output = TextInputResult<'ti>;
     fn raw_attach(self, input: Action, mut screen: ScreenView<'s>) -> Self::Output {
-        let res = match input {
-            _ => TextInputResult::Nothing,
+        let (res, clear_autocomplete) = match input {
+            Action::KeyPress { key: Key::Backspace } => {
+                if self.cursor > 0 {
+                    self.cursor -= 1;
+                    self.line.remove(self.cursor);
+                }
+                (TextInputResult::Nothing, true)
+            }
+            Action::KeyPress { key: Key::Char(ch) } => {
+                self.line.insert(self.cursor, ch);
+                self.cursor += 1;
+                (TextInputResult::Nothing, true)
+            }
+            Action::KeyPress { key: Key::Left } => {
+                if self.cursor > 0 {
+                    self.cursor -= 1;
+                }
+                (TextInputResult::Nothing, true)
+            }
+            Action::KeyPress { key: Key::Right } => {
+                if self.cursor < self.line.len() {
+                    self.cursor += 1;
+                }
+                (TextInputResult::Nothing, true)
+            }
+            _ => (TextInputResult::Nothing, false),
         };
+        if clear_autocomplete {
+            self.autocomplete.clear();
+        }
 
         // generate the base text
         let mut line = text![
