@@ -184,7 +184,7 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
 
         // slice according to cursor position, biasing towards the end of the line
         let width = screen.size().x() - self.prompt.len();
-        let min_space_left = 1 + width / 8;
+        let min_space_left = usize::min(1 + width / 8, self.cursor);
         let max_space_right = width - min_space_left;
         let all_right = self.line.len() - self.cursor;
         let (len_right, cut_right) = if all_right == 0 {
@@ -194,9 +194,10 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
         } else {
             (max_space_right - 1, true)
         };
+
         let max_space_left = width - (len_right + cut_right as usize);
         let all_left = self.cursor;
-        let (len_left, cut_left) = if all_left < max_space_left {
+        let (len_left, cut_left) = if all_left <= max_space_left {
             (all_left, false)
         } else {
             (max_space_left - 1, true)
@@ -217,7 +218,7 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
             // otherwise we've landed on the element we need to trim!
             chunk
                 .text
-                .replace_range(trim.., if cut_left { "…" } else { "" });
+                .replace_range(trim.., if cut_right { "…" } else { "" });
             last_idx = i + 2;
             break;
         }
