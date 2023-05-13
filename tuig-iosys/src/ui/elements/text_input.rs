@@ -3,7 +3,8 @@ use core::{iter, mem};
 use alloc::{collections::VecDeque, string::String};
 
 use crate::{
-    fmt::{Cell, FormattedExt, Text, Formatted, Format}, text1,
+    fmt::{Cell, Format, Formatted, FormattedExt, Text},
+    text1,
     ui::ScreenView,
     Action, Key,
 };
@@ -168,12 +169,14 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
                 }
                 (TextInputResult::Nothing, true, false)
             }
-            Action::KeyPress { key: Key::Tab } => {
-                (TextInputResult::Nothing, true, true)
-            }
+            Action::KeyPress { key: Key::Tab } => (TextInputResult::Nothing, true, true),
             Action::KeyPress { key: Key::Enter } => {
                 self.cursor = 0;
-                (TextInputResult::Submit(mem::take(&mut self.line)), true, false)
+                (
+                    TextInputResult::Submit(mem::take(&mut self.line)),
+                    true,
+                    false,
+                )
             }
             _ => (TextInputResult::Nothing, false, false),
         };
@@ -220,11 +223,16 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
 
         // insert the cursor
         let ch = line.get_mut(3).map(|t| t.text.remove(0)).unwrap_or(' ');
-        let fmt = line.get(3).map(|t| t.get_fmt().clone()).unwrap_or(Format::default());
+        let fmt = line
+            .get(3)
+            .map(|t| t.get_fmt().clone())
+            .unwrap_or(Format::default());
         line[2] = Text::of(ch.into()).fmt(fmt).underline();
 
         // trim the leftmost bits off the left side off
-        line[1].text.replace_range(..(self.cursor - len_left), if cut_left { "…" } else { "" });
+        line[1]
+            .text
+            .replace_range(..(self.cursor - len_left), if cut_left { "…" } else { "" });
         // rim the rightmost bits of the right side off (-1 to account for cursor)
         let mut trim = len_right - 1;
         let mut trimmed = false;
@@ -232,7 +240,9 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
             if trim >= chunk.text.len() {
                 trim -= chunk.text.len();
             } else if !trimmed {
-                chunk.text.replace_range(trim.., if cut_right { "…" } else { "" });
+                chunk
+                    .text
+                    .replace_range(trim.., if cut_right { "…" } else { "" });
                 trimmed = true;
             } else {
                 chunk.text.clear();
@@ -250,7 +260,10 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
 
         // avoid multiple mutable references (there's a better way, I'm sure, but I don't know it oops)
         if return_autocomplete {
-            TextInputResult::Autocomplete { text: &self.line[..self.cursor], res: &mut self.autocomplete }
+            TextInputResult::Autocomplete {
+                text: &self.line[..self.cursor],
+                res: &mut self.autocomplete,
+            }
         } else {
             res
         }
