@@ -5,7 +5,7 @@ use alloc::{collections::VecDeque, string::String};
 use crate::{
     fmt::{Cell, FormattedExt, Text, Formatted, Format}, text1,
     ui::ScreenView,
-    Action, Key, text,
+    Action, Key,
 };
 
 use super::RawAttachment;
@@ -133,6 +133,14 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
                 self.cursor += 1;
                 (TextInputResult::Nothing, true, false)
             }
+            Action::KeyPress { key: Key::Home } => {
+                self.cursor = 0;
+                (TextInputResult::Nothing, true, false)
+            }
+            Action::KeyPress { key: Key::End } => {
+                self.cursor = self.line.len();
+                (TextInputResult::Nothing, true, false)
+            }
             Action::KeyPress { key: Key::Left } => {
                 if self.cursor > 0 {
                     self.cursor -= 1;
@@ -221,7 +229,7 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
         let mut trim = len_right - 1;
         let mut trimmed = false;
         for chunk in &mut line[3..] {
-            if trim > chunk.text.len() {
+            if trim >= chunk.text.len() {
                 trim -= chunk.text.len();
             } else if !trimmed {
                 chunk.text.replace_range(trim.., if cut_right { "…" } else { "" });
@@ -497,7 +505,7 @@ mod tests {
         for ch in "0123456789abcdefghijklmnopqrst".chars() {
             feed!(s, ti, key Key::Char(ch));
         }
-        for _ in 0..28 {
+        for _ in 0..30 {
             feed!(s, ti, key Key::Left);
         }
         screen_assert!(s: fmt 0, 0, "> ", fmt 2, 0, "0" underline, fmt 3, 0, "123456789ab…");
@@ -641,10 +649,10 @@ mod tests {
             fmt 6, 0, "m" bright_black underline, fmt 7, 0, "lem" bright_black,
             fmt 10, 0, "efg  "
         );
-        // F1 shouldn't do anything in particular (except cancel the autocomplete)
-        feed!(s, ti, event Action::KeyPress { key: Key::F(1) });
+        // type a char to watch the autocomplete go away
+        feed!(s, ti, event Action::KeyPress { key: Key::Char('z') });
         screen_assert!(s:
-            fmt 0, 0, "> abcd", fmt 6, 0, "e" underline, fmt 7, 0, "efg     "
+            fmt 0, 0, "> abcdz", fmt 7, 0, "e" underline, fmt 8, 0, "fg     "
         );
     }
 
