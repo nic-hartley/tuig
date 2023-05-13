@@ -1,10 +1,9 @@
-use core::iter;
+use core::{iter, mem};
 
 use alloc::{collections::VecDeque, string::String};
 
 use crate::{
-    fmt::{Cell, FormattedExt, Text},
-    text, text1,
+    fmt::{Cell, FormattedExt, Text}, text1,
     ui::ScreenView,
     Action, Key,
 };
@@ -127,7 +126,25 @@ pub enum TextInputResult<'ti> {
 impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
     type Output = TextInputResult<'ti>;
     fn raw_attach(self, input: Action, mut screen: ScreenView<'s>) -> Self::Output {
-        let (res, clear_autocomplete) = match input {
+        // handle input and update state accordingly
+        let (res, clear_autocomplete, return_autocomplete) = match input {
+            Action::KeyPress { key: Key::Char(ch) } => {
+                self.line.insert(self.cursor, ch);
+                self.cursor += 1;
+                (TextInputResult::Nothing, true, false)
+            }
+            Action::KeyPress { key: Key::Left } => {
+                if self.cursor > 0 {
+                    self.cursor -= 1;
+                }
+                (TextInputResult::Nothing, true, false)
+            }
+            Action::KeyPress { key: Key::Right } => {
+                if self.cursor < self.line.len() {
+                    self.cursor += 1;
+                }
+                (TextInputResult::Nothing, true, false)
+            }
             Action::KeyPress {
                 key: Key::Backspace,
             } => {
@@ -135,58 +152,35 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
                     self.cursor -= 1;
                     self.line.remove(self.cursor);
                 }
-                (TextInputResult::Nothing, true)
+                (TextInputResult::Nothing, true, false)
             }
-            Action::KeyPress { key: Key::Char(ch) } => {
-                self.line.insert(self.cursor, ch);
-                self.cursor += 1;
-                (TextInputResult::Nothing, true)
-            }
-            Action::KeyPress { key: Key::Left } => {
-                if self.cursor > 0 {
-                    self.cursor -= 1;
-                }
-                (TextInputResult::Nothing, true)
-            }
-            Action::KeyPress { key: Key::Right } => {
+            Action::KeyPress { key: Key::Delete } => {
                 if self.cursor < self.line.len() {
-                    self.cursor += 1;
+                    self.line.remove(self.cursor);
                 }
-                (TextInputResult::Nothing, true)
+                (TextInputResult::Nothing, true, false)
             }
-            _ => (TextInputResult::Nothing, false),
+            Action::KeyPress { key: Key::Tab } => {
+                (TextInputResult::Nothing, true, true)
+            }
+            Action::KeyPress { key: Key::Enter } => {
+                self.cursor = 0;
+                (TextInputResult::Submit(mem::take(&mut self.line)), true, false)
+            }
+            _ => (TextInputResult::Nothing, false, false),
         };
         if clear_autocomplete {
             self.autocomplete.clear();
         }
 
-        // generate the base text
-        let mut line = text![
-            // separate prompt for easier slicing later
-            "{}"(self.prompt),
-            "{}"(&self.line[..self.cursor]),
-            "", // blank where the cursor will go
-        ];
-        if !self.autocomplete.is_empty() {
-            line.push(text1!(bright_black "{}"(self.autocomplete)));
-        }
-        line.push(text1!("{}"(&self.line[self.cursor..])));
+        // and now render!
+        // TODO: Rewrite like. all of this once #32 lands. it's so bad,,,
 
-        // underline the cursor character
-        // the cursor is always at the beginning of the 4th element (idx 3)
-        // so we remove that one's first character, create a new Text element accordingly
-        let cursor_ch = if line[3].text.is_empty() {
-            ' '
-        } else {
-            line[3].text.remove(0)
-        };
-        line[2] = Text::of(cursor_ch.into()).fmt_of(&line[3]).underline();
-
-        // slice according to cursor position, biasing towards the end of the line
+        // calculate how wide the right should be
         let width = screen.size().x() - self.prompt.len();
         let min_space_left = usize::min(1 + width / 8, self.cursor);
         let max_space_right = width - min_space_left;
-        let all_right = self.line.len() - self.cursor;
+        let all_right = self.line.len() - self.cursor + self.autocomplete.len();
         let (len_right, cut_right) = if all_right == 0 {
             (1, false)
         } else if all_right <= max_space_right {
@@ -195,6 +189,7 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
             (max_space_right - 1, true)
         };
 
+        // calculate left side space
         let max_space_left = width - (len_right + cut_right as usize);
         let all_left = self.cursor;
         let (len_left, cut_left) = if all_left <= max_space_left {
@@ -203,26 +198,54 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
             (max_space_left - 1, true)
         };
 
-        let left_start = self.cursor - len_left;
-        line[1]
-            .text
-            .replace_range(0..left_start, if cut_left { "…" } else { "" });
-
-        let mut trim = len_right;
-        let mut last_idx = line.len();
-        for (i, chunk) in line[2..].iter_mut().enumerate() {
-            if chunk.text.len() < trim {
-                trim -= chunk.text.len();
-                continue;
-            }
-            // otherwise we've landed on the element we need to trim!
-            chunk
-                .text
-                .replace_range(trim.., if cut_right { "…" } else { "" });
-            last_idx = i + 2;
-            break;
+        // at most 4 chunks: prompt, precursor, cursor, autocomplete, postcursor
+        let mut line = Vec::with_capacity(5);
+        line.push(text1!("{}"(self.prompt)));
+        if self.cursor > 0 {
+            let start_left = self.cursor - len_left;
+            line.push(text1!("{}{}"(
+                if cut_left { "…" } else { "" },
+                &self.line[start_left..self.cursor],
+            )));
+        } else {
+            line.push(text1!(""));
         }
-        line.drain(last_idx + 1..);
+        // eventually we'll put the cursor in here
+        line.push(Text::plain(""));
+        let mut trim = len_right;
+        if trim > 0 && !self.autocomplete.is_empty() {
+            let text;
+            if trim < self.autocomplete.len() {
+                // then we're trimming the autocomplete
+                text = format!("{}{}", &self.autocomplete[..trim], if cut_right { "…" } else { "" });
+                trim = 0;
+            } else {
+                // then we include the entire autocomplete
+                trim -= self.autocomplete.len();
+                text = self.autocomplete.clone();
+            }
+            line.push(Text::of(text).bright_black());
+        }
+        if trim > 0 && self.cursor != self.line.len() {
+            let rest = &self.line[self.cursor..];
+            let text = if trim < rest.len() {
+                // then we're trimming the rest of the line
+                format!("{}{}", &rest[..trim], if cut_right { "…" } else { "" })
+            } else {
+                // then we're not
+                rest.into()
+            };
+            line.push(Text::of(text));
+        }
+        // actually underline the cursor
+        line[2] = if line.len() == 3 {
+            // cursor at the very end and alone
+            text1!(underline " ")
+        } else {
+            // pull cursor char and formatting from next element
+            let ch = line[3].text.remove(0);
+            Text::of(ch.into()).fmt_of(&line[3]).underline()
+        };
 
         screen[0]
             .iter_mut()
@@ -233,7 +256,12 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
             )
             .for_each(|(cell, char)| *cell = char);
 
-        res
+        // avoid multiple mutable references (there's a better way, I'm sure, but I don't know it oops)
+        if return_autocomplete {
+            TextInputResult::Autocomplete { text: &self.line[..self.cursor], res: &mut self.autocomplete }
+        } else {
+            res
+        }
     }
 }
 
@@ -413,11 +441,11 @@ mod tests {
         screen_assert!(s: fmt 0, 0, "> 1234", fmt 6, 0, "5" underline, fmt 7, 0, "6789");
         // then move it back right, confirming along the way
         feed!(s, ti, key Key::Right);
-        screen_assert!(s: fmt 0, 0, "> 12345", fmt 6, 0, "6" underline, fmt 7, 0, "789");
+        screen_assert!(s: fmt 0, 0, "> 12345", fmt 7, 0, "6" underline, fmt 8, 0, "789");
         feed!(s, ti, key Key::Right);
-        screen_assert!(s: fmt 0, 0, "> 123456", fmt 6, 0, "7" underline, fmt 7, 0, "89");
+        screen_assert!(s: fmt 0, 0, "> 123456", fmt 8, 0, "7" underline, fmt 9, 0, "89");
         feed!(s, ti, key Key::Right);
-        screen_assert!(s: fmt 0, 0, "> 1234567", fmt 6, 0, "8" underline, fmt 7, 0, "9");
+        screen_assert!(s: fmt 0, 0, "> 1234567", fmt 9, 0, "8" underline, fmt 10, 0, "9");
         // then try typing at the cursor
         for ch in "abc".chars() {
             feed!(s, ti, key Key::Char(ch));

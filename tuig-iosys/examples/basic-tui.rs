@@ -6,7 +6,7 @@ use tuig_iosys::{
     text,
     ui::{
         cols,
-        elements::{TextInput, Textbox},
+        elements::{TextInput, Textbox, TextInputResult},
         rows, Region, ScreenView,
     },
     Action, IoSystem, Key, Screen,
@@ -24,15 +24,7 @@ fn char_for_input(action: &Action) -> Cell {
 }
 
 fn run(mut iosys: Box<dyn IoSystem>) {
-    let mut ti = TextInput {
-        prompt: "".into(),
-        line: "abcde01234ABCDE)!@#$_".into(),
-        cursor: 3,
-        autocomplete: "".into(),
-        history: Default::default(),
-        histpos: 0,
-        histcap: 0,
-    };
+    let mut ti = TextInput::new("| ", 5);
     let mut tui = |region: Region| {
         let [l, m, r] = region.split(cols!(20 "| |" * "#" 5)).unwrap();
         let [t, b] = l.split(rows!(* "=" 1)).unwrap();
@@ -46,7 +38,9 @@ fn run(mut iosys: Box<dyn IoSystem>) {
             ];
             Textbox::new(txt).render_to(sv)
         });
-        b.attach(&mut ti);
+        if let TextInputResult::Autocomplete { res, .. } = b.attach(&mut ti) {
+            *res = "m l a r m !!!!!ha".into()
+        }
         true
     };
 
