@@ -99,8 +99,32 @@ impl TextInput {
                 self.line = old;
                 self.line.clear();
             }
+            self.history.push_back(line);
+            // track the histpos backwards, if we're in the history
+            if self.histpos < self.history.len() {
+                self.histpos -= 1;
+            }
+        } else {
+            if self.histpos == self.history.len() {
+                self.histpos += 1;
+            }
+            self.history.push_back(line);
         }
-        self.history.push_back(line);
+    }
+
+    fn cur_line(&self) -> &str {
+        if self.histpos == self.history.len() {
+            &self.line
+        } else {
+            &self.history[self.histpos]
+        }
+    }
+
+    fn sel_line(&mut self) {
+        if self.histpos < self.history.len() {
+            self.line = self.history[self.histpos].clone();
+            self.histpos = self.history.len();
+        }
     }
 }
 
@@ -128,61 +152,86 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
     type Output = TextInputResult<'ti>;
     fn raw_attach(self, input: Action, mut screen: ScreenView<'s>) -> Self::Output {
         // handle input and update state accordingly
-        let (res, clear_autocomplete, return_autocomplete) = match input {
+        let res = match input {
             Action::KeyPress { key: Key::Char(ch) } => {
+                self.sel_line();
                 self.line.insert(self.cursor, ch);
                 self.cursor += 1;
-                (TextInputResult::Nothing, true, false)
+                self.autocomplete.clear();
+                Some(TextInputResult::Nothing)
             }
             Action::KeyPress { key: Key::Home } => {
                 self.cursor = 0;
-                (TextInputResult::Nothing, true, false)
+                self.autocomplete.clear();
+                Some(TextInputResult::Nothing)
             }
             Action::KeyPress { key: Key::End } => {
                 self.cursor = self.line.len();
-                (TextInputResult::Nothing, true, false)
+                self.autocomplete.clear();
+                Some(TextInputResult::Nothing)
             }
             Action::KeyPress { key: Key::Left } => {
                 if self.cursor > 0 {
                     self.cursor -= 1;
                 }
-                (TextInputResult::Nothing, true, false)
+                self.autocomplete.clear();
+                Some(TextInputResult::Nothing)
             }
             Action::KeyPress { key: Key::Right } => {
-                if self.cursor < self.line.len() {
+                if self.cursor < self.cur_line().len() {
                     self.cursor += 1;
                 }
-                (TextInputResult::Nothing, true, false)
+                self.autocomplete.clear();
+                Some(TextInputResult::Nothing)
+            }
+            Action::KeyPress { key: Key::Up } => {
+                if self.histpos > 0 {
+                    self.histpos -= 1;
+                    self.cursor = self.cur_line().len();
+                }
+                self.autocomplete.clear();
+                Some(TextInputResult::Nothing)
+            }
+            Action::KeyPress { key: Key::Down } => {
+                if self.histpos < self.history.len() {
+                    self.histpos += 1;
+                    self.cursor = self.cur_line().len();
+                }
+                self.autocomplete.clear();
+                Some(TextInputResult::Nothing)
             }
             Action::KeyPress {
                 key: Key::Backspace,
             } => {
+                self.sel_line();
                 if self.cursor > 0 {
                     self.cursor -= 1;
                     self.line.remove(self.cursor);
                 }
-                (TextInputResult::Nothing, true, false)
+                self.autocomplete.clear();
+                Some(TextInputResult::Nothing)
             }
             Action::KeyPress { key: Key::Delete } => {
+                self.sel_line();
                 if self.cursor < self.line.len() {
                     self.line.remove(self.cursor);
                 }
-                (TextInputResult::Nothing, true, false)
+                self.autocomplete.clear();
+                Some(TextInputResult::Nothing)
             }
-            Action::KeyPress { key: Key::Tab } => (TextInputResult::Nothing, true, true),
+            Action::KeyPress { key: Key::Tab } => {
+                self.sel_line();
+                self.autocomplete.clear();
+                None
+            },
             Action::KeyPress { key: Key::Enter } => {
+                self.sel_line();
                 self.cursor = 0;
-                (
-                    TextInputResult::Submit(mem::take(&mut self.line)),
-                    true,
-                    false,
-                )
+                self.autocomplete.clear();
+                Some(TextInputResult::Submit(mem::take(&mut self.line)))
             }
-            _ => (TextInputResult::Nothing, false, false),
+            _ => Some(TextInputResult::Nothing),
         };
-        if clear_autocomplete {
-            self.autocomplete.clear();
-        }
 
         // and now render!
         // TODO: Rewrite like. all of this once #32 lands. it's so bad,,,
@@ -191,7 +240,7 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
         let width = screen.size().x() - self.prompt.len();
         let min_space_left = usize::min(1 + width / 8, self.cursor);
         let max_space_right = width - min_space_left;
-        let all_right = self.line.len() - self.cursor + self.autocomplete.len();
+        let all_right = self.cur_line().len() - self.cursor + self.autocomplete.len();
         let (len_right, cut_right) = if all_right == 0 {
             (1, false)
         } else if all_right <= max_space_right {
@@ -212,13 +261,13 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
         // 5 chunks: prompt, precursor, cursor, autocomplete, postcursor
         let mut line = Vec::with_capacity(5);
         line.push(text1!("{}"(self.prompt)));
-        line.push(text1!("{}"(&self.line[..self.cursor])));
+        line.push(text1!("{}"(&self.cur_line()[..self.cursor])));
         line.push(text1!("")); // cursor, eventually
         if !self.autocomplete.is_empty() {
             line.push(text1!(bright_black "{}"(self.autocomplete)));
         }
-        if self.cursor < self.line.len() {
-            line.push(text1!("{}"(&self.line[self.cursor..])));
+        if self.cursor < self.cur_line().len() {
+            line.push(text1!("{}"(&self.cur_line()[self.cursor..])));
         }
 
         // insert the cursor
@@ -259,14 +308,13 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
             .for_each(|(cell, char)| *cell = char);
 
         // avoid multiple mutable references (there's a better way, I'm sure, but I don't know it oops)
-        if return_autocomplete {
-            TextInputResult::Autocomplete {
-                text: &self.line[..self.cursor],
-                res: &mut self.autocomplete,
-            }
-        } else {
-            res
-        }
+        res.unwrap_or_else(|| TextInputResult::Autocomplete {
+            // hidden potential bug here: to satisfy the borrow checker, we need to directly borrow the field rather
+            // than using self.cur_line() which borrows the entire struct (and blocks the &mut)
+            // but because this lambda is only called on autocomplete, which selects the line, this works just fine.
+            text: &self.line[..self.cursor],
+            res: &mut self.autocomplete,
+        })
     }
 }
 
@@ -504,9 +552,7 @@ mod tests {
         feed!(s, ti, key Key::End);
         screen_assert!(s: fmt 0, 0, "> 123456789", fmt 11, 0, " " underline);
         // then try typing at the cursor
-        for ch in "abc".chars() {
-            feed!(s, ti, key Key::Char(ch));
-        }
+        feed!(s, ti, chars "abc");
         // and make sure it still looks right
         screen_assert!(s: fmt 0, 0, "> 123456789abc", fmt 14, 0, " " underline);
     }
@@ -674,6 +720,7 @@ mod tests {
         make_screen!(s(15, 1));
         let mut ti = TextInput::new("> ", 2);
         ti.store("abcdef".into());
+        feed!(s, ti, event Action::Redraw);
         // ensure it's blank
         screen_assert!(s: fmt 0, 0, "> ", fmt 2, 0, " " underline, fmt 3, 0, "            ");
         // then hit up and ensure the previous line is there
@@ -748,7 +795,7 @@ mod tests {
         let mut ti = TextInput::new("> ", 2);
         // prep history
         ti.store("abc".into());
-        ti.store("01234".into());
+        ti.store("1234".into());
         // up arrow should give us `01234`, then `abc`
         feed!(s, ti, key Key::Up);
         feed!(s, ti, key Key::Up);

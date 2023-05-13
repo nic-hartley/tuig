@@ -38,8 +38,10 @@ fn run(mut iosys: Box<dyn IoSystem>) {
             ];
             Textbox::new(txt).render_to(sv)
         });
-        if let TextInputResult::Autocomplete { res, .. } = b.attach(&mut ti) {
-            *res = "m l a r m !!!!!ha".into()
+        match b.attach(&mut ti) {
+            TextInputResult::Autocomplete { res, .. } => *res = "mlem!".into(),
+            TextInputResult::Submit(line) => ti.store(line),
+            _ => ()
         }
         true
     };
