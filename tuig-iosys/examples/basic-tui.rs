@@ -24,7 +24,7 @@ fn char_for_input(action: &Action) -> Cell {
 }
 
 fn run(mut iosys: Box<dyn IoSystem>) {
-    let mut ti = TextInput::new("| ", 5);
+    let mut ti = TextInput::new("> ", 5);
     let mut tui = |region: Region| {
         let [l, m, r] = region.split(cols!(20 "| |" * "#" 5)).unwrap();
         let [t, b] = l.split(rows!(* "=" 1)).unwrap();

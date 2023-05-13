@@ -3,9 +3,9 @@ use core::{iter, mem};
 use alloc::{collections::VecDeque, string::String};
 
 use crate::{
-    fmt::{Cell, FormattedExt, Text}, text1,
+    fmt::{Cell, FormattedExt, Text, Formatted, Format}, text1,
     ui::ScreenView,
-    Action, Key,
+    Action, Key, text,
 };
 
 use super::RawAttachment;
@@ -198,54 +198,38 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
             (max_space_left - 1, true)
         };
 
-        // at most 4 chunks: prompt, precursor, cursor, autocomplete, postcursor
+        // 5 chunks: prompt, precursor, cursor, autocomplete, postcursor
         let mut line = Vec::with_capacity(5);
         line.push(text1!("{}"(self.prompt)));
-        if self.cursor > 0 {
-            let start_left = self.cursor - len_left;
-            line.push(text1!("{}{}"(
-                if cut_left { "…" } else { "" },
-                &self.line[start_left..self.cursor],
-            )));
-        } else {
-            line.push(text1!(""));
+        line.push(text1!("{}"(&self.line[..self.cursor])));
+        line.push(text1!("")); // cursor, eventually
+        if !self.autocomplete.is_empty() {
+            line.push(text1!(bright_black "{}"(self.autocomplete)));
         }
-        // eventually we'll put the cursor in here
-        line.push(Text::plain(""));
-        let mut trim = len_right;
-        if trim > 0 && !self.autocomplete.is_empty() {
-            let text;
-            if trim < self.autocomplete.len() {
-                // then we're trimming the autocomplete
-                text = format!("{}{}", &self.autocomplete[..trim], if cut_right { "…" } else { "" });
-                trim = 0;
+        if self.cursor < self.line.len() {
+            line.push(text1!("{}"(&self.line[self.cursor..])));
+        }
+
+        // insert the cursor
+        let ch = line.get_mut(3).map(|t| t.text.remove(0)).unwrap_or(' ');
+        let fmt = line.get(3).map(|t| t.get_fmt().clone()).unwrap_or(Format::default());
+        line[2] = Text::of(ch.into()).fmt(fmt).underline();
+
+        // trim the leftmost bits off the left side off
+        line[1].text.replace_range(..(self.cursor - len_left), if cut_left { "…" } else { "" });
+        // rim the rightmost bits of the right side off (-1 to account for cursor)
+        let mut trim = len_right - 1;
+        let mut trimmed = false;
+        for chunk in &mut line[3..] {
+            if trim > chunk.text.len() {
+                trim -= chunk.text.len();
+            } else if !trimmed {
+                chunk.text.replace_range(trim.., if cut_right { "…" } else { "" });
+                trimmed = true;
             } else {
-                // then we include the entire autocomplete
-                trim -= self.autocomplete.len();
-                text = self.autocomplete.clone();
+                chunk.text.clear();
             }
-            line.push(Text::of(text).bright_black());
         }
-        if trim > 0 && self.cursor != self.line.len() {
-            let rest = &self.line[self.cursor..];
-            let text = if trim < rest.len() {
-                // then we're trimming the rest of the line
-                format!("{}{}", &rest[..trim], if cut_right { "…" } else { "" })
-            } else {
-                // then we're not
-                rest.into()
-            };
-            line.push(Text::of(text));
-        }
-        // actually underline the cursor
-        line[2] = if line.len() == 3 {
-            // cursor at the very end and alone
-            text1!(underline " ")
-        } else {
-            // pull cursor char and formatting from next element
-            let ch = line[3].text.remove(0);
-            Text::of(ch.into()).fmt_of(&line[3]).underline()
-        };
 
         screen[0]
             .iter_mut()
