@@ -657,29 +657,36 @@ mod tests {
     }
 
     #[test]
-    fn submit_text_adds_to_history() {
+    fn store_alone_adds_to_history() {
+        make_screen!(s(15, 1));
+        let mut ti = TextInput::new("> ", 2);
+        ti.store("abcdef".into());
+        // ensure it's blank
+        screen_assert!(s: fmt 0, 0, "> ", fmt 2, 0, " " underline, fmt 3, 0, "            ");
+        // then hit up and ensure the previous line is there
+        feed!(s, ti, key Key::Up);
+        screen_assert!(s: fmt 0, 0, "> abcdef", fmt 8, 0, " " underline, fmt 9, 0, "      ");
+    }
+
+    #[test]
+    fn submit_alone_doesnt_add_to_history() {
         make_screen!(s(15, 1));
         let mut ti = TextInput::new("> ", 2);
         feed!(s, ti, chars "abcdef\n");
         // ensure it's blank
         screen_assert!(s: fmt 0, 0, "> ", fmt 2, 0, " " underline, fmt 3, 0, "            ");
-        // then hit up and ensure the previous line is there
+        // then hit up and ensure it's still blank
         feed!(s, ti, key Key::Up);
-        screen_assert!(s: fmt 0, 0, "> abcdef", fmt 8, 0, " ");
+        screen_assert!(s: fmt 0, 0, "> ", fmt 2, 0, " " underline, fmt 3, 0, "            ");
     }
 
     #[test]
     fn down_restores_current_line() {
         make_screen!(s(15, 1));
         let mut ti = TextInput::new("> ", 2);
-        for ch in "abcdef".chars() {
-            feed!(s, ti, key Key::Char(ch));
-        }
-        feed!(s, ti, key Key::Enter);
+        ti.store("abcdef".into());
         // new text on the current line, without submitting
-        for ch in "01234".chars() {
-            feed!(s, ti, key Key::Char(ch));
-        }
+        feed!(s, ti, chars "01234");
         screen_assert!(s: fmt 0, 0, "> 01234", fmt 7, 0, " " underline);
         // go to the previous line, ensure that's correct
         feed!(s, ti, key Key::Up);
@@ -693,7 +700,8 @@ mod tests {
     fn cursor_move_doesnt_select_history() {
         make_screen!(s(15, 1));
         let mut ti = TextInput::new("> ", 2);
-        feed!(s, ti, chars "abcdef\n01234");
+        ti.store("abcdef".into());
+        feed!(s, ti, chars "01234");
         feed!(s, ti, key Key::Up);
         // move a bit and make sure the cursor moved
         screen_assert!(s: fmt 0, 0, "> abcdef", fmt 8, 0, " " underline);
@@ -710,7 +718,8 @@ mod tests {
     fn typing_selects_history() {
         make_screen!(s(15, 1));
         let mut ti = TextInput::new("> ", 2);
-        feed!(s, ti, chars "abcdef\n01234");
+        ti.store("abcdef".into());
+        feed!(s, ti, chars "01234");
         feed!(s, ti, key Key::Up);
         // type a character
         feed!(s, ti, key Key::Char('z'));
@@ -725,7 +734,8 @@ mod tests {
         make_screen!(s(15, 1));
         let mut ti = TextInput::new("> ", 2);
         // prep history
-        feed!(s, ti, chars "abc\n01234\n");
+        ti.store("abc".into());
+        ti.store("01234".into());
         // up arrow should give us `01234`, then `abc`
         feed!(s, ti, key Key::Up);
         feed!(s, ti, key Key::Up);
@@ -734,13 +744,10 @@ mod tests {
         feed!(s, ti, event Action::KeyRelease { key: Key::Enter });
         // ensure the screen is as it should be
         screen_assert!(s: fmt 0, 0, "> ", fmt 2, 0, " " underline);
-        // up arrow once should show us "abc" (the new one)
-        feed!(s, ti, key Key::Up);
-        screen_assert!(s: fmt 0, 0, "> abc", fmt 5, 0, " " underline);
-        // up again should show us "1234"
+        // up should show us "1234" because we didn't store "abc" but we did move down
         feed!(s, ti, key Key::Up);
         screen_assert!(s: fmt 0, 0, "> 1234", fmt 6, 0, " " underline);
-        // and up one last time should show us "abc" (the original)
+        // up again should show us "abc" (the original)
         feed!(s, ti, key Key::Up);
         screen_assert!(s: fmt 0, 0, "> abc", fmt 5, 0, " " underline);
     }
