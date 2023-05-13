@@ -223,7 +223,7 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
                 self.sel_line();
                 self.autocomplete.clear();
                 None
-            },
+            }
             Action::KeyPress { key: Key::Enter } => {
                 self.sel_line();
                 self.cursor = 0;

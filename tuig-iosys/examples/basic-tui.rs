@@ -41,7 +41,7 @@ fn run(mut iosys: Box<dyn IoSystem>) {
         match b.attach(&mut ti) {
             TextInputResult::Autocomplete { res, .. } => *res = "mlem!".into(),
             TextInputResult::Submit(line) => ti.store(line),
-            _ => ()
+            _ => (),
         }
         true
     };
