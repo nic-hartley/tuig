@@ -126,33 +126,9 @@ impl TextInput {
             self.histpos = self.history.len();
         }
     }
-}
 
-/// The result of parsing a frame of input.
-#[derive(Debug, PartialEq, Eq)]
-pub enum TextInputResult<'ti> {
-    /// The user didn't do anything that you need to handle.
-    ///
-    /// For example, an input that this element ignores, or just typing a letter.
-    Nothing,
-    /// The user pressed Tab to request autocompletion, with the given text.
-    ///
-    /// `line` is everything up to their current cursor location. `res` is where you put the text you want to show.
-    Autocomplete {
-        text: &'ti str,
-        res: &'ti mut String,
-    },
-    /// The user pressed Enter to submit a line of text.
-    ///
-    /// Set `save` to decide whether to store the line in history.
-    Submit(String),
-}
-
-impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
-    type Output = TextInputResult<'ti>;
-    fn raw_attach(self, input: Action, mut screen: ScreenView<'s>) -> Self::Output {
-        // handle input and update state accordingly
-        let res = match input {
+    fn input(&mut self, input: Action) -> Option<TextInputResult<'static>> {
+        match input {
             Action::KeyPress { key: Key::Char(ch) } => {
                 self.sel_line();
                 self.line.insert(self.cursor, ch);
@@ -231,9 +207,10 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
                 Some(TextInputResult::Submit(mem::take(&mut self.line)))
             }
             _ => Some(TextInputResult::Nothing),
-        };
+        }
+    }
 
-        // and now render!
+    fn render(&self, mut screen: ScreenView) {
         // TODO: Rewrite like. all of this once #32 lands. it's so bad,,,
 
         // calculate how wide the right should be
@@ -259,7 +236,7 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
         };
 
         // 5 chunks: prompt, precursor, cursor, autocomplete, postcursor
-        let mut line = Vec::with_capacity(5);
+        let mut line = alloc::vec::Vec::with_capacity(5);
         line.push(text1!("{}"(self.prompt)));
         line.push(text1!("{}"(&self.cur_line()[..self.cursor])));
         line.push(text1!("")); // cursor, eventually
@@ -306,6 +283,37 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
                     .chain(iter::repeat(Cell::BLANK)),
             )
             .for_each(|(cell, char)| *cell = char);
+    }
+}
+
+/// The result of parsing a frame of input.
+#[derive(Debug, PartialEq, Eq)]
+pub enum TextInputResult<'ti> {
+    /// The user didn't do anything that you need to handle.
+    ///
+    /// For example, an input that this element ignores, or just typing a letter.
+    Nothing,
+    /// The user pressed Tab to request autocompletion, with the given text.
+    ///
+    /// `line` is everything up to their current cursor location. `res` is where you put the text you want to show.
+    Autocomplete {
+        text: &'ti str,
+        res: &'ti mut String,
+    },
+    /// The user pressed Enter to submit a line of text.
+    ///
+    /// Set `save` to decide whether to store the line in history.
+    Submit(String),
+}
+
+impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
+    type Output = TextInputResult<'ti>;
+    fn raw_attach(self, input: Action, screen: ScreenView<'s>) -> Self::Output {
+        // handle input and update state accordingly
+        let res = self.input(input);
+
+        // and now render!
+        self.render(screen);
 
         // avoid multiple mutable references (there's a better way, I'm sure, but I don't know it oops)
         res.unwrap_or_else(|| TextInputResult::Autocomplete {
