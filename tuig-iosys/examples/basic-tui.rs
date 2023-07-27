@@ -6,7 +6,7 @@ use tuig_iosys::{
     text,
     ui::{
         cols,
-        elements::{TextInput, TextInputResult, Textbox},
+        elements::{TextInput, TextInputResult, Textbox, Button},
         rows, Region, ScreenView,
     },
     Action, IoSystem, Key, Screen,
@@ -25,24 +25,28 @@ fn char_for_input(action: &Action) -> Cell {
 
 fn run(mut iosys: Box<dyn IoSystem>) {
     let mut ti = TextInput::new("> ", 5);
+    let mut clicks = 0;
     let mut tui = |region: Region| {
-        let [l, m, r] = region.split(cols!(20 "| |" * "#" 5)).unwrap();
-        let [t, b] = l.split(rows!(* "=" 1)).unwrap();
-        for s in [m, r] {
-            s.attach(|i, mut sv: ScreenView| sv.fill(char_for_input(&i)))
-        }
-        t.attach(|i, sv| {
+        let [l, m, r] = region.split(cols!(20 "| |" * "#" 11)).unwrap();
+        let [lt, lb] = l.split(rows!(* "=" 1)).unwrap();
+        let [rt, rb] = r.split(rows!(1 "=" *)).unwrap();
+        lt.attach(|i, sv| {
             let txt = text![
                 "Hello! Your most recent ", red "action", " was: ",
                 bold green "{:?}"(i),
             ];
             Textbox::new(txt).render_to(sv)
         });
-        match b.attach(&mut ti) {
+        match lb.attach(&mut ti) {
             TextInputResult::Autocomplete { res, .. } => *res = "mlem!".into(),
             TextInputResult::Submit(line) => ti.store(line),
             _ => (),
         }
+        m.attach(|i, mut sv: ScreenView| sv.fill(char_for_input(&i)));
+        if rt.attach(Button("click me!").hotkey('4')) {
+            clicks += 1;
+        }
+        rb.attach(Textbox::new(text!("{} clicks"(clicks))));
         true
     };
 

@@ -28,8 +28,8 @@ use super::RawAttachment;
 /// # use tuig_iosys::ui::{Region, elements::{TextInput, TextInputResult}};
 /// let region = //...
 /// # Region::empty();
-/// let text_input = // ...
-/// # TextInput::new();
+/// let mut text_input = // ...
+/// # TextInput::new("", 0);
 /// match region.attach(&mut text_input) {
 ///   TextInputResult::Nothing => (),
 ///   TextInputResult::Autocomplete { text, res } => *res = text.into(),
@@ -327,7 +327,7 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use super::*;
     use crate::{
         fmt::Cell,
