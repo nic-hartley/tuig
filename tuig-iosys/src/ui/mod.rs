@@ -24,6 +24,8 @@ mod view;
 pub use view::ScreenView;
 mod inputstate;
 pub use inputstate::InputState;
+mod scroll;
+pub use scroll::{ScrollState, ScrollableAttachment, ScrolledRegion};
 
 pub mod attachments;
 #[doc(hidden)]

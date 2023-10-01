@@ -8,7 +8,7 @@ use crate::{
 use super::{
     attachments::{Attachment, Textbox, TextboxData},
     splitters::Splitter,
-    Bounds, ScreenView,
+    Bounds, ScreenView, ScrollableAttachment, ScrollState, ScrolledRegion,
 };
 
 macro_rules! split_fn {
@@ -36,7 +36,7 @@ macro_rules! split_fn {
 }
 
 pub struct Region<'s> {
-    sv: ScreenView<'s>,
+    pub(crate) sv: ScreenView<'s>,
     input: Action,
     bounds: Bounds,
 }
@@ -72,6 +72,10 @@ impl<'s> Region<'s> {
 
     pub fn attach<A: Attachment<'s>>(self, attachment: A) -> A::Output {
         attachment.attach(self)
+    }
+
+    pub fn scroll<'st, SA: ScrollableAttachment<'s, 'st>>(self, attachment: SA, state: &'st mut ScrollState) -> SA::Output {
+        attachment.scroll_attach(ScrolledRegion::new(self, state))
     }
 
     pub fn fill(self, cell: Cell) {

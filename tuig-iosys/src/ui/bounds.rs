@@ -1,4 +1,4 @@
-use core::{fmt, ops::Range};
+use core::{fmt, ops::Range, iter::FusedIterator};
 
 use crate::{Action, XY};
 
@@ -61,14 +61,15 @@ impl Bounds {
         (rest, top)
     }
 
-    fn contains(&self, pos: XY) -> bool {
+    /// Whether the region contains the position
+    pub fn contains(&self, pos: &XY) -> bool {
         self.xs().contains(&pos.x()) && self.ys().contains(&pos.y())
     }
 
     /// Filters out [`Action`]s which didn't occur in this `Bounds`.
     pub fn filter(&self, action: &Action) -> Action {
         match action.position() {
-            Some(pos) if !self.contains(pos) => Action::Redraw,
+            Some(pos) if !self.contains(&pos) => Action::Redraw,
             _ => action.clone(),
         }
     }
@@ -100,10 +101,33 @@ impl fmt::Debug for Bounds {
     }
 }
 
-// #[cfg(test)]
-// mod test {
-//     // TODO: macro each_dir
+impl<'b> IntoIterator for &'b Bounds {
+    type Item = XY;
+    type IntoIter = BoundsIter<'b>;
 
-//     #[test]
-//     fn
-// }
+    fn into_iter(self) -> Self::IntoIter {
+        BoundsIter { pos: 0, src: self }
+    }
+}
+
+pub struct BoundsIter<'b> {
+    pos: usize,
+    src: &'b Bounds,
+}
+
+impl<'b> Iterator for BoundsIter<'b> {
+    type Item = XY;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let XY(w, h) = self.src.size;
+        if self.pos >= w * h {
+            None
+        } else {
+            let (x, y) = (self.pos % w, self.pos / w);
+            self.pos += 1;
+            Some(XY(x, y))
+        }
+    }
+}
+
+impl<'b> FusedIterator for BoundsIter<'b> {}

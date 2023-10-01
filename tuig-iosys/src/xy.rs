@@ -16,7 +16,7 @@ use core::{
 ///
 /// When used as a position, `XY(0, 0)` is at the top left of the screen, and `XY(0, 1)` is just below it -- the usual
 /// "graphics axes".
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub struct XY(pub usize, pub usize);
 
 impl XY {
