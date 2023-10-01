@@ -2,7 +2,7 @@ use std::thread;
 
 use tuig_iosys::{
     text1,
-    ui::{elements::Textbox, Region},
+    ui::{attachments::Textbox, Region},
     Action, IoSystem, Key, Screen,
 };
 

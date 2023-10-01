@@ -231,7 +231,7 @@ impl<'s> RawAttachment<'s> for Textbox {
 mod test {
     use crate::{
         fmt::{Cell, FormattedExt},
-        ui::{elements::test_utils::*, Region},
+        ui::{attachments::test_utils::*, Region},
         Screen, XY,
     };
 

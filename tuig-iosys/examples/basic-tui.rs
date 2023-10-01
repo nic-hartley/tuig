@@ -6,7 +6,7 @@ use tuig_iosys::{
     text,
     ui::{
         cols,
-        elements::{TextInput, TextInputResult, Textbox, Button},
+        attachments::{TextInput, TextInputResult, Textbox, Button},
         rows, Region, ScreenView,
     },
     Action, IoSystem, Key, Screen,

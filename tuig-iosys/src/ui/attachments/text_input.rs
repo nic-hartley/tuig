@@ -332,7 +332,7 @@ mod test {
     use crate::{
         fmt::Cell,
         fmt::FormattedExt,
-        ui::{elements::test_utils::*, Region},
+        ui::{attachments::test_utils::*, Region},
         Key, Screen, XY,
     };
 

@@ -6,7 +6,7 @@ use crate::{
 };
 
 use super::{
-    elements::{Attachment, Textbox, TextboxData},
+    attachments::{Attachment, Textbox, TextboxData},
     splitters::Splitter,
     Bounds, ScreenView,
 };

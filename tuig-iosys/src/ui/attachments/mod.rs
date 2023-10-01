@@ -6,7 +6,6 @@
 
 mod button;
 pub use button::Button;
-mod scrollable;
 mod textbox;
 pub use textbox::{Textbox, TextboxData};
 mod text_input;

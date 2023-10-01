@@ -25,7 +25,7 @@ pub use view::ScreenView;
 mod inputstate;
 pub use inputstate::InputState;
 
-pub mod elements;
+pub mod attachments;
 #[doc(hidden)]
 pub mod splitters;
 
