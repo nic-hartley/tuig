@@ -36,7 +36,7 @@ macro_rules! split_static {
                 }
             }
 
-            fn fill_sep<'r>(r: &mut Region<'r>, sep: &str) {
+            fn fill_sep(r: &mut Region<'_>, sep: &str) {
                 if sep.is_empty() {
                     return;
                 }

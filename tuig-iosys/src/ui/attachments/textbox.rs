@@ -102,7 +102,7 @@ impl Textbox {
         // break the chunks into paragraphs on newlines
         let mut paragraphs = alloc::vec![];
         let mut cur_para = alloc::vec![];
-        for mut chunk in mem::replace(&mut self.chunks, alloc::vec![]) {
+        for mut chunk in mem::take(&mut self.chunks) {
             while let Some((line, rest)) = chunk.text.split_once('\n') {
                 cur_para.push(chunk.with_text(line.into()));
                 paragraphs.push(cur_para);

@@ -47,8 +47,7 @@ fn parse_size(input: ParseStream) -> syn::Result<(Span, usize)> {
 }
 
 fn parse_cols(input: ParseStream) -> syn::Result<ColsData> {
-    let mut res = ColsData::default();
-    res.base = input.call(parse_base)?;
+    let mut res = ColsData { base: input.call(parse_base)?, ..ColsData::default() };
     let mut has_star = false;
     res.presep = input.call(parse_sep)?;
     while !input.is_empty() {

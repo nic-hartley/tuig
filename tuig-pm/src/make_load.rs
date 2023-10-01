@@ -20,7 +20,7 @@ fn parse_load(input: ParseStream) -> syn::Result<LoadInput> {
         input.parse::<Token![=>]>()?;
         let mut body = vec![];
         while !input.peek(Token![,]) && !input.is_empty() {
-            body.push(input.parse::<TokenTree>()?.into())
+            body.push(input.parse::<TokenTree>()?)
         }
         // extract if it's available, otherwise we exit on the next loop anyway
         let _ = input.parse::<Token![,]>();
@@ -28,7 +28,7 @@ fn parse_load(input: ParseStream) -> syn::Result<LoadInput> {
     }
     if !input.is_empty() {
         return Err(syn::Error::new(
-            Span::call_site().into(),
+            Span::call_site(),
             "unexpected extras after match arms",
         ));
     }
@@ -94,7 +94,7 @@ pub fn make_load(input: TokenStream) -> TokenStream {
                         break Err(errs);
                     } }
                 }
-            }.into())
+            })
         }
     }
     options.into_iter().collect()

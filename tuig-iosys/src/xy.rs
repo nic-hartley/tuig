@@ -117,10 +117,10 @@ impl From<(usize, usize)> for XY {
     }
 }
 
-impl Into<(usize, usize)> for XY {
+impl From<XY> for (usize, usize) {
     #[cfg_attr(coverage, no_coverage)]
-    fn into(self) -> (usize, usize) {
-        (self.0, self.1)
+    fn from(val: XY) -> Self {
+        (val.0, val.1)
     }
 }
 

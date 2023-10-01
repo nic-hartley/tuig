@@ -82,7 +82,7 @@ impl<'s, 'st> ScrolledRegion<'s, 'st> {
     /// 
     /// In other words, will reading from or writing to this position do it for real?
     pub fn shows(&self, pos: &XY) -> bool {
-        self.bounds().contains(&pos)
+        self.bounds().contains(pos)
     }
 
     /// The maximum scroll state position so the real region won't exit the virtual region.
