@@ -1,4 +1,4 @@
-use core::{fmt, ops::Range, iter::FusedIterator};
+use core::{fmt, iter::FusedIterator, ops::Range};
 
 use crate::{Action, XY};
 

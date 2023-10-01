@@ -79,7 +79,7 @@ pub enum Action {
     /// The mouse has moved to a new location, possibly while holding a button
     MouseMove { pos: XY },
     /// The render backend requested that a redraw happen, maybe without direct user input.
-    /// 
+    ///
     /// In particular, for UI elements, this will be passed along whenever an event occurred, but it's outside the
     /// element's region.
     Redraw,
