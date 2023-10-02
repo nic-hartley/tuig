@@ -1,9 +1,13 @@
-use crate::{Action, ui::ScreenView, fmt::{Color, FormattedExt, Cell}, MouseButton, Key};
+use crate::{
+    fmt::{Cell, Color, FormattedExt},
+    ui::ScreenView,
+    Action, Key, MouseButton,
+};
 
 use super::RawAttachment;
 
 /// A clickable button.
-/// 
+///
 /// This renders as some text in the center of the region. When the mouse is over it,
 pub struct Button<'l>(pub &'l str);
 

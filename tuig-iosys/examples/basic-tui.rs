@@ -5,9 +5,8 @@ use tuig_iosys::{
     fmt::Cell,
     text,
     ui::{
-        cols,
-        attachments::{TextInput, TextInputResult, Textbox, Button},
-        rows, Region, ScreenView,
+        attachments::{Button, TextInput, TextInputResult, Textbox},
+        cols, rows, Region, ScreenView,
     },
     Action, IoSystem, Key, Screen,
 };

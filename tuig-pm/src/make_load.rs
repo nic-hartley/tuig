@@ -20,7 +20,7 @@ fn parse_load(input: ParseStream) -> syn::Result<LoadInput> {
         input.parse::<Token![=>]>()?;
         let mut body = vec![];
         while !input.peek(Token![,]) && !input.is_empty() {
-            body.push(input.parse::<TokenTree>()?.into())
+            body.push(input.parse::<TokenTree>()?)
         }
         // extract if it's available, otherwise we exit on the next loop anyway
         let _ = input.parse::<Token![,]>();
@@ -28,7 +28,7 @@ fn parse_load(input: ParseStream) -> syn::Result<LoadInput> {
     }
     if !input.is_empty() {
         return Err(syn::Error::new(
-            Span::call_site().into(),
+            Span::call_site(),
             "unexpected extras after match arms",
         ));
     }
@@ -56,19 +56,9 @@ pub fn make_load(input: TokenStream) -> TokenStream {
             )
         })
         .collect::<Vec<_>>();
-    let all_feats = arms.into_iter().map(|(f, _)| f).collect::<Vec<_>>();
-    // generate each combination of 1 to n
-    let mut options: Vec<TokenStream> = vec![quote::quote! {
-        #[cfg(not(any( #( feature = #all_feats ),* )))]
-        #[macro_export]
-        macro_rules! load {
-            ($($callback:tt)*) => {
-                compile_error!("select an IO system to use tuig_iosys::load");
-            }
-        }
-    }];
-    for n in 1..=chunks.len() {
-        for c in chunks.iter().combinations(n) {
+    // generate each combination of 0 to n features
+    (0..=chunks.len()).flat_map(|n| {
+        chunks.iter().combinations(n).map(|c| {
             let features = c.iter().map(|(f, _)| f).collect::<Vec<_>>();
             let antifeatures = chunks
                 .iter()
@@ -79,7 +69,7 @@ pub fn make_load(input: TokenStream) -> TokenStream {
                 #[cfg_attr(doc, doc(cfg(has_backend)))]
             };
             let tokens = c.iter().map(|(_, ts)| ts);
-            options.push(quote::quote! {
+            quote::quote! {
                 #cfgs
                 #load_fn
 
@@ -94,8 +84,7 @@ pub fn make_load(input: TokenStream) -> TokenStream {
                         break Err(errs);
                     } }
                 }
-            }.into())
-        }
-    }
-    options.into_iter().collect()
+            }
+        })
+    }).collect()
 }

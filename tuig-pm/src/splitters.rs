@@ -6,7 +6,7 @@ use syn::{
 
 // would be cool if I didn't have to copy/paste the definition but eh.
 #[derive(Default)]
-pub struct ColsData {
+pub struct SplitSpec {
     base: TokenStream,
     sizes: Vec<usize>,
     // TODO: &'static [fmt::Cell] separators?
@@ -46,11 +46,13 @@ fn parse_size(input: ParseStream) -> syn::Result<(Span, usize)> {
     }
 }
 
-fn parse_cols(input: ParseStream) -> syn::Result<ColsData> {
-    let mut res = ColsData::default();
-    res.base = input.call(parse_base)?;
+fn parse_splitspec(input: ParseStream) -> syn::Result<SplitSpec> {
+    let mut res = SplitSpec {
+        base: input.call(parse_base)?,
+        presep: input.call(parse_sep)?,
+        ..Default::default()
+    };
     let mut has_star = false;
-    res.presep = input.call(parse_sep)?;
     while !input.is_empty() {
         let (t, w) = input.call(parse_size)?;
         res.sizes.push(w);
@@ -58,7 +60,7 @@ fn parse_cols(input: ParseStream) -> syn::Result<ColsData> {
             if !has_star {
                 has_star = true;
             } else {
-                return Err(syn::Error::new(t, "maximum one * per cols!()"));
+                return Err(syn::Error::new(t, "maximum one * per split spec"));
             }
         }
         res.seps.push(input.call(parse_sep)?);
@@ -67,12 +69,12 @@ fn parse_cols(input: ParseStream) -> syn::Result<ColsData> {
 }
 
 pub fn splitter(path: TokenStream, input: TokenStream) -> TokenStream {
-    let ColsData {
+    let SplitSpec {
         base,
         sizes,
         presep,
         seps,
-    } = match parse_cols.parse2(input) {
+    } = match parse_splitspec.parse2(input) {
         Ok(d) => d,
         Err(e) => return e.to_compile_error(),
     };

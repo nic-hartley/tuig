@@ -238,7 +238,7 @@ impl Text {
 
     pub fn with_text(&self, new_text: String) -> Text {
         let mut res = self.clone();
-        res.text = new_text.into();
+        res.text = new_text;
         res
     }
 }
