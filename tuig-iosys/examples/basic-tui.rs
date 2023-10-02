@@ -2,14 +2,15 @@ use std::thread;
 
 use tuig_iosys::{
     cell,
-    fmt::Cell,
+    fmt::{Cell, FormattedExt},
     text,
     ui::{
         attachments::{Button, TextInput, TextInputResult, Textbox},
-        cols, rows, Region, ScreenView,
+        Region, ScreenView,
     },
-    Action, IoSystem, Key, Screen,
+    Action, IoSystem, Key, Screen, XY,
 };
+use tuig_pm::{cols, rows};
 
 fn char_for_input(action: &Action) -> Cell {
     match action {
@@ -25,27 +26,26 @@ fn char_for_input(action: &Action) -> Cell {
 fn run(mut iosys: Box<dyn IoSystem>) {
     let mut ti = TextInput::new("> ", 5);
     let mut clicks = 0;
+    let mut scrollstate = XY(0, 0);
+    let mut lines = text!["Hello! Your ", red "actions", " are:"];
     let mut tui = |region: Region| {
         let [l, m, r] = region.split(cols!(20 "| |" * "#" 11)).unwrap();
         let [lt, lb] = l.split(rows!(* "=" 1)).unwrap();
         let [rt, rb] = r.split(rows!(1 "=" *)).unwrap();
-        lt.attach(|i, sv| {
-            let txt = text![
-                "Hello! Your most recent ", red "action", " was: ",
-                bold green "{:?}"(i),
-            ];
-            Textbox::new(txt).render_to(sv)
-        });
         match lb.attach(&mut ti) {
             TextInputResult::Autocomplete { res, .. } => *res = "mlem!".into(),
-            TextInputResult::Submit(line) => ti.store(line),
+            TextInputResult::Submit(line) => {
+                lines.extend(text!["{}: "(lines.len()), bold green "{}"(line), "\n"]);
+                ti.store(line);
+            },
             _ => (),
         }
+        lt.scroll(&mut scrollstate, Textbox::new(&lines));
         m.attach(|i, mut sv: ScreenView| sv.fill(char_for_input(&i)));
         if rt.attach(Button("click me!").hotkey('4')) {
             clicks += 1;
         }
-        rb.attach(Textbox::new(text!("{} clicks"(clicks))));
+        rb.attach(Textbox::new(&text!("{} clicks"(clicks))));
         true
     };
 

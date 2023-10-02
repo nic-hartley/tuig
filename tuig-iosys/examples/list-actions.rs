@@ -3,20 +3,20 @@ use std::thread;
 use tuig_iosys::{
     text1,
     ui::{attachments::Textbox, Region},
-    Action, IoSystem, Key, Screen,
+    Action, IoSystem, Key, Screen, text, XY,
 };
 
 fn list_events(mut sys: Box<dyn IoSystem>) {
     const MAX_LEN: usize = 256;
-    let mut log = vec![text1!["press escape to exit when you're done\n"]];
+    let mut log = text!["press escape to exit when you're done\n"];
     let mut screen = Screen::new(sys.size());
     loop {
         screen.resize(sys.size());
-        Region::new(&mut screen, Action::Redraw).attach(
-            Textbox::new(log.clone())
+        Region::new(&mut screen, Action::Redraw).scroll(
+            &mut XY(0, usize::MAX),
+            Textbox::new(&log)
                 .first_indent(0)
-                .indent(4)
-                .scroll_bottom(true),
+                .indent(4),
         );
         sys.draw(&screen).expect("failed to render screen");
         match sys.input().expect("failed to get input") {

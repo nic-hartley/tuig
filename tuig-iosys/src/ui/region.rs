@@ -1,5 +1,3 @@
-use alloc::vec::Vec;
-
 use crate::{
     fmt::{Cell, Text},
     Action, Screen, XY,
@@ -8,7 +6,7 @@ use crate::{
 use super::{
     attachments::{Attachment, Textbox, TextboxData},
     splitters::Splitter,
-    Bounds, ScreenView, ScrollState, ScrollableAttachment, ScrolledRegion,
+    Bounds, ScreenView, ScrollableAttachment, ScrolledRegion,
 };
 
 macro_rules! split_fn {
@@ -76,8 +74,8 @@ impl<'s> Region<'s> {
 
     pub fn scroll<'st, SA: ScrollableAttachment<'s, 'st>>(
         self,
+        state: &'st mut XY,
         attachment: SA,
-        state: &'st mut ScrollState,
     ) -> SA::Output {
         attachment.scroll_attach(ScrolledRegion::new(self, state))
     }
@@ -86,7 +84,7 @@ impl<'s> Region<'s> {
         self.attach(|_, mut sv: ScreenView| sv.fill(cell))
     }
 
-    pub fn textbox(self, text: Vec<Text>) -> TextboxData {
+    pub fn textbox(self, text: &[Text]) -> TextboxData {
         self.attach(Textbox::new(text))
     }
 }

@@ -6,11 +6,10 @@ use crate::{fmt::Cell, Action, Key, MouseButton, XY};
 
 use super::{Bounds, Region};
 
-#[derive(Default)]
-pub struct ScrollState {
-    pos: XY,
-}
-
+/// An equivalent to [`Attachment`](super::Attachment), but it can be scrolled.
+/// 
+/// The actual scrolling behavior is determined by the attachment, but broadly speaking, attachments implementing this
+/// will probably be scrolled by the scroll wheel, arrow keys, etc.
 pub trait ScrollableAttachment<'s, 'st> {
     type Output;
     fn scroll_attach(self, region: ScrolledRegion<'s, 'st>) -> Self::Output;
@@ -57,7 +56,7 @@ pub trait ScrollableAttachment<'s, 'st> {
 ///     performance in seemingly unrelated code. (Just use `index`.)
 pub struct ScrolledRegion<'s, 'st> {
     region: Region<'s>,
-    state: &'st mut ScrollState,
+    scroll: &'st mut XY,
     virt_size: XY,
     /// Target for writes that need to be discarded.
     _dummy: Cell,
@@ -65,10 +64,10 @@ pub struct ScrolledRegion<'s, 'st> {
 
 impl<'s, 'st> ScrolledRegion<'s, 'st> {
     /// Create a scrollable region from a real region to render onto and a scroll state to update.
-    pub(crate) fn new(region: Region<'s>, state: &'st mut ScrollState) -> Self {
+    pub(crate) fn new(region: Region<'s>, scroll: &'st mut XY) -> Self {
         Self {
             region,
-            state,
+            scroll,
             virt_size: XY(usize::MAX, usize::MAX),
             _dummy: Cell::BLANK,
         }
@@ -81,7 +80,7 @@ impl<'s, 'st> ScrolledRegion<'s, 'st> {
     /// with the raw region (through [`Self::raw`], or in the parent).
     pub fn bounds(&self) -> Bounds {
         Bounds {
-            pos: self.state.pos,
+            pos: *self.scroll,
             size: self.region.size(),
         }
     }
@@ -108,37 +107,37 @@ impl<'s, 'st> ScrolledRegion<'s, 'st> {
     pub fn size(&mut self, size: XY) {
         self.virt_size = size;
         let max = self.max_pos();
-        self.state.pos.0 = self.state.pos.0.min(max.0);
-        self.state.pos.1 = self.state.pos.1.min(max.1);
+        self.scroll.0 = self.scroll.0.min(max.0);
+        self.scroll.1 = self.scroll.1.min(max.1);
     }
 
     /// Move the scrollable area left by `amount` characters, but not going past the left edge.
     pub fn scroll_left(&mut self, amt: usize) {
-        self.state.pos.0 = self.state.pos.0.saturating_sub(amt)
+        self.scroll.0 = self.scroll.0.saturating_sub(amt)
     }
 
     /// Move the scrollable area right by `amount` characters, but not going past the right edge.
     pub fn scroll_right(&mut self, amt: usize) {
         let max = self.max_pos();
-        if amt > max.0 - self.state.pos.0 {
-            self.state.pos.0 = max.0;
+        if amt > max.0 - self.scroll.0 {
+            self.scroll.0 = max.0;
         } else {
-            self.state.pos.0 += amt;
+            self.scroll.0 += amt;
         }
     }
 
     /// Move the scrollable area up by `amount` characters, but not going past the top.
     pub fn scroll_up(&mut self, amt: usize) {
-        self.state.pos.1 = self.state.pos.1.saturating_sub(amt)
+        self.scroll.1 = self.scroll.1.saturating_sub(amt)
     }
 
     /// Move the scrollable area down by `amount` characters, but not going past the bottom.
     pub fn scroll_down(&mut self, amt: usize) {
         let max = self.max_pos();
-        if amt > max.1 - self.state.pos.1 {
-            self.state.pos.1 = max.1;
+        if amt > max.1 - self.scroll.1 {
+            self.scroll.1 = max.1;
         } else {
-            self.state.pos.1 += amt;
+            self.scroll.1 += amt;
         }
     }
 
@@ -191,7 +190,7 @@ impl<'s, 'st> Index<usize> for ScrolledRegion<'s, 'st> {
 
     fn index(&self, index: usize) -> &Self::Output {
         if self.bounds().ys().contains(&index) {
-            &self.region.sv[index - self.state.pos.y()]
+            &self.region.sv[index - self.scroll.y()]
         } else {
             &[]
         }
@@ -201,7 +200,7 @@ impl<'s, 'st> Index<usize> for ScrolledRegion<'s, 'st> {
 impl<'s, 'st> IndexMut<usize> for ScrolledRegion<'s, 'st> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         if self.bounds().ys().contains(&index) {
-            &mut self.region.sv[index - self.state.pos.y()]
+            &mut self.region.sv[index - self.scroll.y()]
         } else {
             &mut []
         }
@@ -213,7 +212,7 @@ impl<'s, 'st> Index<XY> for ScrolledRegion<'s, 'st> {
 
     fn index(&self, index: XY) -> &Self::Output {
         if self.shows(&index) {
-            &self.region.sv[index - self.state.pos]
+            &self.region.sv[index - *self.scroll]
         } else {
             &Cell::BLANK
         }
@@ -223,7 +222,7 @@ impl<'s, 'st> Index<XY> for ScrolledRegion<'s, 'st> {
 impl<'s, 'st> IndexMut<XY> for ScrolledRegion<'s, 'st> {
     fn index_mut(&mut self, index: XY) -> &mut Self::Output {
         if self.shows(&index) {
-            &mut self.region.sv[index - self.state.pos]
+            &mut self.region.sv[index - *self.scroll]
         } else {
             &mut self._dummy
         }

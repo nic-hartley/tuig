@@ -1,11 +1,9 @@
-use core::mem;
-
 use alloc::{string::String, vec::Vec};
 
 use crate::{
     fmt::{Cell, Formatted, FormattedExt, Text},
     text, text1,
-    ui::ScreenView,
+    ui::{ScreenView, ScrollableAttachment, ScrolledRegion},
     xy::XY,
 };
 
@@ -15,7 +13,7 @@ fn breakable(ch: char) -> bool {
     ch.is_whitespace()
 }
 
-/// Ancillary data which might be useful
+/// Ancillary data from after rendering which might be useful
 #[derive(PartialEq, Eq, Clone)]
 pub struct TextboxData {
     /// How many total lines there were, after word wrapping.
@@ -40,39 +38,35 @@ impl TextboxData {
 ///
 /// - Word wrapping to fit in their region
 /// - Indentation, including distinct first line indentation
-/// - Scrolling to a desired height, relative to the top or bottom
-pub struct Textbox {
-    pub(in super::super) chunks: Vec<Text>,
-    pub(in super::super) scroll: usize,
-    pub(in super::super) scroll_bottom: bool,
+/// 
+/// As they're [`ScrollableAttachment`]s, they also support scrolling. You can fix their position by passing a static
+/// value in for the scroll position, or you can enable scrolling with the mousewheel, arrows, or both. Notably, you
+/// can affix the view to the *bottom* of the textbox by passing `XY(0, usize::MAX)` as the scroll state.
+pub struct Textbox<'t> {
+    pub(in super::super) chunks: &'t [Text],
+    pub(in super::super) scroll_wheel: bool,
+    pub(in super::super) scroll_arrows: bool,
     pub(in super::super) indent: usize,
     pub(in super::super) first_indent: Option<usize>,
 }
 
-impl Textbox {
+impl<'t> Textbox<'t> {
     /// Create a new textbox containing the given text.
-    pub fn new(text: Vec<Text>) -> Self {
+    pub fn new(text: &'t [Text]) -> Self {
         Self {
             chunks: text,
-            scroll: 0,
-            scroll_bottom: false,
+            scroll_wheel: false,
+            scroll_arrows: false,
             indent: 0,
             first_indent: None,
         }
     }
 
     crate::util::setters! {
-        /// Set the scroll position of the textbox, i.e. how many lines from the top or bottom should be hidden.
-        ///
-        /// Defaults to 0, i.e. not scrolling at all. Anything that doesn't fit is simply not visible.
-        scroll(amt: usize) => scroll = amt,
-        /// Set whether the scroll position should be relative to the top or bottom.
-        ///
-        /// Scrolling from the bottom will also align the bottom of the text with the bottom of the textbox, rather
-        /// than aligning the tops.
-        ///
-        /// Defaults to false, i.e. by default scrolling is from the top.
-        scroll_bottom(v: bool) => scroll_bottom = v,
+        /// Enables scrolling with the scroll wheel.
+        scroll_wheel => scroll_wheel = true,
+        /// Enables scrolling with the arrow keys.
+        scroll_arrows => scroll_arrows = true,
         /// How much to indent the text.
         ///
         /// Defaults to 0, i.e. no indent.
@@ -82,27 +76,24 @@ impl Textbox {
         /// Defaults to being the same as the indent.
         first_indent(amt: usize) => first_indent = Some(amt),
     }
+}
 
-    /// Render this textbox to a [`ScreenView`], and return information about the render.
-    ///
-    /// This is functionally equivalent to just directly [`Region::attach`][crate::ui::Region::attach]ing the textbox,
-    /// but you may find it useful if e.g. you want the text to depend on the input being handled in that region.
-    pub fn render_to(mut self, mut sv: ScreenView) -> TextboxData {
-        if sv.size() == XY(0, 0) {
+impl<'s, 'st, 't> ScrollableAttachment<'s, 'st> for Textbox<'t> {
+    type Output = TextboxData;
+    fn scroll_attach(self, sr: ScrolledRegion<'s, 'st>) -> Self::Output {
+        let first_indent = self.first_indent.unwrap_or(self.indent);
+        let width = sr.bounds().size.x();
+        let mut height = sr.bounds().size.y();
+
+        if sr.bounds().size == XY(0, 0) || width < self.indent || width < first_indent {
             return TextboxData::EMPTY;
         }
-
-        let first_indent = self.first_indent.unwrap_or(self.indent);
-        let width = sv.size().x();
-        let mut height = sv.size().y();
-
-        assert!(width > self.indent);
-        assert!(width > first_indent);
 
         // break the chunks into paragraphs on newlines
         let mut paragraphs = alloc::vec![];
         let mut cur_para = alloc::vec![];
-        for mut chunk in mem::take(&mut self.chunks) {
+        for chunk in self.chunks {
+            let mut chunk = chunk.to_owned();
             while let Some((line, rest)) = chunk.text.split_once('\n') {
                 cur_para.push(chunk.with_text(line.into()));
                 paragraphs.push(cur_para);
@@ -186,6 +177,10 @@ impl Textbox {
         let x = 0;
         let mut y = 0;
 
+        if self.scroll_wheel {
+
+        }
+
         let start;
         if self.scroll_bottom {
             // we want [height] lines, starting [scroll] away from the bottom
@@ -220,13 +215,6 @@ impl Textbox {
     }
 }
 
-impl<'s> RawAttachment<'s> for Textbox {
-    type Output = TextboxData;
-    fn raw_attach(self, _: crate::Action, screen: ScreenView<'s>) -> Self::Output {
-        self.render_to(screen)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use crate::{
@@ -240,7 +228,7 @@ mod test {
     #[test]
     fn blank_textbox_renders_nothing() {
         make_screen!(sc(50, 30), r(0, 0, *, *));
-        r.textbox(alloc::vec![]);
+        r.textbox(&alloc::vec![]);
         screen_assert! { sc: blank .., .. };
     }
 
@@ -248,7 +236,7 @@ mod test {
     fn basic_textbox_renders_right() {
         make_screen!(sc(50, 30), r(0, 0, *, *));
         let res = r
-            .textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "));
+            .textbox(&text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "));
         screen_assert!(sc:
             // end of the line and beyond
             blank 20.., 1..=1,
@@ -269,7 +257,7 @@ mod test {
     fn textbox_positioning_works() {
         make_screen!(sc(50, 30), r(4, 3, *, *));
         let res = r
-            .textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "));
+            .textbox(&text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "));
         screen_assert!(sc:
             // blank top 3 rows (0, 1, 2)
             blank .., ..3,
@@ -293,7 +281,7 @@ mod test {
     #[test]
     fn textbox_wraps_words_and_overwrites() {
         make_screen!(sc(50, 30), r(40, 0, *, *));
-        let res = r.textbox(text!(
+        let res = r.textbox(&text!(
             "these are some words which will eveeeentually be wrapped!"
         ));
         screen_assert!(sc:
@@ -314,7 +302,7 @@ mod test {
     #[test]
     fn textbox_wrap_carries_formatting() {
         make_screen!(sc(50, 30), r(40, 0, *, *));
-        r.textbox(text!("these are some words which will ", green "eveeeentually", " be wrapped!"));
+        r.textbox(&text!("these are some words which will ", green "eveeeentually", " be wrapped!"));
         screen_assert!(sc:
             blank ..40, ..,
             blank .., 6..,
@@ -331,7 +319,7 @@ mod test {
     fn textbox_linefill_carries_formatting() {
         make_screen!(sc(50, 30), r(40, 0, *, *));
         r.textbox(
-            text!("these are some words which will eveeeentually ", on_blue "be wrapped", "!"),
+            &text!("these are some words which will eveeeentually ", on_blue "be wrapped", "!"),
         );
         screen_assert!(sc:
             blank ..40, ..,
@@ -348,7 +336,7 @@ mod test {
     #[test]
     fn textbox_size_truncates() {
         make_screen!(sc(50, 30), r(40, 0, 10, 3));
-        let res = r.textbox(text!(
+        let res = r.textbox(&text!(
             "these are some words which will eveeeentually be wrapped!"
         ));
         screen_assert!(sc:
@@ -367,7 +355,7 @@ mod test {
     fn textbox_scroll_moves_view() {
         make_screen!(sc(50, 30), r(40, 0, *, *));
         let res = r.attach(
-            Textbox::new(text!(
+            Textbox::new(&text!(
                 "these are some words which will eveeeentually be wrapped!"
             ))
             .scroll(2),
@@ -389,7 +377,7 @@ mod test {
     fn textbox_scroll_bottom_moves_view() {
         make_screen!(sc(50, 30), r(40, 0, 10, 4));
         let res = r.attach(
-            Textbox::new(text!(
+            Textbox::new(&text!(
                 "these are some words which will eveeeentually be wrapped!"
             ))
             .scroll(1)
