@@ -184,11 +184,7 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
     }
 
     #[inline]
-    fn attach_for(
-        &mut self,
-        replies: &mut Replies<G::Message>,
-        action: Action,
-    ) {
+    fn attach_for(&mut self, replies: &mut Replies<G::Message>, action: Action) {
         self.new_screen.resize(self.iosys.size());
         let region = Region::new(&mut self.new_screen, action);
         self.game.attach(region, replies);
