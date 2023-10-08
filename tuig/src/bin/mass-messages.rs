@@ -3,7 +3,7 @@
 use std::time::Instant;
 
 use tuig::{Agent, ControlFlow, Game, Replies, Response, Runner};
-use tuig_iosys::{Action, Screen};
+use tuig_iosys::ui::Region;
 
 const AGENTS: u64 = 10_000;
 
@@ -66,11 +66,7 @@ impl Game for TinyGame {
         }
     }
 
-    fn input(&mut self, _input: Action, _replies: &mut Replies<Self::Message>) -> Response {
-        Response::Nothing
-    }
-
-    fn render(&self, _onto: &mut Screen) {
+    fn attach<'s>(&mut self, _into: Region<'s>, _replies: &mut Replies<Self::Message>) {
         println!(
             "count={}, max={}, complete={}",
             self.count, self.max, self.complete

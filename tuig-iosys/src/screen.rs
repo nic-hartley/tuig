@@ -68,9 +68,10 @@ impl<'s> FusedIterator for ScreenRows<'s> {}
 ///
 /// Allows you to render things onto it, then can be rendered onto the screen. This strategy avoids flickering,
 /// partial renders, etc. and helps deduplicate rendering effort.
+#[derive(Clone, PartialEq, Eq)]
 pub struct Screen {
-    cells: Vec<Cell>,
     size: XY,
+    pub(crate) cells: Vec<Cell>,
 }
 
 impl Screen {
@@ -89,7 +90,7 @@ impl Screen {
         self.size
     }
 
-    /// All of the cells of this screen, in rows.
+    /// All of the cells of this screen, in row-major order.
     ///
     /// i.e. for the screen:
     ///
@@ -98,13 +99,13 @@ impl Screen {
     /// 3 4
     /// ```
     ///
-    /// this will return `&[1, 2, 3, 4]
+    /// this will return `&[1, 2, 3, 4]`.
     pub fn cells(&self) -> &[Cell] {
         &self.cells
     }
 
     /// Returns an iterator over the rows in a screen.
-    pub fn rows(&self) -> ScreenRows {
+    pub fn rows(&self) -> impl Iterator<Item = &[Cell]> {
         ScreenRows::new(self)
     }
 
@@ -132,30 +133,6 @@ impl Screen {
             }
         }
     }
-
-    /// Write a header to the screen. (Note this must be rewritten every frame!)
-    #[cfg(feature = "ui")]
-    pub fn header<'a>(&'a mut self) -> crate::ui::widgets::Header<'a> {
-        crate::ui::widgets::Header::new(self)
-    }
-
-    /// Write a text-box to the screen.
-    #[cfg(feature = "ui")]
-    pub fn textbox<'a>(&'a mut self, text: Vec<Text>) -> crate::ui::widgets::Textbox<'a> {
-        crate::ui::widgets::Textbox::new(self, text)
-    }
-
-    /// Draw a vertical line on screen.
-    #[cfg(feature = "ui")]
-    pub fn vertical<'a>(&'a mut self, col: usize) -> crate::ui::widgets::Vertical<'a> {
-        crate::ui::widgets::Vertical::new(self, col)
-    }
-
-    /// Draw a horizontal line on screen.
-    #[cfg(feature = "ui")]
-    pub fn horizontal<'a>(&'a mut self, row: usize) -> crate::ui::widgets::Horizontal<'a> {
-        crate::ui::widgets::Horizontal::new(self, row)
-    }
 }
 
 impl ops::Index<usize> for Screen {
@@ -172,5 +149,11 @@ impl ops::IndexMut<usize> for Screen {
         let start = row * self.size.x();
         let end = start + self.size.x();
         &mut self.cells[start..end]
+    }
+}
+
+impl Default for Screen {
+    fn default() -> Self {
+        Self::new(XY(0, 0))
     }
 }

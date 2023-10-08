@@ -73,12 +73,15 @@ pub enum Action {
     /// depending on the input mechanism it may only be able to send them when a non-modifier key is released.
     KeyRelease { key: Key },
     /// A mouse button was pressed.
-    MousePress { button: MouseButton },
+    MousePress { pos: XY, button: MouseButton },
     /// A mouse button was released.
-    MouseRelease { button: MouseButton },
+    MouseRelease { pos: XY, button: MouseButton },
     /// The mouse has moved to a new location, possibly while holding a button
     MouseMove { pos: XY },
-    /// The render target requested that a redraw happen, maybe without direct user input.
+    /// The render backend requested that a redraw happen, maybe without direct user input.
+    ///
+    /// In particular, for UI elements, this will be passed along whenever an event occurred, but it's outside the
+    /// element's region.
     Redraw,
     /// User requested the program end externally, e.g. clicking the X button in a window
     Closed,
@@ -92,4 +95,16 @@ pub enum Action {
     Unknown(String),
     /// Trying to read input let to some kind of error, with a description
     Error(String),
+}
+
+impl Action {
+    /// Get the screen position of mouse events, or None for non-mouse events
+    pub fn position(&self) -> Option<XY> {
+        match self {
+            Self::MouseMove { pos } => Some(*pos),
+            Self::MousePress { pos, .. } => Some(*pos),
+            Self::MouseRelease { pos, .. } => Some(*pos),
+            _ => None,
+        }
+    }
 }

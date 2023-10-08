@@ -115,21 +115,24 @@ pub mod backends {
     }
 }
 
-tuig_pm::make_load! {
-    /// Based on IO system features enabled, attempt to initialize an IO system, in the same manner as [`load!`].
-    ///
-    /// This returns things boxed so they can be used as trait objects, which provides nicer ergonomics at the
-    /// cost of slightly lower max performance.
-    pub fn load() -> core::result::Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), BTreeMap<&'static str, Error>> {
-        #[allow(unused)]
-        fn cb(
-            sys: impl IoSystem + 'static,
-            run: impl IoRunner + 'static,
-        ) -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
-            (Box::new(sys), Box::new(run))
-        }
-        load!(cb)
+type LoadError =
+    core::result::Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), BTreeMap<&'static str, Error>>;
+/// Based on IO system features enabled, attempt to initialize an IO system, in the same manner as [`load!`].
+///
+/// This returns things boxed so they can be used as trait objects, which provides nicer ergonomics at the
+/// cost of slightly lower max performance.
+pub fn load() -> LoadError {
+    #[allow(unused)]
+    fn cb(
+        sys: impl IoSystem + 'static,
+        run: impl IoRunner + 'static,
+    ) -> (Box<dyn IoSystem>, Box<dyn IoRunner>) {
+        (Box::new(sys), Box::new(run))
     }
+    load!(cb)
+}
+
+tuig_pm::make_load! {
     /// Based on IO system features enabled, attempt to initialize an IO system; in order:
     ///
     /// - NOP (`nop`), for benchmarks
@@ -139,7 +142,8 @@ tuig_pm::make_load! {
     /// - crossterm CLI (`cli_crossterm`)
     ///
     /// This macro takes a function or method to call with the loaded `impl IoSystem`. That structure is weird but it
-    /// enables having ownership of the varied types, without needing a `Box`.
+    /// enables having ownership of the varied types, without needing a `Box`. If you *want* a `Box`, you can just use
+    /// [`load`] instead.
     ///
     /// The callback can be any "function call", up to the parens, e.g. `run` or `self.start`. It will be called as
     /// `$thing(iosys, iorun)`. If it's called, this macro "returns" `Ok(())`. Otherwise, all attempted loads failed,

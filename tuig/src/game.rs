@@ -1,6 +1,6 @@
 //! The `Game` and the `Response` it can give the engine.
 
-use tuig_iosys::{Action, Screen};
+use tuig_iosys::ui::Region;
 
 use crate::{Message, Replies};
 
@@ -20,25 +20,23 @@ pub enum Response {
 /// Note that `Game`s don't run the bulk of the game logic; that's the `Agent`'s job. The `Game` trait is the place
 /// where user input and rendering happen. The idea here is:
 ///
-/// - When there's relevant user input, you can send messages or make new agents, and/or update state for rendering
-/// - When a message happens (including one this `Game` spawned!), you can update internal state for rendering
-/// - You *don't* react to messages with more messages -- that's an `Agent`'s job
-/// - Come time to render, you already have all the info you need from previous inputs/messages
+/// - When there's relevant user input or just periodically, you can send messages, make new agents, etc. and render.
+/// - When you receive a message, you can update your internal state for your next render and user input.
 ///
-/// This is a fairly typical Elm-style GUI, though obviously the message bus is used for more than just UI messages,
-/// as it's also the primary method of communication between agents and the game. This makes the code a bit harder to
-/// write, but it clearly separates concerns and helps you put heavy logic somewhere other than the render thread, and
-/// ideally split it into multiple `Agent`s so it can be parallelized neatly.
+/// This uses the usual [`tuig_iosys::ui`] system: You get a [`Region`], you attach something into it, etc. But you
+/// deliberately can't trigger arbitrary messages from receiving messages: That's an `Agent`'s job. It could make some
+/// for simpler code to let it happen in `Game`, but it also makes it very easy to stall out your render thread.
 pub trait Game: Send {
     /// The message that this `Game` will be passing around between `Agent`s and itself.
     type Message: Message;
 
-    /// The user has done some input; update the UI and inform [`Agent`](crate::Agent)s accordingly.
-    fn input(&mut self, input: Action, replies: &mut Replies<Self::Message>) -> Response;
-
     /// A message has happened; update the UI accordingly.
     fn message(&mut self, message: &Self::Message) -> Response;
 
-    /// Render the game onto the provided `Screen`.
-    fn render(&self, onto: &mut Screen);
+    /// Attach the game to a [`Region`] occupying the whole screen. Based on the inputs given, re-render the player's
+    /// UI, and inform [`Agent`](crate::Agent)s accordingly.
+    ///
+    /// If you want to render in terms of a raw [`Screen`](tuig_iosys::Screen) and input [`Action`](tuig_iosys::Action)
+    /// instead, call [`Region::attach`] with a [`RawAttachment`](tuig_iosys::ui::attachments::RawAttachment).
+    fn attach<'s>(&mut self, into: Region<'s>, replies: &mut Replies<Self::Message>);
 }

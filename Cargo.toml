@@ -1,2 +1,3 @@
 [workspace]
 members = ["tuig", "tuig-iosys", "tuig-pm"]
+resolver = "2"

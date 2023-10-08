@@ -197,26 +197,32 @@ impl IoRunner for CtRunner {
                 let pos = XY(col as usize, row as usize);
                 match kind {
                     ct::MouseEventKind::Up(btn) => try_send!(MouseRelease {
+                        pos,
                         button: io4ct_btn(btn)
                     }),
                     ct::MouseEventKind::Down(btn) => try_send!(MousePress {
+                        pos,
                         button: io4ct_btn(btn)
                     }),
                     ct::MouseEventKind::Drag(_) => try_send!(MouseMove { pos }),
                     ct::MouseEventKind::Moved => try_send!(MouseMove { pos }),
                     ct::MouseEventKind::ScrollUp => {
                         try_send!(MousePress {
+                            pos,
                             button: MouseButton::ScrollUp
                         });
                         try_send!(MousePress {
+                            pos,
                             button: MouseButton::ScrollUp
                         });
                     }
                     ct::MouseEventKind::ScrollDown => {
                         try_send!(MousePress {
+                            pos,
                             button: MouseButton::ScrollDown
                         });
                         try_send!(MousePress {
+                            pos,
                             button: MouseButton::ScrollDown
                         });
                     }

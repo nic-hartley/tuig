@@ -15,6 +15,8 @@
 //!
 //! And uh. Eventually there'll be others!
 
+use core::fmt::Debug;
+
 use alloc::string::String;
 
 /// The color of a piece of formatted text.
@@ -236,7 +238,7 @@ impl Text {
 
     pub fn with_text(&self, new_text: String) -> Text {
         let mut res = self.clone();
-        res.text = new_text.into();
+        res.text = new_text;
         res
     }
 }
@@ -271,20 +273,27 @@ macro_rules! text {
         {
             extern crate alloc;
             #[allow(unused_imports)]
-            use $crate::fmt::{FormattedExt as _};
+            use $crate::fmt::{Text, FormattedExt as _};
+            // enforce the correct type, even for empty text![]
             alloc::vec![
                 $(
                     $crate::text1!($( $name )* $text $( ( $( $arg ),* ) )?)
                 ),*
-            ]
+            ] as Vec<Text>
         }
     };
 }
 
 fmt_type! {
     /// A single character with associated formatting.
-    #[derive(Clone, Debug, PartialEq, Eq)]
+    #[derive(Clone, PartialEq, Eq)]
     pub struct Cell { pub ch: char }
+}
+
+impl core::fmt::Debug for Cell {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("Cell").field(&self.ch).finish()
+    }
 }
 
 /// Create a formatted [`Cell`].

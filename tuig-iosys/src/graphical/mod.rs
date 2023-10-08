@@ -209,7 +209,7 @@ fn spawn_window(char_size: XY, win_size: XY) -> io::Result<WindowSpawnOutput> {
             kill_recv,
             char_size,
             win_size,
-            prev_cursor_pos: XY(0, 0),
+            prev_pos: XY(0, 0),
         },
     };
     Ok(WindowSpawnOutput {
@@ -347,7 +347,7 @@ struct WrRest {
     kill_recv: Arc<Once>,
     char_size: XY,
     win_size: XY,
-    prev_cursor_pos: XY,
+    prev_pos: XY,
 }
 
 impl WrRest {
@@ -410,11 +410,11 @@ impl WrRest {
                 event: WindowEvent::CursorMoved { position, .. },
                 ..
             } => {
-                let position = XY(position.x as usize, position.y as usize);
-                let position = char4pixel_pos(position, self.char_size, self.win_size);
-                if self.prev_cursor_pos != position {
-                    send!(Action::MouseMove { pos: position });
-                    self.prev_cursor_pos = position;
+                let pos = XY(position.x as usize, position.y as usize);
+                let pos = char4pixel_pos(pos, self.char_size, self.win_size);
+                if self.prev_pos != pos {
+                    self.prev_pos = pos;
+                    send!(Action::MouseMove { pos });
                 }
             }
             Event::WindowEvent {
@@ -423,8 +423,14 @@ impl WrRest {
             } => {
                 if let Some(button) = mb4button(button) {
                     match state {
-                        ElementState::Pressed => send!(Action::MousePress { button }),
-                        ElementState::Released => send!(Action::MouseRelease { button }),
+                        ElementState::Pressed => send!(Action::MousePress {
+                            pos: self.prev_pos,
+                            button
+                        }),
+                        ElementState::Released => send!(Action::MouseRelease {
+                            pos: self.prev_pos,
+                            button
+                        }),
                     }
                 }
             }

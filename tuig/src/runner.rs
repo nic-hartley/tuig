@@ -4,7 +4,7 @@
 
 use std::{mem, thread, time::Duration};
 
-use tuig_iosys::{Action, IoRunner, IoSystem, Screen};
+use tuig_iosys::{ui::Region, Action, IoRunner, IoSystem, Screen};
 
 use crate::{
     agent::{Agent, ControlFlow},
@@ -137,9 +137,15 @@ impl<M: Message> AgentRunner<M> {
 }
 
 struct GameRunner<G: Game, IO: IoSystem> {
+    /// The game being run
     game: G,
+    /// The IO system the game is being drawn onto
     iosys: IO,
-    screen: Screen,
+    /// The screen drawn last time it rendered to screen
+    old_screen: Screen,
+    /// The screen that will be drawn next time it's rendered
+    new_screen: Screen,
+    /// Whether, after receiving a message, the game indicates that it needs to be redrawn
     tainted: bool,
     render_timer: Timer,
 }
@@ -150,16 +156,18 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
         Self {
             game,
             iosys,
-            screen,
-            tainted: true,
-            // Render at most ~60fps
-            render_timer: Timer::new(1.0 / 60.0),
+            old_screen: screen.clone(),
+            new_screen: screen.clone(),
+            tainted: false,
+            // Render at most ~100fps
+            render_timer: Timer::new(1.0 / 100.0),
         }
     }
 
     /// Feed a list of messages to the associated `Game`.
     ///
     /// Returns whether a stop was requested.
+    #[inline]
     fn feed(&mut self, messages: &[G::Message]) -> bool {
         if messages.is_empty() {
             return self.feed(&[G::Message::tick()]);
@@ -175,10 +183,19 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
         false
     }
 
-    /// Do a step of IO with the associated `IoSystem` and `Game`.
+    #[inline]
+    fn attach_for(&mut self, replies: &mut Replies<G::Message>, action: Action) {
+        self.new_screen.resize(self.iosys.size());
+        let region = Region::new(&mut self.new_screen, action);
+        self.game.attach(region, replies);
+        self.tainted = false;
+    }
+
+    /// Do a step of IO with the associated `IoSystem` and `Game`, re-rendering to the stored [`Screen`].
     ///
     /// Returns whether a stop was requested.
-    fn io(
+    #[inline]
+    fn attach(
         &mut self,
         messages: &mut Vec<G::Message>,
         agents: &mut Vec<Box<dyn Agent<G::Message>>>,
@@ -188,38 +205,27 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
             messages: mem::take(messages),
         };
         while let Ok(Some(action)) = self.iosys.poll_input() {
-            match action {
-                Action::Closed => return true,
-                Action::Redraw => self.tainted = true,
-                other => match self.game.input(other, &mut replies) {
-                    Response::Nothing => (),
-                    Response::Redraw => self.tainted = true,
-                    Response::Quit => return true,
-                },
+            if action == Action::Closed {
+                return true;
             }
+
+            self.attach_for(&mut replies, action);
+        }
+        if self.tainted {
+            // need to redraw, but haven't done it yet
+            self.attach_for(&mut replies, Action::Redraw);
         }
         *agents = replies.agents;
         *messages = replies.messages;
         false
     }
 
-    /// Render to the screen.
-    ///
-    /// This will automatically only render if:
-    ///
-    /// - The screen contents have been tainted (e.g. by a [`Response::Redraw`] or [`Action::Redraw`])
-    /// - It's been long enough since the last redraw
+    /// Render the stored [`Screen`] to the real screen. This will automatically only render if the screen contents
+    /// have been tainted (e.g. by a [`Response::Redraw`] or [`Action::Redraw`]) and the render timer says it's time.
     fn render(&mut self) {
-        let new_size = self.iosys.size();
-        if self.tainted || new_size != self.screen.size() {
-            if !self.render_timer.tick_ready() {
-                // avoid wasting too much time rendering
-                return;
-            }
-            self.screen.resize(new_size);
-            self.game.render(&mut self.screen);
-            self.iosys.draw(&self.screen).unwrap();
-            self.tainted = false;
+        if self.new_screen != self.old_screen && self.render_timer.tick_ready() {
+            self.iosys.draw(&self.new_screen).unwrap();
+            mem::swap(&mut self.new_screen, &mut self.old_screen);
         }
     }
 }
@@ -287,7 +293,7 @@ impl<G: Game + 'static> Runner<G> {
             'mainloop: loop {
                 loop {
                     gr.render();
-                    if gr.io(&mut messages, &mut agents) {
+                    if gr.attach(&mut messages, &mut agents) {
                         break 'mainloop;
                     }
                     if input_timer.tick_ready() {
@@ -327,7 +333,7 @@ impl<G: Game + 'static> Runner<G> {
                 if iorun.step() {
                     break 'mainloop;
                 }
-                if gr.io(&mut messages, &mut agents) {
+                if gr.attach(&mut messages, &mut agents) {
                     break 'mainloop;
                 }
                 if input_timer.tick_ready() {
@@ -364,7 +370,7 @@ impl<G: Game + 'static> Runner<G> {
             'mainloop: loop {
                 loop {
                     gr.render();
-                    if gr.io(&mut messages, &mut agents) {
+                    if gr.attach(&mut messages, &mut agents) {
                         break 'mainloop;
                     }
                     if input_timer.tick_ready() {
