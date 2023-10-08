@@ -68,9 +68,10 @@ impl<'s> FusedIterator for ScreenRows<'s> {}
 ///
 /// Allows you to render things onto it, then can be rendered onto the screen. This strategy avoids flickering,
 /// partial renders, etc. and helps deduplicate rendering effort.
+#[derive(Clone, PartialEq, Eq)]
 pub struct Screen {
-    pub(crate) cells: Vec<Cell>,
     size: XY,
+    pub(crate) cells: Vec<Cell>,
 }
 
 impl Screen {

@@ -1,6 +1,6 @@
 //! The `Game` and the `Response` it can give the engine.
 
-use tuig_iosys::{Action, Screen};
+use tuig_iosys::ui::Region;
 
 use crate::{Message, Replies};
 
@@ -33,12 +33,13 @@ pub trait Game: Send {
     /// The message that this `Game` will be passing around between `Agent`s and itself.
     type Message: Message;
 
-    /// The user has done some input; update the UI and inform [`Agent`](crate::Agent)s accordingly.
-    fn input(&mut self, input: Action, replies: &mut Replies<Self::Message>) -> Response;
-
     /// A message has happened; update the UI accordingly.
     fn message(&mut self, message: &Self::Message) -> Response;
 
-    /// Render the game onto the provided `Screen`.
-    fn render(&self, onto: &mut Screen);
+    /// Attach the game to a [`Region`] occupying the whole screen. Based on the inputs given, re-render the player's
+    /// UI, and inform [`Agent`](crate::Agent)s accordingly.
+    ///
+    /// If you want to render in terms of a raw [`Screen`](tuig_iosys::Screen) and input [`Action`](tuig_iosys::Action)
+    /// instead, call [`Region::attach`] with a [`RawAttachment`](tuig_iosys::ui::attachments::RawAttachment).
+    fn attach<'s>(&mut self, into: Region<'s>, replies: &mut Replies<Self::Message>);
 }

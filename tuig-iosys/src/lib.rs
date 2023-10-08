@@ -115,7 +115,8 @@ pub mod backends {
     }
 }
 
-type LoadError = core::result::Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), BTreeMap<&'static str, Error>>;
+type LoadError =
+    core::result::Result<(Box<dyn IoSystem>, Box<dyn IoRunner>), BTreeMap<&'static str, Error>>;
 /// Based on IO system features enabled, attempt to initialize an IO system, in the same manner as [`load!`].
 ///
 /// This returns things boxed so they can be used as trait objects, which provides nicer ergonomics at the
