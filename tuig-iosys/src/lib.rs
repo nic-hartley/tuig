@@ -55,8 +55,6 @@ mod terminal;
 mod action;
 pub mod fmt;
 mod screen;
-#[cfg(feature = "ui")]
-pub mod ui;
 mod xy;
 
 mod util;
