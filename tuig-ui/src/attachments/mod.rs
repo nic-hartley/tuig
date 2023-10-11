@@ -43,7 +43,10 @@ impl<'s, T, F: FnOnce(Action, ScreenView<'s>) -> T> RawAttachment<'s> for F {
 pub(crate) mod test_utils {
     use core::ops::{Bound, RangeBounds};
 
-    use tuig_iosys::{Screen, fmt::{Color, Formatted, Cell, Text, FormattedExt}};
+    use tuig_iosys::{
+        fmt::{Cell, Color, Formatted, FormattedExt, Text},
+        Screen,
+    };
 
     const FILLER: &str = "0123456789abcdef";
 

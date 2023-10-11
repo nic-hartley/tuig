@@ -1,4 +1,4 @@
-use tuig_iosys::{Key, Action};
+use tuig_iosys::{Action, Key};
 
 /// Tracks and presents the current state of inputs, based on past ones.
 ///

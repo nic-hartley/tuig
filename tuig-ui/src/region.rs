@@ -1,5 +1,8 @@
 use alloc::vec::Vec;
-use tuig_iosys::{Action, Screen, XY, fmt::{Cell, Text}};
+use tuig_iosys::{
+    fmt::{Cell, Text},
+    Action, Screen, XY,
+};
 
 use super::{
     attachments::{Attachment, Textbox, TextboxData},

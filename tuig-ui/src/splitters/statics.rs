@@ -95,7 +95,7 @@ mod test {
     use crate::{bounds::Bounds, cols, Region};
 
     use alloc::string::String;
-    use tuig_iosys::{XY, Screen, Action, fmt::Cell};
+    use tuig_iosys::{fmt::Cell, Action, Screen, XY};
 
     fn bounds(x: usize, y: usize, w: usize, h: usize) -> Bounds {
         Bounds {

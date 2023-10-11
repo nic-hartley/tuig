@@ -1,7 +1,10 @@
 use core::mem;
 
 use alloc::{string::String, vec::Vec};
-use tuig_iosys::{fmt::{Text, Formatted, FormattedExt, Cell}, XY, text, text1, Action};
+use tuig_iosys::{
+    fmt::{Cell, Formatted, FormattedExt, Text},
+    text, text1, Action, XY,
+};
 
 use crate::ScreenView;
 
@@ -227,7 +230,12 @@ impl<'s> RawAttachment<'s> for Textbox {
 mod test {
     use tuig_iosys::Screen;
 
-    use crate::{attachments::test_utils::{make_screen, screen_assert, make_region, charat, assert_area_blank, assert_area_fmt}, Region};
+    use crate::{
+        attachments::test_utils::{
+            assert_area_blank, assert_area_fmt, charat, make_region, make_screen, screen_assert,
+        },
+        Region,
+    };
 
     use super::*;
 

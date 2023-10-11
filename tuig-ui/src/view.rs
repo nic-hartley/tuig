@@ -5,7 +5,7 @@ use core::{
 };
 
 use alloc::slice;
-use tuig_iosys::{Screen, fmt::Cell, XY};
+use tuig_iosys::{fmt::Cell, Screen, XY};
 
 use super::Bounds;
 

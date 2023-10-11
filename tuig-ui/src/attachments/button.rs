@@ -1,4 +1,7 @@
-use tuig_iosys::{Action, Key, MouseButton, fmt::{Color, Cell, FormattedExt}};
+use tuig_iosys::{
+    fmt::{Cell, Color, FormattedExt},
+    Action, Key, MouseButton,
+};
 
 use crate::ScreenView;
 

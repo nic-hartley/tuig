@@ -1,10 +1,7 @@
 use std::thread;
 
-use tuig_iosys::{
-    text1,
-    Action, IoSystem, Key, Screen,
-};
-use tuig_ui::{Region, attachments::Textbox};
+use tuig_iosys::{text1, Action, IoSystem, Key, Screen};
+use tuig_ui::{attachments::Textbox, Region};
 
 fn list_events(mut sys: Box<dyn IoSystem>) {
     const MAX_LEN: usize = 256;
