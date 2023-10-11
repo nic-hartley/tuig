@@ -1,13 +1,9 @@
 use core::mem;
 
 use alloc::{string::String, vec::Vec};
+use tuig_iosys::{fmt::{Text, Formatted, FormattedExt, Cell}, XY, text, text1, Action};
 
-use crate::{
-    fmt::{Cell, Formatted, FormattedExt, Text},
-    text, text1,
-    ui::ScreenView,
-    xy::XY,
-};
+use crate::ScreenView;
 
 use super::RawAttachment;
 
@@ -61,7 +57,7 @@ impl Textbox {
         }
     }
 
-    crate::util::setters! {
+    tuig_pm::setters! {
         /// Set the scroll position of the textbox, i.e. how many lines from the top or bottom should be hidden.
         ///
         /// Defaults to 0, i.e. not scrolling at all. Anything that doesn't fit is simply not visible.
@@ -222,18 +218,16 @@ impl Textbox {
 
 impl<'s> RawAttachment<'s> for Textbox {
     type Output = TextboxData;
-    fn raw_attach(self, _: crate::Action, screen: ScreenView<'s>) -> Self::Output {
+    fn raw_attach(self, _: Action, screen: ScreenView<'s>) -> Self::Output {
         self.render_to(screen)
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        fmt::{Cell, FormattedExt},
-        ui::{attachments::test_utils::*, Region},
-        Screen, XY,
-    };
+    use tuig_iosys::Screen;
+
+    use crate::{attachments::test_utils::{make_screen, screen_assert, make_region, charat, assert_area_blank, assert_area_fmt}, Region};
 
     use super::*;
 

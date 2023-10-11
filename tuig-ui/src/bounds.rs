@@ -1,6 +1,6 @@
 use core::{fmt, ops::Range};
 
-use crate::{Action, XY};
+use tuig_iosys::{XY, Action};
 
 /// The boundaries of a [`Region`][super::Region].
 #[derive(PartialEq, Eq, Clone, Copy)]

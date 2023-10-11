@@ -27,8 +27,9 @@ name = "mass-messages"
 required-features = ["io_nop", "__run"]
 
 [dependencies]
-tuig-iosys = { version = "0.0.4", path = "../tuig-iosys", features = ["ui"] }
+tuig-iosys = { version = "0.0.4", path = "../tuig-iosys" }
 tuig-pm = { version = "0.0.4", path = "../tuig-pm" }
+tuig-ui = { version = "0.1.0", path = "../tuig-ui" }
 
 crossbeam = { version = "0.8.2", optional = true }
 rayon = { version = "1.7.0", optional = true }

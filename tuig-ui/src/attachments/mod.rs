@@ -10,8 +10,7 @@ mod textbox;
 pub use textbox::{Textbox, TextboxData};
 mod text_input;
 pub use text_input::{TextInput, TextInputResult};
-
-use crate::Action;
+use tuig_iosys::Action;
 
 use super::{Region, ScreenView};
 
@@ -44,10 +43,7 @@ impl<'s, T, F: FnOnce(Action, ScreenView<'s>) -> T> RawAttachment<'s> for F {
 pub(crate) mod test_utils {
     use core::ops::{Bound, RangeBounds};
 
-    use crate::{
-        fmt::{Cell, Color, Formatted, FormattedExt, Text},
-        Screen,
-    };
+    use tuig_iosys::{Screen, fmt::{Color, Formatted, Cell, Text, FormattedExt}};
 
     const FILLER: &str = "0123456789abcdef";
 
@@ -85,10 +81,10 @@ pub(crate) mod test_utils {
             $screen:ident => $region:ident($rx:tt, $ry:tt, $rw:tt, $rh:tt $(, $act:expr )?)
         ) => {
             #[allow(unused)]
-            let root = Region::new(&mut $screen, make_region!(@@select $( $act; )? crate::Action::Redraw));
-            let [_, vert] = root.split(crate::ui::cols!($rx $rw))
+            let root = Region::new(&mut $screen, make_region!(@@select $( $act; )? Action::Redraw));
+            let [_, vert] = root.split(crate::cols!($rx $rw))
                 .expect("not enough space for desired cols");
-            let [_, hori] = vert.split(crate::ui::rows!($ry $rh))
+            let [_, hori] = vert.split(crate::rows!($ry $rh))
                 .expect("not enough space for desired rows");
             #[allow(unused_mut)]
             let mut $region = hori;
@@ -157,7 +153,7 @@ pub(crate) mod test_utils {
         ),* ) => {
             $(
                 $(
-                    assert_area_fmt(&$sc, $fmt_x, $fmt_y, crate::text1!($($mod)* $text));
+                    assert_area_fmt(&$sc, $fmt_x, $fmt_y, text1!($($mod)* $text));
                 )?
                 $(
                     assert_area_blank(&$sc, $blank_x, $blank_y);

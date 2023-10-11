@@ -5,8 +5,7 @@ use core::{
 };
 
 use alloc::slice;
-
-use crate::{fmt::Cell, Screen, XY};
+use tuig_iosys::{Screen, fmt::Cell, XY};
 
 use super::Bounds;
 
@@ -60,7 +59,7 @@ impl<'s> ScreenView<'s> {
         Self {
             _sc: PhantomData,
             // SAFETY: `Vec::as_mut_ptr` never returns null pointers, only dangling ones.
-            buf: Some(unsafe { NonNull::new_unchecked(screen.cells.as_mut_ptr()) }),
+            buf: Some(unsafe { NonNull::new_unchecked(screen.cells_mut().as_mut_ptr()) }),
             full_size: screen.size(),
             bounds,
         }
@@ -217,7 +216,7 @@ mod test {
     #[test]
     fn get_cell_inbounds() {
         let mut screen = Screen::new(XY(5, 5));
-        screen.cells[0] = Cell::of('~');
+        screen.cells_mut()[0] = Cell::of('~');
         let sv = unsafe { ScreenView::new(&mut screen, Bounds::new(0, 0, 5, 5)) };
         assert_eq!(sv[XY(0, 0)], Cell::of('~'));
     }
@@ -225,16 +224,16 @@ mod test {
     #[test]
     fn set_cell_inbounds() {
         let mut screen = Screen::new(XY(5, 5));
-        screen.cells[0] = Cell::of('~');
+        screen.cells_mut()[0] = Cell::of('~');
         let mut sv = unsafe { ScreenView::new(&mut screen, Bounds::new(0, 0, 5, 5)) };
         sv[XY(0, 0)] = Cell::of('!');
-        assert_eq!(screen.cells[0], Cell::of('!'));
+        assert_eq!(screen.cells_mut()[0], Cell::of('!'));
     }
 
     #[test]
     fn get_row_inbounds() {
         let mut screen = Screen::new(XY(5, 5));
-        for (i, v) in screen.cells[0..5].iter_mut().enumerate() {
+        for (i, v) in screen.cells_mut()[0..5].iter_mut().enumerate() {
             *v = Cell::of(char::from_digit(i as u32, 36).unwrap());
         }
         let sv = unsafe { ScreenView::new(&mut screen, Bounds::new(0, 0, 5, 5)) };
@@ -258,7 +257,7 @@ mod test {
             *v = Cell::of(char::from_digit(i as u32, 36).unwrap());
         }
         assert_eq!(
-            &screen.cells[0..5],
+            &screen.cells_mut()[0..5],
             [
                 Cell::of('0'),
                 Cell::of('1'),

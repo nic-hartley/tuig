@@ -4,12 +4,9 @@ use tuig_iosys::{
     cell,
     fmt::Cell,
     text,
-    ui::{
-        attachments::{Button, TextInput, TextInputResult, Textbox},
-        cols, rows, Region, ScreenView,
-    },
     Action, IoSystem, Key, Screen,
 };
+use tuig_ui::{attachments::{TextInput, Textbox, TextInputResult, Button}, Region, cols, rows, ScreenView};
 
 fn char_for_input(action: &Action) -> Cell {
     match action {

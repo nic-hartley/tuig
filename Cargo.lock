@@ -1202,6 +1202,7 @@ dependencies = [
  "rayon",
  "tuig-iosys",
  "tuig-pm",
+ "tuig-ui",
 ]
 
 [[package]]
@@ -1231,6 +1232,11 @@ dependencies = [
 [[package]]
 name = "tuig-ui"
 version = "0.1.0"
+dependencies = [
+ "paste",
+ "tuig-iosys",
+ "tuig-pm",
+]
 
 [[package]]
 name = "unicode-ident"

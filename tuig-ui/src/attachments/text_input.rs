@@ -1,13 +1,9 @@
 use core::{iter, mem};
 
 use alloc::{collections::VecDeque, string::String};
+use tuig_iosys::{Key, Action, text1, fmt::{Format, Formatted, Text, FormattedExt, Cell}};
 
-use crate::{
-    fmt::{Cell, Format, Formatted, FormattedExt, Text},
-    text1,
-    ui::ScreenView,
-    Action, Key,
-};
+use crate::ScreenView;
 
 use super::RawAttachment;
 
@@ -328,13 +324,10 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
 
 #[cfg(test)]
 mod test {
+    use tuig_iosys::{Screen, XY};
+    use crate::{attachments::test_utils::{make_screen, screen_assert, make_region, charat, assert_area_fmt}, Region};
+
     use super::*;
-    use crate::{
-        fmt::Cell,
-        fmt::FormattedExt,
-        ui::{attachments::test_utils::*, Region},
-        Key, Screen, XY,
-    };
 
     macro_rules! feed {
         (

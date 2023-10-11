@@ -8,7 +8,6 @@ repository = "https://github.com/nic-hartley/tuig"
 
 [features]
 std = []
-ui = []
 
 nop = []
 cli_crossterm = ["crossterm"]
