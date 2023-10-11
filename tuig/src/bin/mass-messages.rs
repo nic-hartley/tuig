@@ -3,7 +3,7 @@
 use std::time::Instant;
 
 use tuig::{Agent, ControlFlow, Game, Replies, Response, Runner};
-use tuig_iosys::ui::Region;
+use tuig_ui::Region;
 
 const AGENTS: u64 = 10_000;
 

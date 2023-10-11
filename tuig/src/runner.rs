@@ -4,7 +4,8 @@
 
 use std::{mem, thread, time::Duration};
 
-use tuig_iosys::{ui::Region, Action, IoRunner, IoSystem, Screen};
+use tuig_iosys::{Action, IoRunner, IoSystem, Screen};
+use tuig_ui::Region;
 
 use crate::{
     agent::{Agent, ControlFlow},

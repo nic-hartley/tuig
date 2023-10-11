@@ -21,7 +21,7 @@ use super::RawAttachment;
 /// Accordingly, [`Attachment`] is implemented for `&mut TextInput`, not `TextInput` itself, so you'll use it like:
 ///
 /// ```no_run
-/// # use tuig_iosys::ui::{Region, elements::{TextInput, TextInputResult}};
+/// # use tuig_ui::{Region, attachments::{TextInput, TextInputResult}};
 /// let region = //...
 /// # Region::empty();
 /// let mut text_input = // ...

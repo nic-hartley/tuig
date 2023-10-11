@@ -1,6 +1,6 @@
 //! The `Game` and the `Response` it can give the engine.
 
-use tuig_iosys::ui::Region;
+use tuig_ui::Region;
 
 use crate::{Message, Replies};
 
