@@ -10,13 +10,13 @@ repository = "https://github.com/nic-hartley/tuig"
 # See tuig::docs::features for crucial information.
 __io = []
 io_nop = ["__io", "tuig-iosys/nop"]
-io_cli_crossterm = ["__io", "tuig-iosys/cli_crossterm"]
-io_gui_softbuffer = ["__io", "tuig-iosys/gui_softbuffer"]
+io_cli_crossterm = ["__io", "std", "tuig-iosys/cli_crossterm"]
+io_gui_softbuffer = ["__io", "std", "tuig-iosys/gui_softbuffer"]
 
 __run = []
 run_orig = ["__run"]
 run_single = ["__run"]
-run_rayon = ["__run", "rayon", "crossbeam"]
+run_rayon = ["__run", "std", "rayon", "crossbeam"]
 
 std = ["tuig-iosys/std"]
 
