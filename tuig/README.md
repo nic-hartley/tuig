@@ -2,14 +2,32 @@
 
 tuig is a game engine hyperfocused on systemic textmode games.
 
-## I want to make a game with tuig.
+## Usage
 
-Checking out [`tuig::docs::walkthrough`]!
+Check out [`tuig::docs::walkthrough`]!
 In maybe ten minutes you'll have a simple tic-tac-toe game with an AI.
 
   [`tuig::docs::walkthrough`]: https://docs.rs/tuig/latest/tuig/docs/walkthrough
 
+The short version, though, is:
+
+- `cargo add tuig` to add it to your project.
+  - Pick the features you want: `io_cli_crossterm,run_rayon` is a good, broadly compatible set to start with.
+    Just don't forget to handle `Ctrl+C`!
+- Implement [`Message`]: This is how the pieces talk to each other.
+- Implement [`Game`]: This is how you talk to the player.
+- Implement [`Agent`]: This is how you simulate things.
+- Use a [`Runner`] to get everything running.
+
+  [`Message`]: https://docs.rs/tuig/latest/tuig/trait.Message.html
+  [`Game`]: https://docs.rs/tuig/latest/tuig/trait.Game.html
+  [`Agent`]: https://docs.rs/tuig/latest/tuig/trait.Agent.html
+
 ## FAQ
+
+*(Don't forget to check out [the repo's README] for the cross-crate FAQ, too!)*
+
+  [the repo's README]: https://github.com/nic-hartley/tuig
 
 ### How usable is tuig, *right now*?
 
@@ -20,7 +38,11 @@ It's at 0.0.x for a reason, and I don't see it even hitting 0.1 for a fair while
 If you do still want to make a game in it, please [raise issues] as you encounter them.
 Undocumented items, missing features, bugs, ugly APIs, whatever -- I can't fix it if I don't know about it!
 
-And if you're just interested in watching, keep an eye on the [issue list], in particular the [v0.1 milestone].
+And if you're just interested in watching, keep an eye on the [issue list].
+
+  [redshell]: https://github.com/nic-hartley/redshell/
+  [raise issues]: https://github.com/nic-hartley/redshell/issues/new
+  [issue list]: https://github.com/nic-hartley/redshell/issues
 
 ### What's textmode?
 
@@ -37,6 +59,8 @@ There's some hidden technical complexity underlying that intuition, but mostly i
 Check the [tuig-iosys] docs for details.
 Like the name implies, it's what tuig uses for its IO subsystem.
 
+  [tuig-iosys]: https://docs.rs/tuig-iosys
+
 ### What's systemic?
 
 Systemic games design and simulate their worlds as complete, interlocking systems, rather than tailoring the simulation to the specific intended play experience.
@@ -50,22 +74,7 @@ It's designed to more cleanly represent a *world*, whose components can interact
 
 ### What else does tuig offer?
 
-Not much, yet.
-You can see the roadmap in the [issue list] and [v0.1 milestone].
+Not much, yet!
+Keep an eye on the [v0.1 milestone] for updates.
 
-### How does tuig do versioning?
-
-tuig tries to follow semantic versioning, but the line between "bugfix", "new feature", and "breaking change" can be difficult to draw.
-In short:
-- If it's undocumented, I can change it however I like and count it as a bugfix.
-- If it's documented, *just adding things* is never a breaking change, only a new feature -- even if I forgot to add `#[non_exhaustive]` to that enum. (Though I'll try very hard to make sure your code works without changes for minor version bumps, regardless.)
-- Changing documented things is almost certainly breaking regardless of the change.
-
-Its versions are also pinned to `tuig-iosys`, and vice versa, meaning that versions might be bumped without any change to this particular crate.
-That said, because `tuig-iosys` is exposed as `tuig::io`, arguably any changes to it count as changes to `tuig` anyway.
-
-  [tuig-iosys]: https://docs.rs/tuig-iosys
-  [redshell]: https://github.com/nic-hartley/redshell/
-  [raise issues]: https://github.com/nic-hartley/redshell/issues/new
-  [issue list]: https://github.com/nic-hartley/redshell/issues
   [v0.1 milestone]: https://github.com/nic-hartley/redshell/milestone/1
