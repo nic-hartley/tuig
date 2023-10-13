@@ -1,9 +1,11 @@
 [package]
 name = "tuig-ui"
-version = "0.1.0"
+version = "0.0.4"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "A predictable immediate-mode UI system for character grids."
+license = "BSD-3-Clause"
+repository = "https://github.com/nic-hartley/tuig"
+rust-version = "1.63"
 
 [dependencies]
 paste = "1.0.14"

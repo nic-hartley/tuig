@@ -2,9 +2,10 @@
 name = "tuig-pm"
 version = "0.0.4"
 edition = "2021"
-description = "Procedural macro crate for tuig and tuig-iosys"
+description = "Procedural macro crate for tuig/tuig-ui/tuig-iosys"
 license = "BSD-3-Clause"
 repository = "https://github.com/nic-hartley/tuig"
+rust-version = "1.63"
 
 [lib]
 proc-macro = true
