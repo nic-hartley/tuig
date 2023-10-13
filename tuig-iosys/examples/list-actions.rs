@@ -1,28 +1,25 @@
 use std::thread;
 
-use tuig_iosys::{text1, Action, IoSystem, Key, Screen};
-use tuig_ui::{attachments::Textbox, Region};
+use tuig_iosys::{Action, IoSystem, Key, Screen, fmt::Cell};
 
 fn list_events(mut sys: Box<dyn IoSystem>) {
-    const MAX_LEN: usize = 256;
-    let mut log = vec![text1!["press escape to exit when you're done\n"]];
+    let mut log = vec!["press escape to exit when you're done".to_owned()];
     let mut screen = Screen::new(sys.size());
     loop {
         screen.resize(sys.size());
-        Region::new(&mut screen, Action::Redraw).attach(
-            Textbox::new(log.clone())
-                .first_indent(0)
-                .indent(4)
-                .scroll_bottom(true),
-        );
+        for (line, row) in log.iter().rev().zip((0..screen.size().y()).rev()) {
+            for (char, col) in line.chars().zip(0..screen.size().x()) {
+                screen[row][col] = Cell::of(char);
+            }
+        }
         sys.draw(&screen).expect("failed to render screen");
         match sys.input().expect("failed to get input") {
             Action::Closed | Action::KeyPress { key: Key::Escape } => break,
             Action::Error(e) => Err(e).expect("got an error for input"),
-            other => log.push(text1!("{:?}\n"(other))),
+            other => log.push(format!("{:?}", other)),
         }
-        if log.len() > MAX_LEN {
-            let diff = log.len() - MAX_LEN;
+        if log.len() > screen.size().y() {
+            let diff = log.len() - screen.size().y();
             log.drain(..diff);
         }
     }
