@@ -61,7 +61,7 @@ There isn't as clear a line as with textmode vs. graphical games.
 In tuig's case, it's enabled through the message system, which has agents listening for messages they're interested in rather than being reached out to.
 It's designed to more cleanly represent a *world*, whose components can interact in a variety of ways.
 
-## Usage
+### How do I use tuig?
 
 Check out [`tuig::docs::walkthrough`]!
 In maybe ten minutes you'll have a simple tic-tac-toe game with an AI.
