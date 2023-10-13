@@ -1,6 +1,6 @@
 use std::thread;
 
-use tuig_iosys::{Action, IoSystem, Key, Screen, fmt::Cell};
+use tuig_iosys::{fmt::Cell, Action, IoSystem, Key, Screen};
 
 fn list_events(mut sys: Box<dyn IoSystem>) {
     let mut log = vec!["press escape to exit when you're done".to_owned()];

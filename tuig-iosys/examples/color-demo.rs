@@ -1,18 +1,28 @@
 use std::{iter::repeat, thread, time::Duration};
 
-use tuig_iosys::{IoSystem, Screen, fmt::{Color, FormattedExt, Cell, Formatted}, Action, Key, XY};
+use tuig_iosys::{
+    fmt::{Cell, Color, Formatted, FormattedExt},
+    Action, IoSystem, Key, Screen, XY,
+};
 
 fn color_demo(mut sys: Box<dyn IoSystem>) {
-    let color_width = Color::all().into_iter().map(|c| format!("{:?}", c).len()).max().unwrap();
+    let color_width = Color::all()
+        .into_iter()
+        .map(|c| format!("{:?}", c).len())
+        .max()
+        .unwrap();
 
-    let mut lines: Vec<Vec<Cell>> = Color::all().into_iter().map(|bg| {
-        let mut line = vec![];
-        for fg in Color::all() {
-            let text = format!("{:?} on {1:<2$} ", fg, format!("{:?}", bg), color_width);
-            line.extend(text.chars().map(move |c| Cell::of(c).fg(fg).bg(bg)));
-        }
-        line
-    }).collect();
+    let mut lines: Vec<Vec<Cell>> = Color::all()
+        .into_iter()
+        .map(|bg| {
+            let mut line = vec![];
+            for fg in Color::all() {
+                let text = format!("{:?} on {1:<2$} ", fg, format!("{:?}", bg), color_width);
+                line.extend(text.chars().map(move |c| Cell::of(c).fg(fg).bg(bg)));
+            }
+            line
+        })
+        .collect();
     let width: usize = lines.iter().map(|l| l.len()).max().unwrap() + 5;
     for line in &mut lines {
         let bg = line[0].get_fmt().bg;
@@ -25,7 +35,9 @@ fn color_demo(mut sys: Box<dyn IoSystem>) {
         while let Some(action) = sys.poll_input().unwrap() {
             match action {
                 Action::Closed | Action::KeyPress { key: Key::Escape } => break 'main,
-                Action::KeyPress { key: Key::Char(' ') } => moving = !moving,
+                Action::KeyPress {
+                    key: Key::Char(' '),
+                } => moving = !moving,
                 _ => (),
             }
         }
