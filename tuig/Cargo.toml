@@ -6,7 +6,7 @@ description = "Flexible, portable, and fast game engine for textmode games."
 license = "BSD-3-Clause"
 repository = "https://github.com/nic-hartley/tuig"
 readme = "../README.md"
-rust-version = "1.63"
+rust-version = "1.64"
 
 [features]
 # See tuig::docs::features for crucial information.

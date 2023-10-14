@@ -5,7 +5,7 @@ edition = "2021"
 description = "Multi-backend terminal-like text grid rendering."
 license = "BSD-3-Clause"
 repository = "https://github.com/nic-hartley/tuig"
-rust-version = "1.63"
+rust-version = "1.64"
 
 [features]
 std = []
