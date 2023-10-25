@@ -242,7 +242,7 @@ mod test {
     #[test]
     fn blank_textbox_renders_nothing() {
         make_screen!(sc(50, 30), r(0, 0, *, *));
-        r.textbox(alloc::vec![]);
+        r.text(alloc::vec![]);
         screen_assert! { sc: blank .., .. };
     }
 
@@ -250,7 +250,7 @@ mod test {
     fn basic_textbox_renders_right() {
         make_screen!(sc(50, 30), r(0, 0, *, *));
         let res = r
-            .textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "));
+            .text(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "));
         screen_assert!(sc:
             // end of the line and beyond
             blank 20.., 1..=1,
@@ -271,7 +271,7 @@ mod test {
     fn textbox_positioning_works() {
         make_screen!(sc(50, 30), r(4, 3, *, *));
         let res = r
-            .textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "));
+            .text(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "));
         screen_assert!(sc:
             // blank top 3 rows (0, 1, 2)
             blank .., ..3,
@@ -295,7 +295,7 @@ mod test {
     #[test]
     fn textbox_wraps_words_and_overwrites() {
         make_screen!(sc(50, 30), r(40, 0, *, *));
-        let res = r.textbox(text!(
+        let res = r.text(text!(
             "these are some words which will eveeeentually be wrapped!"
         ));
         screen_assert!(sc:
@@ -316,7 +316,7 @@ mod test {
     #[test]
     fn textbox_wrap_carries_formatting() {
         make_screen!(sc(50, 30), r(40, 0, *, *));
-        r.textbox(text!("these are some words which will ", green "eveeeentually", " be wrapped!"));
+        r.text(text!("these are some words which will ", green "eveeeentually", " be wrapped!"));
         screen_assert!(sc:
             blank ..40, ..,
             blank .., 6..,
@@ -332,7 +332,7 @@ mod test {
     #[test]
     fn textbox_linefill_carries_formatting() {
         make_screen!(sc(50, 30), r(40, 0, *, *));
-        r.textbox(
+        r.text(
             text!("these are some words which will eveeeentually ", on_blue "be wrapped", "!"),
         );
         screen_assert!(sc:
@@ -350,7 +350,7 @@ mod test {
     #[test]
     fn textbox_size_truncates() {
         make_screen!(sc(50, 30), r(40, 0, 10, 3));
-        let res = r.textbox(text!(
+        let res = r.text(text!(
             "these are some words which will eveeeentually be wrapped!"
         ));
         screen_assert!(sc:

@@ -14,11 +14,15 @@ use tuig_iosys::Action;
 
 use super::{Region, ScreenView};
 
+/// Something that can be put into a [`Region`].
+/// 
+/// 
 pub trait Attachment<'s> {
     type Output;
     fn attach(self, region: Region<'s>) -> Self::Output;
 }
 
+/// The low-level "raw" trait for implementing [`Attachment`]s.
 pub trait RawAttachment<'s> {
     type Output;
     fn raw_attach(self, input: Action, screen: ScreenView<'s>) -> Self::Output;
@@ -51,10 +55,6 @@ pub(crate) mod test_utils {
     const FILLER: &str = "0123456789abcdef";
 
     pub fn charat(x: usize, y: usize) -> char {
-        // compare:
-        // [(...) % FILLER.len()]
-        // .chars().nth((...) % FILLER.len()).unwrap()
-        // unfortunately the first one is invalid
         FILLER.chars().nth((x * 5 + y * 3) % FILLER.len()).unwrap()
     }
 

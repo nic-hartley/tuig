@@ -4,12 +4,22 @@ use crate::{Action, Result, Screen, XY};
 
 /// An input/output system.
 ///
-/// The output is called a "display" to distinguish it from the [`Screen`].
-///
 /// This object is meant to be associated with a [`IoRunner`], which will run infinitely on the main thread while this
 /// is called from within the message system.
+///
+/// # Terminology
+/// 
+/// * screen: The type, [`Screen`]. A character grid in memory.
+/// * display: The actual output to be rendered to, whether that's rendering as pixels in a window or characters in a
+///   terminal.
+/// * action: The type, [`Action`]. A single raw user input, conveying what changed.
+/// * input: The overall input state, e.g. modifier keys currently pressed. This isn't tracked by `tuig-iosys`, but it
+///   *is* tracked by [`tuig-ui`](https://crates.io/crates/tuig-ui).
 pub trait IoSystem: Send {
     /// Actually render a [`Screen`] to the display.
+    /// 
+    /// This must be able to handle `Screen`s of the wrong size. What exactly that means is up to the display, but it
+    /// can't crash or cause UB. Generally, if the screen size doesn't match the display size, 
     ///
     /// Please don't `clone` the screen to send it to the `IoRunner` unless you *really really* have to. The reason
     /// this takes a reference is so allocations can be reused.
@@ -22,6 +32,8 @@ pub trait IoSystem: Send {
     fn size(&self) -> XY;
 
     /// Wait for the next user input.
+    /// 
+    /// This will wait indefinitely, until an error happen or an input occurs, blocking the thread.
     fn input(&mut self) -> Result<Action>;
     /// If the next user input is available, return it. Otherwise, return `None`.
     ///
@@ -33,8 +45,8 @@ pub trait IoSystem: Send {
     ///
     /// This **must not** wait for the runner to finish tearing down, to avoid deadlocks in the singlethreaded mode.
     ///
-    /// This will always be the last method called on this object (unless you count `Drop::drop`) so feel free to
-    /// panic in the others if they're called after this one, especially `draw`.
+    /// This will always be the last method called on this object (unless you count `Drop::drop`) and may panic in the
+    /// others if they're called after this one, especially `draw`.
     fn stop(&mut self);
 }
 

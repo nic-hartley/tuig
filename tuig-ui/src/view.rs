@@ -11,12 +11,10 @@ use super::Bounds;
 
 /// A mutable view into a region of a `Screen`.
 ///
-/// You don't directly get `ScreenView`s; they're given to you through [`Region::attach`][super::Region::attach] and
+/// You don't directly get `ScreenView`s; they're given to you through [`Region::attach`][crate::Region::attach] and
 /// [`RawAttachment::raw_attach`][super::RawAttachment::raw_attach]. You can use them to directly draw to a screen's
 /// textgrid, but bounded in a certain region, so that multiple attachments can be alive at once without causing
-/// lifetime issues.
-///
-/// Primarily, you'll do that through [`Self::row`], which is also available through
+/// lifetime issues or deadlocks or slowdowns from mutexes.
 pub struct ScreenView<'s> {
     /// Ties the lifetimes together
     _sc: PhantomData<&'s Screen>,

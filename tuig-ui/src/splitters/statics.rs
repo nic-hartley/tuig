@@ -15,7 +15,6 @@ macro_rules! split_static {
         // literally just x and y for macro hygeine
         $x:ident, $y:ident
     ) => { paste::paste! {
-        #[must_use]
         pub struct $struct<const N: usize> {
             sizes: [usize; N],
             // TODO: &'static [fmt::Cell] separators?
@@ -39,13 +38,13 @@ macro_rules! split_static {
                 if sep.is_empty() {
                     return;
                 }
-                // TODO: Get rid of this allocation somehow, maybe with more preprocessing/macrofuckery
-                let cells: alloc::vec::Vec<_> = sep.chars().map(|c| Cell::of(c)).collect();
                 let region = r.[<split_ $prev _mut>](sep.len());
                 region.attach(|_, mut sv: ScreenView| {
                     for $y in 0..sv.size().y() {
-                        for $x in 0..sv.size().x() {
-                            sv[$y][$x] = cells[$along].clone();
+                        // TODO: get rid of this .chars() call, probably by preprocessing the `sep` into a `&[char]`
+                        // in the proc macro? or maybe a `&[Cell]` to make this basically a memcpy?
+                        for (c, $x) in sep.chars().zip(0..sv.size().x()) {
+                            sv[$y][$x] = Cell::of(c);
                         }
                     }
                 })
@@ -73,7 +72,7 @@ macro_rules! split_static {
                         self.sizes[i]
                     };
                     let res = if width == 0 {
-                        Region::empty()
+                        Region::empty(parent.input.clone())
                     } else {
                         parent.[< split_ $prev _mut >](width)
                     };

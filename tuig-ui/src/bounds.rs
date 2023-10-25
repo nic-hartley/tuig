@@ -2,7 +2,7 @@ use core::{fmt, ops::Range};
 
 use tuig_iosys::{Action, XY};
 
-/// The boundaries of a [`Region`][super::Region].
+/// Boundaries of something, i.e. a position and size.
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub struct Bounds {
     pub pos: XY,
@@ -31,7 +31,7 @@ impl Bounds {
         (left, rest)
     }
 
-    /// Cut off the rightmost `amt` columns. Returns `(right, rest)`.
+    /// Cut off the rightmost `amt` columns. Returns `(right, rest)`. (**Not `(rest, right)`!**)
     pub fn split_right(&self, amt: usize) -> (Bounds, Bounds) {
         assert!(amt > 0 && amt <= self.size.x());
         let inverse = self.size.x() - amt;
@@ -53,7 +53,7 @@ impl Bounds {
         (top, rest)
     }
 
-    /// Cut off the bottommost `amt` columns. Returns `(bottom, rest)`.
+    /// Cut off the bottommost `amt` columns. Returns `(bottom, rest)`. (**Not `(rest, bottom)`!**)
     pub fn split_bottom(&self, amt: usize) -> (Bounds, Bounds) {
         assert!(amt > 0 && amt <= self.size.y());
         let inverse = self.size.y() - amt;
@@ -73,14 +73,17 @@ impl Bounds {
         }
     }
 
+    /// The X coordinates within these bounds.
     pub fn xs(&self) -> Range<usize> {
         self.pos.x()..(self.pos.x() + self.size.x())
     }
 
+    /// The Y coordinates within these bounds.
     pub fn ys(&self) -> Range<usize> {
         self.pos.y()..(self.pos.y() + self.size.y())
     }
 
+    /// Boundaries containing nothing at all.
     pub fn empty() -> Self {
         Self {
             pos: XY(0, 0),
