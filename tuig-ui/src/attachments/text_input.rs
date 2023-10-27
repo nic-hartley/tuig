@@ -21,7 +21,8 @@ use super::RawAttachment;
 /// - Cursor position within the line
 /// - Autocomplete-related things
 ///
-/// Accordingly, [`Attachment`] is implemented for `&mut TextInput`, not `TextInput` itself, so you'll use it like:
+/// Accordingly, [`Attachment`](super::Attachment) (through [`RawAttachment`]) is implemented for `&mut TextInput`,
+/// not `TextInput` itself, so you'll use it like:
 ///
 /// ```no_run
 /// # use tuig_ui::{Region, attachments::{TextInput, TextInputResult}};
@@ -36,8 +37,8 @@ use super::RawAttachment;
 /// }
 /// ```
 ///
-/// [`Region::attach`]ing this will return a [`TextInputResult`], which is how you'll interact with autocomplete. To
-/// use the history features, see [`TextInput::store`].
+/// [`Region::attach`](super::Region::attach)ing this will return a [`TextInputResult`], which is how you'll interact
+/// with autocomplete. To use the history features, see [`TextInput::store`].
 pub struct TextInput {
     /// A bit of fixed, uneditable text at the beginning of the text input, to signal the user to type.
     pub prompt: String,

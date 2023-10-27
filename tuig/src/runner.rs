@@ -394,7 +394,7 @@ impl<G: Game + 'static> Runner<G> {
 
     /// Start the game running, according to the feature-selected runner.
     ///
-    /// This function only exits when [`Game::message`] or [`Game::input`] returns [`Response::Quit`]. It returns the
+    /// This function only exits when [`Game::message`] or [`Game::attach`] returns [`Response::Quit`]. It returns the
     /// [`Game`], primarily for testing purposes.
     #[allow(unreachable_code)] // for `cargo check --all-features`
     pub fn run(self, iosys: impl IoSystem + 'static, iorun: impl IoRunner) -> G {
@@ -411,10 +411,9 @@ impl<G: Game + 'static> Runner<G> {
     ///
     /// This **must** be run on the main thread. Ideally, you'd run it from `main` directly.
     ///
-    /// This function only exits when [`Game::message`] or [`Game::input`] returns [`Response::Quit`]. It returns the
+    /// This function only exits when [`Game::message`] or [`Game::attach`] returns [`Response::Quit`]. It returns the
     /// [`Game`], primarily for testing purposes. If loading fails, it panics.
     #[cfg(feature = "__io")]
-    #[cfg_attr(doc, doc(cfg(feature = "io_*")))]
     pub fn load_run(self) -> G {
         tuig_iosys::load!(self.run).unwrap()
     }

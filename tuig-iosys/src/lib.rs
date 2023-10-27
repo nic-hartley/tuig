@@ -5,9 +5,8 @@
 //! it doesn't have all the extra "game engine" stuff. If you want to use it yourself, there are two central parts to
 //! familiarize yourself with.
 //!
-//! The first is [`Screen`]. It's a grid of formatted characters you can freely draw to. With the `ui` feature, it
-//! also has a small, modular UI system; see [`ui`] for more information. The formatting is in [`fmt`]; see that for
-//! more information.
+//! The first is [`Screen`]. It's a grid of formatted characters you can freely draw to. (If you'd like a UI system
+//! designed for chargrids that renders straight to it, consider [`tuig-ui`](https://crates.io/crates/tuig-ui)!)
 //!
 //! The second is [`IoSystem`]. You can use `load!` to pick one based on available features and which one succeeds
 //! first, or you can load them yourself. The `IoSystem` can be passed around wherever you like, but its associated
@@ -36,8 +35,6 @@
 //! in the exact same way as every other.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(doc, feature(doc_cfg, doc_auto_cfg))]
-tuig_pm::force_docs_nightly!();
 
 /// Re-exported for the [`load!`] macro.
 #[doc(hidden)]
@@ -68,8 +65,8 @@ pub use crate::{
 };
 
 /// Helper types for implementing your own (primarily graphical) IO systems.
+#[cfg(feature = "gui")]
 pub mod im {
-    #[cfg(feature = "gui")]
     pub use super::graphical::{GuiRenderer, GuiRunner, GuiSystem, BOLD_TTF, REGULAR_TTF};
 }
 
@@ -141,7 +138,7 @@ tuig_pm::make_load! {
     ///
     /// This macro takes a function or method to call with the loaded `impl IoSystem`. That structure is weird but it
     /// enables having ownership of the varied types, without needing a `Box`. If you *want* a `Box`, you can just use
-    /// [`load`] instead.
+    /// [`load()`] instead.
     ///
     /// The callback can be any "function call", up to the parens, e.g. `run` or `self.start`. It will be called as
     /// `$thing(iosys, iorun)`. If it's called, this macro "returns" `Ok(())`. Otherwise, all attempted loads failed,

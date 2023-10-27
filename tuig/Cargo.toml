@@ -8,6 +8,9 @@ repository = "https://github.com/nic-hartley/tuig"
 readme = "../README.md"
 rust-version = "1.64"
 
+[package.metadata.docs.rs]
+all-features = true
+
 [features]
 # See tuig::docs::features for crucial information.
 __io = []

@@ -33,7 +33,7 @@ impl TextboxData {
     };
 }
 
-/// A box of text which can be attached to a [`Region`].
+/// A box of text which can be attached to a [`Region`](crate::Region).
 ///
 /// Textboxes automatically handle:
 ///
@@ -84,7 +84,7 @@ impl Textbox {
 
     /// Render this textbox to a [`ScreenView`], and return information about the render.
     ///
-    /// This is functionally equivalent to just directly [`Region::attach`][crate::ui::Region::attach]ing the textbox,
+    /// This is functionally equivalent to just directly [`Region::attach`][crate::Region::attach]ing the textbox,
     /// but you may find it useful if e.g. you want the text to depend on the input being handled in that region.
     pub fn render_to(mut self, mut sv: ScreenView) -> TextboxData {
         if sv.size() == XY(0, 0) {

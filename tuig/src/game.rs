@@ -9,7 +9,7 @@ use crate::{Message, Replies};
 pub enum Response {
     /// Nothing in particular needs to be done.
     Nothing,
-    /// The visual state has updated, and the [`Screen`] needs to be redrawn.
+    /// The visual state has updated, and the [`Screen`](tuig_iosys::Screen) needs to be redrawn.
     Redraw,
     /// The game should be exited, e.g. because the user clicked "Exit" in the menu.
     Quit,
@@ -23,7 +23,7 @@ pub enum Response {
 /// - When there's relevant user input or just periodically, you can send messages, make new agents, etc. and render.
 /// - When you receive a message, you can update your internal state for your next render and user input.
 ///
-/// This uses the usual [`tuig_iosys::ui`] system: You get a [`Region`], you attach something into it, etc. But you
+/// This uses the usual [`tuig_ui`] system: You get a [`Region`], you attach something into it, etc. But you
 /// deliberately can't trigger arbitrary messages from receiving messages: That's an `Agent`'s job. It could make some
 /// for simpler code to let it happen in `Game`, but it also makes it very easy to stall out your render thread.
 pub trait Game: Send {
@@ -37,6 +37,6 @@ pub trait Game: Send {
     /// UI, and inform [`Agent`](crate::Agent)s accordingly.
     ///
     /// If you want to render in terms of a raw [`Screen`](tuig_iosys::Screen) and input [`Action`](tuig_iosys::Action)
-    /// instead, call [`Region::attach`] with a [`RawAttachment`](tuig_iosys::ui::attachments::RawAttachment).
+    /// instead, call [`Region::attach`] with a [`RawAttachment`](tuig_ui::attachments::RawAttachment).
     fn attach<'s>(&mut self, into: Region<'s>, replies: &mut Replies<Self::Message>);
 }

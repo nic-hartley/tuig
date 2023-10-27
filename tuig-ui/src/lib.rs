@@ -1,34 +1,39 @@
-//! The text UI system.
+//! The text UI system built for [`tuig`](https://docs.rs/tuig/0.0.4/tuig/), but usable outside of it.
 //!
-//! It's based on the idea of splitting regions and filling them. You start with a [`Region`] occupying the whole
-//! screen, [`.split`](Region::split) it however you want, and then [`.attach`](Region::attach) something to the
-//! subregions. It's an immediate mode API, meaning you don't build and maintain persistent UI trees. You rebuild it
-//! every time with simple, direct method calls, imperatively divvying up and assigning the screen space.
-//!
-//! That assigned screen space is used for both input and output. Driving this system can be challenging, but at its
-//! most basic level will look something like:
-//!
-//! TODO: figure out what this looks like by implementing it in tuig
-//!
-//! You can implement your own custom attachments through the [`Attachment`] trait. The simplest ways are through the
-//! existing impls for various function types, but you might find custom impls useful for higher-level abstractions.
-//! Attachments take a `Region` and can do anything with it that you can do directly, including attach more things.
+//! There are three main ways to use this crate.
+//! 
+//! **When rendering a UI,** you'll probably use [`Adapter`] to start out, since it encapsulates most of the required
+//! logic and just leaves you with the UI to write. You might find it doesn't meet your needs, though, in which case
+//! its code can serve as a starting point. If there's some obvious shortfall, please open a feature request, or even
+//! make your own crate with a more advanced one, since it's only hitting public APIs.
+//! 
+//! **When writing a UI,** you'll get a [`Region`], possibly because you implemented [`Attachment`]. You can
+//! [`split`](Region::split) it in a variety of ways -- with anything that implements [`Splitter`] -- and put more
+//! [`Attachment`]s in the resulting child regions.
+//! 
+//! **When making a totally new UI element,** you'll implement [`RawAttachment`]. But try to minimize how complex your
+//! raw attachments are -- keeping them simple makes them easy to compose and adjust later.
+//! 
+//! There are a couple of basic examples in the repo that you may find useful.
+
+extern crate alloc;
 
 mod adapter;
 pub use adapter::Adapter;
+pub mod attachments;
+pub use attachments::{Attachment, RawAttachment};
 mod bounds;
 pub(crate) use bounds::Bounds;
+mod inputstate;
+pub use inputstate::InputState;
 mod region;
 pub use region::Region;
 mod view;
 pub use view::ScreenView;
-mod inputstate;
-pub use inputstate::InputState;
+pub use tuig_iosys::Screen;
 
-pub mod attachments;
 #[doc(hidden)]
 pub mod splitters;
+pub use splitters::Splitter;
 #[doc(hidden)]
 pub mod macros;
-
-extern crate alloc;

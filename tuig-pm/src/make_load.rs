@@ -64,7 +64,6 @@ pub fn make_load(input: TokenStream) -> TokenStream {
                 .filter(|f| !features.contains(f));
             let cfgs = quote::quote! {
                 #[cfg(all(not(any( #( feature = #antifeatures ),* )), #( feature = #features ),* ))]
-                #[cfg_attr(doc, doc(cfg(has_backend)))]
             };
             let tokens = c.iter().map(|(_, ts)| ts);
             quote::quote! {

@@ -1,6 +1,6 @@
 pub use tuig_pm as pm;
 
-/// Create a splitter for a [`Region`] which divides it into optionally separated columns.
+/// Create a splitter for a [`Region`](super::Region) which divides it into optionally separated columns.
 ///
 /// The syntax is relatively simple. First, you need to specify the widths of the columns you want:
 ///
@@ -45,10 +45,10 @@ macro_rules! cols {
     };
 }
 
-/// Create a splitter for a [`Region`] which divides it into optionally separated columns.
+/// Create a splitter for a [`Region`](super::Region) which divides it into optionally separated rows.
 ///
 /// The syntax is the same as for [`cols!`], except that everywhere it references words like "left" or "width",
-/// replace them with "top" or "height".
+/// replace them with words like "top" or "height".
 #[macro_export]
 macro_rules! rows {
     ($( $i:tt )*) => {

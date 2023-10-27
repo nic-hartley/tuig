@@ -7,6 +7,9 @@ license = "BSD-3-Clause"
 repository = "https://github.com/nic-hartley/tuig"
 rust-version = "1.64"
 
+[package.metadata.docs.rs]
+all-features = true
+
 [lib]
 proc-macro = true
 
