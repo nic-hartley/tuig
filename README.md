@@ -14,19 +14,19 @@ You can use `tuig-ui` and `tuig-iosys` on their own, and using `tuig` doesn't re
 
 That depends.
 
-You want `tuig` for a full game engine with:
+You want [`tuig`](https://crates.io/crates/tuig) for a full game engine with:
 
 - A UI hyperfocused on textmode games
 - An agent-and-message structure that enables systemic games
 - And more!
 
-You want `tuig-ui` for a *UI* system with:
+You want [`tuig-ui`](https://crates.io/crates/tuig-ui) for a *UI* system with:
 
 - Easy integration with `tuig-iosys`, but backend-independent.
 - Clearly defined and predictable UI element layout
 - A well-stocked library of default components
 
-You want `tuig-iosys` for a bare IO system with:
+You want [`tuig-iosys`](https://crates.io/crates/tuig-iosys) for a bare IO system with:
 
 - A fast way to draw character grids to various targets
 - Standardized input/output for any character grid backend

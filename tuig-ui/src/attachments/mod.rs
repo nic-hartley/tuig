@@ -15,8 +15,8 @@ use tuig_iosys::Action;
 use super::{Region, ScreenView};
 
 /// Something that can be put into a [`Region`].
-/// 
-/// 
+///
+///
 pub trait Attachment<'s> {
     type Output;
     fn attach(self, region: Region<'s>) -> Self::Output;
