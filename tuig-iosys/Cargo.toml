@@ -1,6 +1,6 @@
 [package]
 name = "tuig-iosys"
-version = "0.0.4"
+version = "0.0.5"
 edition = "2021"
 description = "Multi-backend terminal-like text grid rendering."
 license = "BSD-3-Clause"
@@ -20,7 +20,7 @@ gui = ["winit"]
 gui_softbuffer = ["gui", "softbuffer", "rayon", "fontdue"]
 
 [dependencies]
-tuig-pm = { version = "0.0.4", path = "../tuig-pm" }
+tuig-pm = { version = "0.0.5", path = "../tuig-pm" }
 
 paste = "1.0.12"
 crossterm = { version = "0.26.1", optional = true }

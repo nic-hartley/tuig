@@ -1,6 +1,6 @@
 [package]
 name = "tuig"
-version = "0.0.4"
+version = "0.0.5"
 edition = "2021"
 description = "Flexible, portable, and fast game engine for textmode games."
 license = "BSD-3-Clause"
@@ -32,9 +32,9 @@ name = "mass-messages"
 required-features = ["io_nop", "__run"]
 
 [dependencies]
-tuig-iosys = { version = "0.0.4", path = "../tuig-iosys" }
-tuig-pm = { version = "0.0.4", path = "../tuig-pm" }
-tuig-ui = { version = "0.0.4", path = "../tuig-ui" }
+tuig-iosys = { version = "0.0.5", path = "../tuig-iosys" }
+tuig-pm = { version = "0.0.5", path = "../tuig-pm" }
+tuig-ui = { version = "0.0.5", path = "../tuig-ui" }
 
 crossbeam = { version = "0.8.2", optional = true }
 rayon = { version = "1.7.0", optional = true }

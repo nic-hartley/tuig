@@ -1,4 +1,4 @@
-//! The text UI system built for [`tuig`](https://docs.rs/tuig/0.0.4/tuig/), but usable outside of it.
+//! The text UI system built for [`tuig`](https://docs.rs/tuig), but usable outside of it.
 //!
 //! There are three main ways to use this crate.
 //!
