@@ -15,7 +15,7 @@ fn list_events(mut sys: Box<dyn IoSystem>) {
         sys.draw(&screen).expect("failed to render screen");
         match sys.input().expect("failed to get input") {
             Action::Closed | Action::KeyPress { key: Key::Escape } => break,
-            Action::Error(e) => Err(e).expect("got an error for input"),
+            Action::Error(e) => panic!("{1}: {:?}", e, "got an error for input"),
             other => log.push(format!("{:?}", other)),
         }
         if log.len() > screen.size().y() {

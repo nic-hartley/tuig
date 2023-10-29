@@ -1,5 +1,3 @@
-use core::mem;
-
 use alloc::{string::String, vec::Vec};
 use tuig_iosys::{
     fmt::{Cell, Formatted, FormattedExt, Text},
@@ -101,7 +99,7 @@ impl Textbox {
         // break the chunks into paragraphs on newlines
         let mut paragraphs = alloc::vec![];
         let mut cur_para = alloc::vec![];
-        for mut chunk in mem::replace(&mut self.chunks, alloc::vec![]) {
+        for mut chunk in std::mem::take(&mut self.chunks) {
             while let Some((line, rest)) = chunk.text.split_once('\n') {
                 cur_para.push(chunk.with_text(line.into()));
                 paragraphs.push(cur_para);

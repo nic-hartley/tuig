@@ -105,7 +105,7 @@ impl<'s> ScreenView<'s> {
     /// Get a single cell in this view.
     ///
     /// This returns `None` if the index is out of bounds.
-    pub fn cell<'v>(&'v self, pos: XY) -> Option<&'v Cell> {
+    pub fn cell(&self, pos: XY) -> Option<&Cell> {
         let buf = self.buf?;
         let offset = self.offset(pos)?;
         // SAFETY: See [`Self::offset`] docs.
@@ -115,7 +115,7 @@ impl<'s> ScreenView<'s> {
     /// Get a single cell in this view, mutably.
     ///
     /// This returns `None` if the index is out of bounds.
-    pub fn cell_mut<'v>(&'v mut self, pos: XY) -> Option<&'v mut Cell> {
+    pub fn cell_mut(&mut self, pos: XY) -> Option<&mut Cell> {
         let buf = self.buf?;
         let offset = self.offset(pos)?;
         // SAFETY: See [`Self::offset`] docs. Mutable references are safe because this method is `&mut self`, which
@@ -130,7 +130,7 @@ impl<'s> ScreenView<'s> {
     /// cell in a column independently.
     ///
     /// This returns `None` if the index is out of bounds.
-    pub fn row<'v>(&'v self, idx: usize) -> Option<&'v [Cell]> {
+    pub fn row(&self, idx: usize) -> Option<&[Cell]> {
         let buf = self.buf?;
         let offset = self.offset(XY(0, idx))?;
         // SAFETY: See [`Self::offset`] docs.
@@ -150,7 +150,7 @@ impl<'s> ScreenView<'s> {
     /// cell in a column independently.
     ///
     /// This returns `None` if the index is out of bounds.
-    pub fn row_mut<'v>(&'v mut self, idx: usize) -> Option<&'v mut [Cell]> {
+    pub fn row_mut(&mut self, idx: usize) -> Option<&mut [Cell]> {
         let buf = self.buf?;
         let offset = self.offset(XY(0, idx))?;
         // SAFETY: The offset is guaranteed to be within the allocated object (the screen's Vec's buffer) because

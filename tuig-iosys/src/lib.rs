@@ -54,8 +54,6 @@ pub mod fmt;
 mod screen;
 mod xy;
 
-mod util;
-
 pub use crate::{
     action::{Action, Key, MouseButton},
     error::{Error, Result},

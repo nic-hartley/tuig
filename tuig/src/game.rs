@@ -38,5 +38,5 @@ pub trait Game: Send {
     ///
     /// If you want to render in terms of a raw [`Screen`](tuig_iosys::Screen) and input [`Action`](tuig_iosys::Action)
     /// instead, call [`Region::attach`] with a [`RawAttachment`](tuig_ui::attachments::RawAttachment).
-    fn attach<'s>(&mut self, into: Region<'s>, replies: &mut Replies<Self::Message>);
+    fn attach(&mut self, into: Region<'_>, replies: &mut Replies<Self::Message>);
 }
