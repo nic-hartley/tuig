@@ -16,13 +16,29 @@ use super::{Region, ScreenView};
 
 /// Something that can be put into a [`Region`].
 ///
+/// Deciding when to implement `Attachment` -- versus just fiddling with regions in the parent attachment -- can be
+/// difficult, like most software design problems. It's a balancing act between the extra boilerplate and the extra
+/// segmentation. Follow the single-responsibility principle, keep your code DRY, etc.
 ///
+/// Implementing this trait directly will let you fiddle with `Region`s and, generally, is the high-level interface.
+/// If you need the lower-level interface to actually handle input and draw to the character grid, you'll need to impl
+/// [`RawAttachment`], or make use of `FnOnce(Action, ScreenView)` implementing `RawAttachment`.
 pub trait Attachment<'s> {
     type Output;
     fn attach(self, region: Region<'s>) -> Self::Output;
 }
 
 /// The low-level "raw" trait for implementing [`Attachment`]s.
+///
+/// You should implement this at the lowest level of the hierarchy that it makes sense to. Remember you can pass the
+/// same state into two elements -- which might let you reuse the region-splitting code, for example, or attach a
+/// [`Textbox`] where you might otherwise have had to rewrite that logic yourself. For example, if you need an action
+/// log and a map, you can probably implement the action log as a textbox and the map as a `RawAttachment`, rather
+/// than both as one `RawAttachment` together.
+///
+/// Because `FnOnce(Action, ScreenView) -> T` implements `RawAttachment<Output=T>`, you can usually avoid implementing
+/// this explicitly. For example, you might [`impl Attachment`][Attachment], writing a few lines of code in a lambda
+/// rather than a full new type and `impl` block.
 pub trait RawAttachment<'s> {
     type Output;
     fn raw_attach(self, input: Action, screen: ScreenView<'s>) -> Self::Output;

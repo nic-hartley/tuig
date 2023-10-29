@@ -102,11 +102,3 @@ impl fmt::Debug for Bounds {
             .finish()
     }
 }
-
-// #[cfg(test)]
-// mod test {
-//     // TODO: macro each_dir
-
-//     #[test]
-//     fn
-// }

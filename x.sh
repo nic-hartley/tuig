@@ -14,10 +14,7 @@ for crate in $CRATES; do
         exit 1
     fi
 done
-case "$mode" in
-    pub*) cargo fmt --check ;;
-    *) cargo fmt ;;
-esac
+cargo fmt --check
 cargo build --all-features --workspace --all-targets
 cargo doc --all-features --workspace --no-deps --lib --bins --examples
 cargo test --all-features --workspace --all-targets
@@ -28,6 +25,7 @@ case "$mode" in
             cargo publish -p "$crate"
         done
         ;;
+    precom*) ;;
     *)
         for crate in $CRATES; do
             cargo publish -p "$crate" --dry-run
