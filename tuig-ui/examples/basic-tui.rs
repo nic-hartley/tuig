@@ -1,14 +1,9 @@
 use std::thread;
 
-use tuig_iosys::{
-    cell,
-    fmt::Cell,
-    text,
-    ui::{
-        attachments::{Button, TextInput, TextInputResult, Textbox},
-        cols, rows, Region, ScreenView,
-    },
-    Action, IoSystem, Key, Screen,
+use tuig_iosys::{cell, fmt::Cell, text, Action, IoSystem, Key, Screen};
+use tuig_ui::{
+    attachments::{Button, TextInput, TextInputResult, Textbox},
+    cols, rows, Region, ScreenView,
 };
 
 fn char_for_input(action: &Action) -> Cell {

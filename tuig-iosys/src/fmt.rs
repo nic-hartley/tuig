@@ -45,24 +45,17 @@ pub enum Color {
 
 impl Color {
     /// All of the colors supported
+    #[rustfmt::skip]
     pub fn all() -> [Color; 16] {
         [
-            Color::Black,
-            Color::BrightBlack,
-            Color::Red,
-            Color::BrightRed,
-            Color::Green,
-            Color::BrightGreen,
-            Color::Yellow,
-            Color::BrightYellow,
-            Color::Blue,
-            Color::BrightBlue,
-            Color::Magenta,
-            Color::BrightMagenta,
-            Color::Cyan,
-            Color::BrightCyan,
-            Color::White,
-            Color::BrightWhite,
+            Color::Black,   Color::BrightBlack,
+            Color::Red,     Color::BrightRed,
+            Color::Green,   Color::BrightGreen,
+            Color::Yellow,  Color::BrightYellow,
+            Color::Blue,    Color::BrightBlue,
+            Color::Magenta, Color::BrightMagenta,
+            Color::Cyan,    Color::BrightCyan,
+            Color::White,   Color::BrightWhite,
         ]
     }
 
@@ -71,24 +64,17 @@ impl Color {
     }
 
     /// The name of the color as a string
+    #[rustfmt::skip]
     pub fn name(&self) -> &'static str {
         match self {
-            Color::Black => "black",
-            Color::BrightBlack => "bright black",
-            Color::Red => "red",
-            Color::BrightRed => "bright red",
-            Color::Green => "green",
-            Color::BrightGreen => "bright green",
-            Color::Yellow => "yellow",
-            Color::BrightYellow => "bright yellow",
-            Color::Blue => "blue",
-            Color::BrightBlue => "bright blue",
-            Color::Magenta => "magenta",
-            Color::BrightMagenta => "bright magenta",
-            Color::Cyan => "cyan",
-            Color::BrightCyan => "bright cyan",
-            Color::White => "white",
-            Color::BrightWhite => "bright white",
+            Color::Black => "black",        Color::BrightBlack => "bright black",
+            Color::Red => "red",            Color::BrightRed => "bright red",
+            Color::Green => "green",        Color::BrightGreen => "bright green",
+            Color::Yellow => "yellow",      Color::BrightYellow => "bright yellow",
+            Color::Blue => "blue",          Color::BrightBlue => "bright blue",
+            Color::Magenta => "magenta",    Color::BrightMagenta => "bright magenta",
+            Color::Cyan => "cyan",          Color::BrightCyan => "bright cyan",
+            Color::White => "white",        Color::BrightWhite => "bright white",
         }
     }
 }

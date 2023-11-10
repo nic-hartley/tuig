@@ -1,13 +1,10 @@
-use core::mem;
-
 use alloc::{string::String, vec::Vec};
-
-use crate::{
+use tuig_iosys::{
     fmt::{Cell, Formatted, FormattedExt, Text},
-    text, text1,
-    ui::ScreenView,
-    xy::XY,
+    text, text1, Action, XY,
 };
+
+use crate::ScreenView;
 
 use super::RawAttachment;
 
@@ -34,7 +31,7 @@ impl TextboxData {
     };
 }
 
-/// A box of text which can be attached to a [`Region`].
+/// A box of text which can be attached to a [`Region`](crate::Region).
 ///
 /// Textboxes automatically handle:
 ///
@@ -61,7 +58,7 @@ impl Textbox {
         }
     }
 
-    crate::util::setters! {
+    tuig_pm::setters! {
         /// Set the scroll position of the textbox, i.e. how many lines from the top or bottom should be hidden.
         ///
         /// Defaults to 0, i.e. not scrolling at all. Anything that doesn't fit is simply not visible.
@@ -85,7 +82,7 @@ impl Textbox {
 
     /// Render this textbox to a [`ScreenView`], and return information about the render.
     ///
-    /// This is functionally equivalent to just directly [`Region::attach`][crate::ui::Region::attach]ing the textbox,
+    /// This is functionally equivalent to just directly [`Region::attach`][crate::Region::attach]ing the textbox,
     /// but you may find it useful if e.g. you want the text to depend on the input being handled in that region.
     pub fn render_to(mut self, mut sv: ScreenView) -> TextboxData {
         if sv.size() == XY(0, 0) {
@@ -102,7 +99,7 @@ impl Textbox {
         // break the chunks into paragraphs on newlines
         let mut paragraphs = alloc::vec![];
         let mut cur_para = alloc::vec![];
-        for mut chunk in mem::replace(&mut self.chunks, alloc::vec![]) {
+        for mut chunk in std::mem::take(&mut self.chunks) {
             while let Some((line, rest)) = chunk.text.split_once('\n') {
                 cur_para.push(chunk.with_text(line.into()));
                 paragraphs.push(cur_para);
@@ -222,17 +219,20 @@ impl Textbox {
 
 impl<'s> RawAttachment<'s> for Textbox {
     type Output = TextboxData;
-    fn raw_attach(self, _: crate::Action, screen: ScreenView<'s>) -> Self::Output {
+    fn raw_attach(self, _: Action, screen: ScreenView<'s>) -> Self::Output {
         self.render_to(screen)
     }
 }
 
 #[cfg(test)]
 mod test {
+    use tuig_iosys::Screen;
+
     use crate::{
-        fmt::{Cell, FormattedExt},
-        ui::{attachments::test_utils::*, Region},
-        Screen, XY,
+        attachments::test_utils::{
+            assert_area_blank, assert_area_fmt, charat, make_region, make_screen, screen_assert,
+        },
+        Region,
     };
 
     use super::*;
@@ -240,15 +240,15 @@ mod test {
     #[test]
     fn blank_textbox_renders_nothing() {
         make_screen!(sc(50, 30), r(0, 0, *, *));
-        r.textbox(alloc::vec![]);
+        r.text(alloc::vec![]);
         screen_assert! { sc: blank .., .. };
     }
 
     #[test]
     fn basic_textbox_renders_right() {
         make_screen!(sc(50, 30), r(0, 0, *, *));
-        let res = r
-            .textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "));
+        let res =
+            r.text(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "));
         screen_assert!(sc:
             // end of the line and beyond
             blank 20.., 1..=1,
@@ -268,8 +268,8 @@ mod test {
     #[test]
     fn textbox_positioning_works() {
         make_screen!(sc(50, 30), r(4, 3, *, *));
-        let res = r
-            .textbox(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "));
+        let res =
+            r.text(text!("bleh ", red "blah ", green underline "bluh ", blue on_magenta "bloh "));
         screen_assert!(sc:
             // blank top 3 rows (0, 1, 2)
             blank .., ..3,
@@ -293,7 +293,7 @@ mod test {
     #[test]
     fn textbox_wraps_words_and_overwrites() {
         make_screen!(sc(50, 30), r(40, 0, *, *));
-        let res = r.textbox(text!(
+        let res = r.text(text!(
             "these are some words which will eveeeentually be wrapped!"
         ));
         screen_assert!(sc:
@@ -314,7 +314,7 @@ mod test {
     #[test]
     fn textbox_wrap_carries_formatting() {
         make_screen!(sc(50, 30), r(40, 0, *, *));
-        r.textbox(text!("these are some words which will ", green "eveeeentually", " be wrapped!"));
+        r.text(text!("these are some words which will ", green "eveeeentually", " be wrapped!"));
         screen_assert!(sc:
             blank ..40, ..,
             blank .., 6..,
@@ -330,9 +330,7 @@ mod test {
     #[test]
     fn textbox_linefill_carries_formatting() {
         make_screen!(sc(50, 30), r(40, 0, *, *));
-        r.textbox(
-            text!("these are some words which will eveeeentually ", on_blue "be wrapped", "!"),
-        );
+        r.text(text!("these are some words which will eveeeentually ", on_blue "be wrapped", "!"));
         screen_assert!(sc:
             blank ..40, ..,
             blank .., 6..,
@@ -348,7 +346,7 @@ mod test {
     #[test]
     fn textbox_size_truncates() {
         make_screen!(sc(50, 30), r(40, 0, 10, 3));
-        let res = r.textbox(text!(
+        let res = r.text(text!(
             "these are some words which will eveeeentually be wrapped!"
         ));
         screen_assert!(sc:

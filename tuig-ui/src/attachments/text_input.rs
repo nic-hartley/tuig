@@ -1,13 +1,12 @@
 use core::{iter, mem};
 
 use alloc::{collections::VecDeque, string::String};
-
-use crate::{
+use tuig_iosys::{
     fmt::{Cell, Format, Formatted, FormattedExt, Text},
-    text1,
-    ui::ScreenView,
-    Action, Key,
+    text1, Action, Key,
 };
+
+use crate::ScreenView;
 
 use super::RawAttachment;
 
@@ -22,10 +21,11 @@ use super::RawAttachment;
 /// - Cursor position within the line
 /// - Autocomplete-related things
 ///
-/// Accordingly, [`Attachment`] is implemented for `&mut TextInput`, not `TextInput` itself, so you'll use it like:
+/// Accordingly, [`Attachment`](super::Attachment) (through [`RawAttachment`]) is implemented for `&mut TextInput`,
+/// not `TextInput` itself, so you'll use it like:
 ///
 /// ```no_run
-/// # use tuig_iosys::ui::{Region, elements::{TextInput, TextInputResult}};
+/// # use tuig_ui::{Region, attachments::{TextInput, TextInputResult}};
 /// let region = //...
 /// # Region::empty();
 /// let mut text_input = // ...
@@ -37,8 +37,8 @@ use super::RawAttachment;
 /// }
 /// ```
 ///
-/// [`Region::attach`]ing this will return a [`TextInputResult`], which is how you'll interact with autocomplete. To
-/// use the history features, see [`TextInput::store`].
+/// [`Region::attach`](super::Region::attach)ing this will return a [`TextInputResult`], which is how you'll interact
+/// with autocomplete. To use the history features, see [`TextInput::store`].
 pub struct TextInput {
     /// A bit of fixed, uneditable text at the beginning of the text input, to signal the user to type.
     pub prompt: String,
@@ -328,13 +328,15 @@ impl<'s, 'ti> RawAttachment<'s> for &'ti mut TextInput {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use crate::{
-        fmt::Cell,
-        fmt::FormattedExt,
-        ui::{attachments::test_utils::*, Region},
-        Key, Screen, XY,
+        attachments::test_utils::{
+            assert_area_fmt, charat, make_region, make_screen, screen_assert,
+        },
+        Region,
     };
+    use tuig_iosys::{Screen, XY};
+
+    use super::*;
 
     macro_rules! feed {
         (

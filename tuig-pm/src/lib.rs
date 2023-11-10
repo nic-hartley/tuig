@@ -1,3 +1,5 @@
+//! You probably want one of the other crates. See [the repo](https://github.com/nic-hartley/tuig) for help choosing.
+
 use proc_macro::TokenStream;
 
 macro_rules! convert {
@@ -44,22 +46,6 @@ macro_rules! mod_fn {
 
 mod_fn! {
     proc_macro make_load,
-    proc_macro force_docs_nightly,
-}
-
-mod splitters;
-#[proc_macro]
-pub fn cols(input: TokenStream) -> TokenStream {
-    splitters::splitter(quote::quote!(ui::splitters::statics::Cols), input.into()).into()
-}
-#[proc_macro]
-pub fn rows(input: TokenStream) -> TokenStream {
-    splitters::splitter(quote::quote!(ui::splitters::statics::Rows), input.into()).into()
-}
-
-fn is_nightly() -> bool {
-    use rustc_version::{version_meta, Channel};
-    version_meta()
-        .map(|vm| vm.channel == Channel::Nightly)
-        .unwrap_or(false)
+    proc_macro splitter,
+    proc_macro setters,
 }

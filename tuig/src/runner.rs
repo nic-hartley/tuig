@@ -4,11 +4,12 @@
 
 use std::{mem, thread, time::Duration};
 
-use tuig_iosys::{ui::Region, Action, IoRunner, IoSystem, Screen};
+use tuig_iosys::{IoRunner, IoSystem};
+use tuig_ui::{Adapter, Attachment, Region};
 
 use crate::{
     agent::{Agent, ControlFlow},
-    game::{Game, Response},
+    game::Game,
     util::timing::Timer,
     Message, Replies,
 };
@@ -31,7 +32,7 @@ impl<M: Message> AgentRunner<M> {
     /// `agents` and `messages` are both input and output:
     ///
     /// - `agents` and `messages` passed in are the agents/messages for this runner to run
-    /// - `agents` and `messages` coming out are the agents that this round spawned
+    /// - `agents` and `messages` coming out are the agents/messages that this round spawned
     ///
     /// Notably the vecs *will be cleared* and old messages *will not be available*!
     #[cfg_attr(feature = "run_rayon", allow(unused))]
@@ -136,31 +137,28 @@ impl<M: Message> AgentRunner<M> {
     }
 }
 
+struct AttachGame<'g, 'r, G: Game>(&'g mut G, &'r mut Replies<G::Message>);
+
+impl<'s, 'g, 'r, G: Game> Attachment<'s> for AttachGame<'g, 'r, G> {
+    type Output = bool;
+    fn attach(self, region: Region<'s>) -> Self::Output {
+        let Self(game, replies) = self;
+        game.attach(region, replies)
+    }
+}
+
 struct GameRunner<G: Game, IO: IoSystem> {
     /// The game being run
     game: G,
-    /// The IO system the game is being drawn onto
-    iosys: IO,
-    /// The screen drawn last time it rendered to screen
-    old_screen: Screen,
-    /// The screen that will be drawn next time it's rendered
-    new_screen: Screen,
-    /// Whether, after receiving a message, the game indicates that it needs to be redrawn
-    tainted: bool,
-    render_timer: Timer,
+    /// The IO adapter for the UI stuff
+    adapter: Adapter<IO>,
 }
 
 impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
     fn new(game: G, iosys: IO) -> Self {
-        let screen = Screen::new(iosys.size());
         Self {
             game,
-            iosys,
-            old_screen: screen.clone(),
-            new_screen: screen.clone(),
-            tainted: false,
-            // Render at most ~100fps
-            render_timer: Timer::new(1.0 / 100.0),
+            adapter: Adapter::new(iosys).with_cap(60), // TODO: let the game pick
         }
     }
 
@@ -168,52 +166,47 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
     ///
     /// Returns whether a stop was requested.
     #[inline]
-    fn feed(&mut self, messages: &[G::Message]) -> bool {
+    fn feed(&mut self, messages: &[G::Message]) {
         if messages.is_empty() {
-            return self.feed(&[G::Message::tick()]);
-        }
-
-        for msg in messages {
-            match self.game.message(msg) {
-                Response::Nothing => (),
-                Response::Redraw => self.tainted = true,
-                Response::Quit => return true,
+            self.game.message(&G::Message::tick());
+        } else {
+            for msg in messages {
+                self.game.message(msg);
             }
-        }
-        false
-    }
-
-    #[inline]
-    fn attach_for(&mut self, replies: &mut Replies<G::Message>, action: Action) {
-        self.new_screen.resize(self.iosys.size());
-        let region = Region::new(&mut self.new_screen, action);
-        self.game.attach(region, replies);
-        self.tainted = false;
+        };
     }
 
     /// Do a step of IO with the associated `IoSystem` and `Game`, re-rendering to the stored [`Screen`].
     ///
     /// Returns whether a stop was requested.
     #[inline]
+    #[must_use]
     fn attach(
         &mut self,
         messages: &mut Vec<G::Message>,
         agents: &mut Vec<Box<dyn Agent<G::Message>>>,
     ) -> bool {
+        let mut drawn = false;
         let mut replies = Replies {
             agents: mem::take(agents),
             messages: mem::take(messages),
         };
-        while let Ok(Some(action)) = self.iosys.poll_input() {
-            if action == Action::Closed {
+
+        while let Ok(Some(stop)) = self
+            .adapter
+            .poll_input(AttachGame(&mut self.game, &mut replies))
+        {
+            drawn = true;
+            if stop {
                 return true;
             }
-
-            self.attach_for(&mut replies, action);
         }
-        if self.tainted {
-            // need to redraw, but haven't done it yet
-            self.attach_for(&mut replies, Action::Redraw);
+        if !drawn
+            && self
+                .adapter
+                .refresh(AttachGame(&mut self.game, &mut replies))
+        {
+            return true;
         }
         *agents = replies.agents;
         *messages = replies.messages;
@@ -223,14 +216,11 @@ impl<G: Game, IO: IoSystem> GameRunner<G, IO> {
     /// Render the stored [`Screen`] to the real screen. This will automatically only render if the screen contents
     /// have been tainted (e.g. by a [`Response::Redraw`] or [`Action::Redraw`]) and the render timer says it's time.
     fn render(&mut self) {
-        if self.new_screen != self.old_screen && self.render_timer.tick_ready() {
-            self.iosys.draw(&self.new_screen).unwrap();
-            mem::swap(&mut self.new_screen, &mut self.old_screen);
-        }
+        self.adapter.draw().expect("Failed to draw to the screen")
     }
 }
 
-/// Handles starting up and running a `Game`.
+/// Handles starting up and running a `Game` and all its agents.
 #[must_use]
 pub struct Runner<G: Game + 'static> {
     messages: Vec<G::Message>,
@@ -302,12 +292,10 @@ impl<G: Game + 'static> Runner<G> {
                     thread::sleep(input_timer.remaining().min(Duration::from_millis(2)));
                 }
                 gr.render();
-                if gr.feed(&messages) {
-                    break 'mainloop;
-                }
+                gr.feed(&messages);
                 ar.step(&mut messages, &mut agents);
             }
-            gr.iosys.stop();
+            gr.adapter.stop();
             gr.game
         });
         iorun.run();
@@ -342,12 +330,10 @@ impl<G: Game + 'static> Runner<G> {
                 thread::sleep(input_timer.remaining().min(Duration::from_millis(2)));
             }
             gr.render();
-            if gr.feed(&messages) {
-                break 'mainloop;
-            }
+            gr.feed(&messages);
             ar.step(&mut messages, &mut agents);
         }
-        gr.iosys.stop();
+        gr.adapter.stop();
         iorun.run();
         gr.game
     }
@@ -379,12 +365,10 @@ impl<G: Game + 'static> Runner<G> {
                     thread::sleep(input_timer.remaining().min(Duration::from_millis(2)));
                 }
                 gr.render();
-                if gr.feed(&messages) {
-                    break 'mainloop;
-                }
+                gr.feed(&messages);
                 ar.step_rayon(&mut messages, &mut agents);
             }
-            gr.iosys.stop();
+            gr.adapter.stop();
             send.send(gr.game).unwrap();
         });
         iorun.run();
@@ -393,7 +377,7 @@ impl<G: Game + 'static> Runner<G> {
 
     /// Start the game running, according to the feature-selected runner.
     ///
-    /// This function only exits when [`Game::message`] or [`Game::input`] returns [`Response::Quit`]. It returns the
+    /// This function only exits when [`Game::message`] or [`Game::attach`] returns [`Response::Quit`]. It returns the
     /// [`Game`], primarily for testing purposes.
     #[allow(unreachable_code)] // for `cargo check --all-features`
     pub fn run(self, iosys: impl IoSystem + 'static, iorun: impl IoRunner) -> G {
@@ -410,10 +394,9 @@ impl<G: Game + 'static> Runner<G> {
     ///
     /// This **must** be run on the main thread. Ideally, you'd run it from `main` directly.
     ///
-    /// This function only exits when [`Game::message`] or [`Game::input`] returns [`Response::Quit`]. It returns the
+    /// This function only exits when [`Game::message`] or [`Game::attach`] returns [`Response::Quit`]. It returns the
     /// [`Game`], primarily for testing purposes. If loading fails, it panics.
     #[cfg(feature = "__io")]
-    #[cfg_attr(doc, doc(cfg(feature = "io_*")))]
     pub fn load_run(self) -> G {
         tuig_iosys::load!(self.run).unwrap()
     }

@@ -5,19 +5,16 @@ use core::{
 };
 
 use alloc::slice;
-
-use crate::{fmt::Cell, Screen, XY};
+use tuig_iosys::{fmt::Cell, Screen, XY};
 
 use super::Bounds;
 
 /// A mutable view into a region of a `Screen`.
 ///
-/// You don't directly get `ScreenView`s; they're given to you through [`Region::attach`][super::Region::attach] and
+/// You don't directly get `ScreenView`s; they're given to you through [`Region::attach`][crate::Region::attach] and
 /// [`RawAttachment::raw_attach`][super::RawAttachment::raw_attach]. You can use them to directly draw to a screen's
 /// textgrid, but bounded in a certain region, so that multiple attachments can be alive at once without causing
-/// lifetime issues.
-///
-/// Primarily, you'll do that through [`Self::row`], which is also available through
+/// lifetime issues or deadlocks or slowdowns from mutexes.
 pub struct ScreenView<'s> {
     /// Ties the lifetimes together
     _sc: PhantomData<&'s Screen>,
@@ -60,7 +57,7 @@ impl<'s> ScreenView<'s> {
         Self {
             _sc: PhantomData,
             // SAFETY: `Vec::as_mut_ptr` never returns null pointers, only dangling ones.
-            buf: Some(unsafe { NonNull::new_unchecked(screen.cells.as_mut_ptr()) }),
+            buf: Some(unsafe { NonNull::new_unchecked(screen.cells_mut().as_mut_ptr()) }),
             full_size: screen.size(),
             bounds,
         }
@@ -108,7 +105,7 @@ impl<'s> ScreenView<'s> {
     /// Get a single cell in this view.
     ///
     /// This returns `None` if the index is out of bounds.
-    pub fn cell<'v>(&'v self, pos: XY) -> Option<&'v Cell> {
+    pub fn cell(&self, pos: XY) -> Option<&Cell> {
         let buf = self.buf?;
         let offset = self.offset(pos)?;
         // SAFETY: See [`Self::offset`] docs.
@@ -118,7 +115,7 @@ impl<'s> ScreenView<'s> {
     /// Get a single cell in this view, mutably.
     ///
     /// This returns `None` if the index is out of bounds.
-    pub fn cell_mut<'v>(&'v mut self, pos: XY) -> Option<&'v mut Cell> {
+    pub fn cell_mut(&mut self, pos: XY) -> Option<&mut Cell> {
         let buf = self.buf?;
         let offset = self.offset(pos)?;
         // SAFETY: See [`Self::offset`] docs. Mutable references are safe because this method is `&mut self`, which
@@ -133,7 +130,7 @@ impl<'s> ScreenView<'s> {
     /// cell in a column independently.
     ///
     /// This returns `None` if the index is out of bounds.
-    pub fn row<'v>(&'v self, idx: usize) -> Option<&'v [Cell]> {
+    pub fn row(&self, idx: usize) -> Option<&[Cell]> {
         let buf = self.buf?;
         let offset = self.offset(XY(0, idx))?;
         // SAFETY: See [`Self::offset`] docs.
@@ -153,7 +150,7 @@ impl<'s> ScreenView<'s> {
     /// cell in a column independently.
     ///
     /// This returns `None` if the index is out of bounds.
-    pub fn row_mut<'v>(&'v mut self, idx: usize) -> Option<&'v mut [Cell]> {
+    pub fn row_mut(&mut self, idx: usize) -> Option<&mut [Cell]> {
         let buf = self.buf?;
         let offset = self.offset(XY(0, idx))?;
         // SAFETY: The offset is guaranteed to be within the allocated object (the screen's Vec's buffer) because
@@ -217,7 +214,7 @@ mod test {
     #[test]
     fn get_cell_inbounds() {
         let mut screen = Screen::new(XY(5, 5));
-        screen.cells[0] = Cell::of('~');
+        screen.cells_mut()[0] = Cell::of('~');
         let sv = unsafe { ScreenView::new(&mut screen, Bounds::new(0, 0, 5, 5)) };
         assert_eq!(sv[XY(0, 0)], Cell::of('~'));
     }
@@ -225,16 +222,16 @@ mod test {
     #[test]
     fn set_cell_inbounds() {
         let mut screen = Screen::new(XY(5, 5));
-        screen.cells[0] = Cell::of('~');
+        screen.cells_mut()[0] = Cell::of('~');
         let mut sv = unsafe { ScreenView::new(&mut screen, Bounds::new(0, 0, 5, 5)) };
         sv[XY(0, 0)] = Cell::of('!');
-        assert_eq!(screen.cells[0], Cell::of('!'));
+        assert_eq!(screen.cells_mut()[0], Cell::of('!'));
     }
 
     #[test]
     fn get_row_inbounds() {
         let mut screen = Screen::new(XY(5, 5));
-        for (i, v) in screen.cells[0..5].iter_mut().enumerate() {
+        for (i, v) in screen.cells_mut()[0..5].iter_mut().enumerate() {
             *v = Cell::of(char::from_digit(i as u32, 36).unwrap());
         }
         let sv = unsafe { ScreenView::new(&mut screen, Bounds::new(0, 0, 5, 5)) };
@@ -258,7 +255,7 @@ mod test {
             *v = Cell::of(char::from_digit(i as u32, 36).unwrap());
         }
         assert_eq!(
-            &screen.cells[0..5],
+            &screen.cells_mut()[0..5],
             [
                 Cell::of('0'),
                 Cell::of('1'),

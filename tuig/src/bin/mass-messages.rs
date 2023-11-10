@@ -2,8 +2,8 @@
 
 use std::time::Instant;
 
-use tuig::{Agent, ControlFlow, Game, Replies, Response, Runner};
-use tuig_iosys::ui::Region;
+use tuig::{Agent, ControlFlow, Game, Replies, Runner};
+use tuig_ui::Region;
 
 const AGENTS: u64 = 10_000;
 
@@ -43,34 +43,23 @@ struct TinyGame {
 
 impl Game for TinyGame {
     type Message = TinyMessage;
-    fn message(&mut self, msg: &Self::Message) -> Response {
+    fn message(&mut self, msg: &Self::Message) {
         if msg != &0 {
             self.count += 1;
         }
         if *msg == 1 {
             self.complete += 1;
-            if self.complete == AGENTS {
-                Response::Quit
-            } else {
-                Response::Redraw
-            }
         } else if *msg > self.max {
             self.max = *msg;
-            Response::Redraw
-        } else {
-            if self.count % (AGENTS / 100) == 0 {
-                Response::Redraw
-            } else {
-                Response::Nothing
-            }
         }
     }
 
-    fn attach<'s>(&mut self, _into: Region<'s>, _replies: &mut Replies<Self::Message>) {
+    fn attach<'s>(&mut self, _into: Region<'s>, _replies: &mut Replies<Self::Message>) -> bool {
         println!(
             "count={}, max={}, complete={}",
             self.count, self.max, self.complete
         );
+        self.complete == AGENTS
     }
 }
 

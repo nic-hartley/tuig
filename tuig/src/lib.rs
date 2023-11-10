@@ -47,9 +47,6 @@
 //! that's how the engine works internally, and it explains why certain things happen or don't. But in short: Don't
 //! count on queued messages or spawned agents to be *immediate*, just vaguely "soon".
 
-#![cfg_attr(doc, feature(doc_cfg, doc_auto_cfg))]
-tuig_pm::force_docs_nightly!();
-
 mod agent;
 #[cfg(doc)]
 pub mod docs;
@@ -60,7 +57,7 @@ mod util;
 
 pub use {
     agent::{Agent, ControlFlow, WaitHandle},
-    game::{Game, Response},
+    game::Game,
     message::{Message, Replies},
     runner::Runner,
     tuig_iosys as io,
@@ -71,7 +68,6 @@ pub use {
 /// If you need more control, e.g. selecting a specific backend or queueing initial agents, use [`Runner`]. Many real
 /// games won't, as they won't be doing anything until after some user input asks them to.
 #[cfg(feature = "__io")]
-#[cfg_attr(doc, doc(cfg(feature = "io_*")))]
 pub fn run<G: Game + 'static>(game: G) -> G {
     Runner::new(game).load_run()
 }

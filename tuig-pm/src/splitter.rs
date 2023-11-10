@@ -16,16 +16,15 @@ pub struct SplitSpec {
 
 fn parse_base(input: ParseStream) -> syn::Result<TokenStream> {
     let mut res = vec![];
-    while !input.lookahead1().peek(Token!(:)) {
+    while !input.peek(Token![@]) {
         res.push(input.parse::<TokenTree>()?)
     }
-    let _ = input.parse::<Token!(:)>()?;
+    let _ = input.parse::<Token![@]>()?;
     Ok(quote::quote!( #( #res )* ))
 }
 
 fn parse_sep(input: ParseStream) -> syn::Result<String> {
-    let lh = input.lookahead1();
-    if lh.peek(LitStr) {
+    if input.peek(LitStr) {
         input.parse::<LitStr>().map(|s| s.value())
     } else {
         Ok("".into())
@@ -42,7 +41,7 @@ fn parse_size(input: ParseStream) -> syn::Result<(Span, usize)> {
         let t = input.parse::<syn::Token!(*)>()?;
         Ok((t.span, usize::MAX))
     } else {
-        Err(input.error("expected a usize or *"))
+        Err(lh.error())
     }
 }
 
@@ -68,7 +67,7 @@ fn parse_splitspec(input: ParseStream) -> syn::Result<SplitSpec> {
     Ok(res)
 }
 
-pub fn splitter(path: TokenStream, input: TokenStream) -> TokenStream {
+pub fn splitter(input: TokenStream) -> TokenStream {
     let SplitSpec {
         base,
         sizes,
@@ -84,7 +83,7 @@ pub fn splitter(path: TokenStream, input: TokenStream) -> TokenStream {
     // get namespaced nicely?
     quote::quote! {
         #[allow(deprecated)]
-        #base::#path::new(
+        #base::new(
             [ #(#sizes),* ],
             #presep,
             [ #(#seps),* ],

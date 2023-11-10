@@ -1,9 +1,10 @@
-use crate::{Action, Key};
+use tuig_iosys::{Action, Key};
 
 /// Tracks and presents the current state of inputs, based on past ones.
 ///
 /// You must manually feed this each input you receive. If you miss any, it might fall out of sync with reality,
-/// though because events are absolute, there's no risk of the classic "exactly inverted state" desync.
+/// though because events are absolute (i.e. press/release rather than toggle), there's no risk of the classic
+/// "exactly inverted state" desync.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct InputState {
     /// Whether either Shift key is currently being held

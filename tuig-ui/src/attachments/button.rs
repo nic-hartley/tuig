@@ -1,8 +1,9 @@
-use crate::{
+use tuig_iosys::{
     fmt::{Cell, Color, FormattedExt},
-    ui::ScreenView,
     Action, Key, MouseButton,
 };
+
+use crate::ScreenView;
 
 use super::RawAttachment;
 

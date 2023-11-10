@@ -1,22 +1,27 @@
 [package]
 name = "tuig"
-version = "0.0.4"
+version = "0.0.5"
 edition = "2021"
 description = "Flexible, portable, and fast game engine for textmode games."
 license = "BSD-3-Clause"
 repository = "https://github.com/nic-hartley/tuig"
+readme = "../README.md"
+rust-version = "1.64"
+
+[package.metadata.docs.rs]
+all-features = true
 
 [features]
 # See tuig::docs::features for crucial information.
 __io = []
 io_nop = ["__io", "tuig-iosys/nop"]
-io_cli_crossterm = ["__io", "tuig-iosys/cli_crossterm"]
-io_gui_softbuffer = ["__io", "tuig-iosys/gui_softbuffer"]
+io_cli_crossterm = ["__io", "std", "tuig-iosys/cli_crossterm"]
+io_gui_softbuffer = ["__io", "std", "tuig-iosys/gui_softbuffer"]
 
 __run = []
 run_orig = ["__run"]
 run_single = ["__run"]
-run_rayon = ["__run", "rayon", "crossbeam"]
+run_rayon = ["__run", "std", "rayon", "crossbeam"]
 
 std = ["tuig-iosys/std"]
 
@@ -27,8 +32,9 @@ name = "mass-messages"
 required-features = ["io_nop", "__run"]
 
 [dependencies]
-tuig-iosys = { version = "0.0.4", path = "../tuig-iosys", features = ["ui"] }
-tuig-pm = { version = "0.0.4", path = "../tuig-pm" }
+tuig-iosys = { version = "0.0.5", path = "../tuig-iosys" }
+tuig-pm = { version = "0.0.5", path = "../tuig-pm" }
+tuig-ui = { version = "0.0.5", path = "../tuig-ui" }
 
 crossbeam = { version = "0.8.2", optional = true }
 rayon = { version = "1.7.0", optional = true }

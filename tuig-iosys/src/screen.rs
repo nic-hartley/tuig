@@ -104,6 +104,11 @@ impl Screen {
         &self.cells
     }
 
+    /// All of the cells of this screen, in row-major order, mutably.
+    pub fn cells_mut(&mut self) -> &mut [Cell] {
+        &mut self.cells
+    }
+
     /// Returns an iterator over the rows in a screen.
     pub fn rows(&self) -> impl Iterator<Item = &[Cell]> {
         ScreenRows::new(self)

@@ -42,5 +42,5 @@ impl From<String> for Error {
     }
 }
 
-/// Alias for [`std::result::Result`] with the error always being [`Error`].
+/// Alias for [`core::result::Result`] with the error always being [`Error`].
 pub type Result<T> = core::result::Result<T, Error>;
