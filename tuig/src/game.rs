@@ -4,17 +4,6 @@ use tuig_ui::Region;
 
 use crate::{Message, Replies};
 
-/// How a `Game` can respond to inputs or messages, affecting the whole game.
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum Response {
-    /// Nothing in particular needs to be done.
-    Nothing,
-    /// The visual state has updated, and the [`Screen`](tuig_iosys::Screen) needs to be redrawn.
-    Redraw,
-    /// The game should be exited, e.g. because the user clicked "Exit" in the menu.
-    Quit,
-}
-
 /// Represents a game which can be run in the main loop.
 ///
 /// Note that `Game`s don't run the bulk of the game logic; that's the `Agent`'s job. The `Game` trait is the place
@@ -31,12 +20,19 @@ pub trait Game: Send {
     type Message: Message;
 
     /// A message has happened; update the UI accordingly.
-    fn message(&mut self, message: &Self::Message) -> Response;
+    fn message(&mut self, message: &Self::Message);
 
     /// Attach the game to a [`Region`] occupying the whole screen. Based on the inputs given, re-render the player's
-    /// UI, and inform [`Agent`](crate::Agent)s accordingly.
+    /// UI, and inform [`Agent`](crate::Agent)s accordingly. This always gets called at least once per frame, either
+    /// when user input happens or with `Redraw` if there was no input during the frame.
     ///
     /// If you want to render in terms of a raw [`Screen`](tuig_iosys::Screen) and input [`Action`](tuig_iosys::Action)
     /// instead, call [`Region::attach`] with a [`RawAttachment`](tuig_ui::attachments::RawAttachment).
-    fn attach(&mut self, into: Region<'_>, replies: &mut Replies<Self::Message>);
+    ///
+    /// This will blindly pass inputs through to you -- be sure to check for `Closed` events, perform the cleanup you
+    /// need to do, and return `true` as appropriate. (If cleanup might take a while, e.g. saving the game, consider
+    /// spawning an agent to do it.)
+    ///
+    /// Return `true` to completely exit the game, e.g. if the player pressed a "Quit" button in the menu.
+    fn attach(&mut self, into: Region<'_>, replies: &mut Replies<Self::Message>) -> bool;
 }

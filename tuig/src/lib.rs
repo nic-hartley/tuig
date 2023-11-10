@@ -57,7 +57,7 @@ mod util;
 
 pub use {
     agent::{Agent, ControlFlow, WaitHandle},
-    game::{Game, Response},
+    game::Game,
     message::{Message, Replies},
     runner::Runner,
     tuig_iosys as io,
